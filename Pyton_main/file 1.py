@@ -1,5 +1,5 @@
 # my_float = 3.14
-# my_name = "Matvey Bpsin"
+# my_name = "Matvey Bosin"
 # print (my_name + " Python prograqmmer")
 # my_float = 7.8
 # print (int(my_float))
