@@ -2,8 +2,8 @@
   "emeraldwalk.runonsave": {
     "commands": [
       {
-        "match": ".*",
-        "cmd": "git add . && git commit -m \"Auto commit on save\" && git push"
+        "match": "\\.(py|ipynb)$",
+        "cmd": "git add *.py *.ipynb && git commit -m \"Auto commit on save\" && git push"
       }
     ]
   }
