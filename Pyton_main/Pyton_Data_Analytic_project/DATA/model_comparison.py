@@ -8,6 +8,7 @@ from catboost import CatBoostRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import r2_score, mean_squared_error
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Загрузка данных
 df_search = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/search_results.csv")
