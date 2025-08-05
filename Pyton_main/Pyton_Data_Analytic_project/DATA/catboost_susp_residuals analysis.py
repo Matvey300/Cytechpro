@@ -4,8 +4,8 @@ import pandas as pd
 from catboost import CatBoostRegressor
 
 # Загрузка данных
-df_search = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/search_results.csv")
-df_reviews = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/all_reviews.csv")
+df_reviews = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/search_results.csv")
+df_search = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/all_reviews.csv")
 
 df_search['product_name'] = df_search['title'].astype(str).str.slice(0, 50)
 
