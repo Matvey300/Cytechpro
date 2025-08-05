@@ -50,7 +50,7 @@ df_features['residual'] = df_features['total_helpful_votes'] - df_features['y_pr
 df_features['abs_residual'] = df_features['residual'].abs()
 
 # Подозрительные ASIN
-sus = df_features[df_features['verified_share'] < 0.5] \
+sus = df_features[df_features['verified_share'] < 0.8] \
     .sort_values(by='abs_residual', ascending=False).head(10)
 
 sus = sus.merge(df_search[['asin', 'product_name']], on='asin', how='left')
