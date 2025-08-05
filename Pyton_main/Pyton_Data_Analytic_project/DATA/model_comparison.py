@@ -10,8 +10,8 @@ from sklearn.metrics import r2_score, mean_squared_error
 import matplotlib.pyplot as plt
 
 # Загрузка данных
-df_reviews = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/search_results.csv")
-df_search = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/all_reviews.csv")
+df_search = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/search_results.csv")
+df_reviews = pd.read_csv("/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/all_reviews.csv")
 
 # Подготовка
 df_reviews.columns = df_reviews.columns.astype(str).str.strip()
