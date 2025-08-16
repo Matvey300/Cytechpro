@@ -1,270 +1,419 @@
 #!/usr/bin/env python3
-# file: vpn_users.py
+# -*- coding: utf-8 -*-
 
-import os, json, uuid, argparse, datetime, urllib.parse, sys, textwrap
+import argparse
+import os
+import sys
+import subprocess
+import shlex
+import uuid as _uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import json
+import getpass
 
-# ====== НАСТРОЙКИ ПО УМОЛЧАНИЮ ======
-BASE_DIR     = "/Users/Matvej1/AWS/Users"
-USERS_JSON   = os.path.join(BASE_DIR, "users.json")
-ACTIVITY_LOG = os.path.join(BASE_DIR, "activity.log")
+# -----------------------------------------------------------------------------
+# Константы окружения (подправь при необходимости)
+# -----------------------------------------------------------------------------
+EC2_HOST_DEFAULT = "ec2-user@3.28.239.151"
+SSH_KEY_DEFAULT  = str(Path.home() / "AWS" / "VPN_SERVER_UAE" / "VPN_SERVER_UAE_KEY.pem")
+SERVER_DOMAIN    = "matvey300.duckdns.org"
 
-DOMAIN = "matvey300.duckdns.org"
-PORT   = 443
-SNI    = DOMAIN
-ALPN   = "http/1.1"  # у тебя так на сервере
-# ====================================
+# Пути на EC2
+REMOTE_LEDGER_DIR = "/var/log/xray/users"
+REMOTE_LEDGER     = f"{REMOTE_LEDGER_DIR}/ledger.tsv"
+REMOTE_ACCESSLOG  = "/var/log/xray/access.log"
+REMOTE_CONFIG     = "/usr/local/etc/xray/config.json"
+REMOTE_XRAY       = "/usr/local/bin/xray"
+REMOTE_MAKE_LAND  = "/usr/local/bin/make_vless_landing.sh"
 
-def now_iso():
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+# Локальная папка для выгрузок
+LOCAL_USERS_DIR   = str(Path.home() / "AWS" / "Users")
 
-def ensure_dirs():
-    os.makedirs(BASE_DIR, exist_ok=True)
-    if not os.path.exists(USERS_JSON):
-        with open(USERS_JSON, "w") as f:
-            json.dump({"users": []}, f, ensure_ascii=False, indent=2)
+# Порт/тег inbounds на сервере — используем только 443, как ты просил
+INBOUND_PORT      = 443
 
-def load_db():
-    ensure_dirs()
-    with open(USERS_JSON, "r") as f:
-        return json.load(f)
+# -----------------------------------------------------------------------------
+# Утилиты
+# -----------------------------------------------------------------------------
+def die(msg, code=1):
+    print(f"[ERR] {msg}", file=sys.stderr)
+    sys.exit(code)
 
-def save_db(db):
-    with open(USERS_JSON, "w") as f:
-        json.dump(db, f, ensure_ascii=False, indent=2)
+def info(msg):
+    print(f"[OK] {msg}")
 
-def append_activity(line: str):
-    with open(ACTIVITY_LOG, "a") as f:
-        f.write(f"{now_iso()} {line}\n")
+def warn(msg):
+    print(f"[WARN] {msg}")
 
-def sanitize_filename(name: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in name.strip())
+def run(cmd, check=True, capture=False, timeout=None):
+    """Локальный запуск"""
+    if capture:
+        return subprocess.run(cmd, shell=True, check=check, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, text=True, timeout=timeout).stdout
+    else:
+        subprocess.run(cmd, shell=True, check=check, timeout=timeout)
+        return ""
 
-def make_vless_link(u: str, name: str, host: str, port: int, sni: str, alpn: str) -> str:
-    q = {
-        "security": "tls",
-        "encryption": "none",
-        "type": "tcp",
-        "sni": sni,
-        "alpn": alpn
-    }
-    query = urllib.parse.urlencode(q, doseq=True)
-    tag = urllib.parse.quote(name, safe="")
-    return f"vless://{u}@{host}:{port}?{query}#{tag}"
-
-# ---- совместимость со старой схемой (uuids: [...]) ----
-def normalize_entry(entry):
-    if "keys" in entry:
-        return entry
-    keys = []
-    for u in entry.get("uuids", []):
-        keys.append({"uuid": u, "status": "active", "issued_at": entry.get("issued_at", now_iso())})
-    entry["keys"] = keys
-    entry.pop("uuids", None)
-    return entry
-
-def add_user(name: str, acc_type: int, count: int, host: str, port: int, sni: str, alpn: str):
-    db = load_db()
-    keys = []
-    for _ in range(count):
-        u = str(uuid.uuid4())
-        keys.append({"uuid": u, "status": "active", "issued_at": now_iso()})
-    policy = (
-        {"mode": "unlimited"} if acc_type == 1 else
-        {"mode": "single_session"} if acc_type == 2 else
-        {"mode": "per_device", "limit": count}
+def remote(ssh_host, ssh_key, command, capture=True, sudo=False, timeout=40):
+    """Выполнить команду на EC2. Если sudo=True, префиксует sudo."""
+    key_q   = shlex.quote(ssh_key)
+    host_q  = shlex.quote(ssh_host)
+    cmd_q   = command if not sudo else f"sudo bash -lc {shlex.quote(command)}"
+    full    = (
+        f"ssh -i {key_q} -o BatchMode=yes -o StrictHostKeyChecking=accept-new "
+        f"{host_q} {shlex.quote(cmd_q)}"
     )
-    entry = {
-        "name": name,
-        "type": acc_type,
-        "policy": policy,
-        "keys": keys,
-        "domain": host, "port": port, "sni": sni, "alpn": alpn,
-        "issued_at": now_iso(),
-        "status": "active",
+    return run(full, check=True, capture=capture, timeout=timeout)
+
+def scp_from(ssh_host, ssh_key, remote_path, local_path, timeout=60):
+    key_q  = shlex.quote(ssh_key)
+    host_q = shlex.quote(ssh_host)
+    r_q    = shlex.quote(remote_path)
+    l_q    = shlex.quote(local_path)
+    cmd    = f"scp -i {key_q} -o BatchMode=yes -o StrictHostKeyChecking=accept-new {host_q}:{r_q} {l_q}"
+    run(cmd, check=True, capture=False, timeout=timeout)
+
+def ensure_local_dir(p: str):
+    Path(p).mkdir(parents=True, exist_ok=True)
+
+def now_utc_iso():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+def gen_uuid():
+    return str(_uuid.uuid4())
+
+# -----------------------------------------------------------------------------
+# Серверная подготовка: каталоги, файлы и права
+# -----------------------------------------------------------------------------
+def server_bootstrap(ssh_host, ssh_key):
+    cmd = f"""
+set -e
+sudo install -d -m 0755 {shlex.quote(REMOTE_LEDGER_DIR)}
+# Создать файл если отсутствует, не трогая права
+sudo bash -lc 'test -f {shlex.quote(REMOTE_LEDGER)} || {{ echo -e "ts\\taction\\tname\\tuuid\\tlanding\\tsubscribe" > {shlex.quote(REMOTE_LEDGER)}; }}'
+"""
+    remote(ssh_host, ssh_key, cmd, capture=True)
+
+# -----------------------------------------------------------------------------
+# Добавление UUID в Xray config (inbound:443) и рестарт сервиса
+# -----------------------------------------------------------------------------
+def server_add_client(ssh_host, ssh_key, uuid, name):
+    script = f"""
+set -e
+ts=$(date -u +%F-%H%M%S)
+conf="{REMOTE_CONFIG}"
+bak="/usr/local/etc/xray/config.json.bak.$ts"
+
+sudo cp -a "$conf" "$bak"
+
+# Добавим клиента в inbound с портом {INBOUND_PORT} (если такого id ещё нет)
+sudo jq '
+  (.inbounds[] | select(.protocol=="vless" and .port=={INBOUND_PORT}) | .settings.clients) as $c |
+  if ($c | map(.id) | index("{uuid}") ) then
+    .
+  else
+    (.inbounds[] | select(.protocol=="vless" and .port=={INBOUND_PORT}) | .settings.clients) += [{{"id":"{uuid}","email":{json.dumps(name)}}}]
+  end
+' "$conf" | sudo tee "$conf.new" >/dev/null
+
+# Проверка синтаксиса
+sudo {REMOTE_XRAY} run -test -config "$conf.new" >/dev/null
+
+# Атомарная замена и рестарт
+sudo mv "$conf.new" "$conf"
+sudo systemctl restart xray
+"""
+    remote(ssh_host, ssh_key, script, capture=True)
+
+# -----------------------------------------------------------------------------
+# Публикация лендинга/подписки на EC2
+# -----------------------------------------------------------------------------
+def publish_landing(ssh_host, ssh_key, name, uuid):
+    cmd = f"{REMOTE_MAKE_LAND} {shlex.quote(name)} {shlex.quote(uuid)}"
+    out = remote(ssh_host, ssh_key, cmd, capture=True, sudo=True)
+    # Ожидаем строки вида:
+    # Landing:   https://.../get/XXXX
+    # Subscribe: https://.../subs/XXXX.txt
+    landing, subscribe = None, None
+    for line in out.splitlines():
+        line = line.strip()
+        if line.lower().startswith("landing:"):
+            landing = line.split(":",1)[1].strip()
+        elif line.lower().startswith("subscribe:"):
+            subscribe = line.split(":",1)[1].strip()
+    if not landing or not subscribe:
+        raise RuntimeError(f"Неожиданный вывод make_vless_landing.sh:\n{out}")
+    return landing, subscribe
+
+# -----------------------------------------------------------------------------
+# Запись в серверный журнал
+# -----------------------------------------------------------------------------
+def server_log_issue(ssh_host, ssh_key, name, uuid, landing, subscribe):
+    ts = now_utc_iso()
+    line = f"{ts}\tISSUE\t{name}\t{uuid}\t{landing}\t{subscribe}\n"
+    cmd = f"printf %s {shlex.quote(line)} >> {shlex.quote(REMOTE_LEDGER)}"
+    remote(ssh_host, ssh_key, cmd, capture=False, sudo=True)
+
+def server_log_revoke(ssh_host, ssh_key, name, uuid, note=""):
+    ts = now_utc_iso()
+    line = f"{ts}\tREVOKE\t{name}\t{uuid}\t{note}\t-\n"
+    cmd = f"printf %s {shlex.quote(line)} >> {shlex.quote(REMOTE_LEDGER)}"
+    remote(ssh_host, ssh_key, cmd, capture=False, sudo=True)
+
+# -----------------------------------------------------------------------------
+# Формирование «умной» ссылки (для вывода пользователю)
+# -----------------------------------------------------------------------------
+def smart_message(name, landing, subscribe, domain=SERVER_DOMAIN):
+    return (
+f"""
+Готово!
+Имя: {name}
+
+1) Универсальная ссылка (откроет V2Box/предложит установить):
+   {landing}
+
+2) Подписка (текст с vless:// для ручного импорта):
+   {subscribe}
+
+Требования клиента: V2Box (или совместимый), актуальная версия.
+Сервер: {domain} (TLS 443)
+"""
+    ).strip()
+
+# -----------------------------------------------------------------------------
+# Выдача ключей
+# -----------------------------------------------------------------------------
+def cmd_issue(args):
+    ssh_host = args.ssh_host
+    ssh_key  = args.ssh_key
+    name     = args.name.strip()
+
+    if not Path(ssh_key).exists():
+        die(f"SSH ключ не найден: {ssh_key}")
+
+    server_bootstrap(ssh_host, ssh_key)
+
+    uuids = []
+    if args.type == 1:
+        uuids = [ gen_uuid() ]
+    elif args.type == 2:
+        uuids = [ gen_uuid() ]
+    elif args.type == 3:
+        if args.count < 1:
+            die("Для type=3 укажи --count N (N>=1)")
+        uuids = [ gen_uuid() for _ in range(args.count) ]
+    else:
+        die("Неизвестный тип. 1=безлимит, 2=1 ключ, 3=N ключей")
+
+    # На каждый UUID: добавить в Xray config, опубликовать лендинг, залогировать
+    for i, uid in enumerate(uuids, 1):
+        info(f"[{i}/{len(uuids)}] Добавляю клиента {uid} в Xray…")
+        server_add_client(ssh_host, ssh_key, uid, name)
+
+        info("Публикую лендинг/подписку…")
+        landing, subscribe = publish_landing(ssh_host, ssh_key, name, uid)
+
+        server_log_issue(ssh_host, ssh_key, name, uid, landing, subscribe)
+
+        print(smart_message(name, landing, subscribe))
+        print("-"*80)
+
+# -----------------------------------------------------------------------------
+# Отзыв
+# -----------------------------------------------------------------------------
+def cmd_revoke(args):
+    ssh_host = args.ssh_host
+    ssh_key  = args.ssh_key
+    name     = args.name.strip()
+    uuid     = args.uuid.strip()
+    note     = args.note or ""
+
+    if not Path(ssh_key).exists():
+        die(f"SSH ключ не найден: {ssh_key}")
+
+    # Прямо сейчас делаем «мягкий» ревок: пишем в журнал.
+    # (Опционально можно удалить клиента из config.json и рестартануть xray —
+    #  добавлю по запросу.)
+    server_bootstrap(ssh_host, ssh_key)
+    server_log_revoke(ssh_host, ssh_key, name, uuid, note)
+    info(f"Ключ {uuid} помечен как REVOKE для {name}. (в {REMOTE_LEDGER})")
+
+# -----------------------------------------------------------------------------
+# Список активных (по журналу ISSUE-REVOKE)
+# -----------------------------------------------------------------------------
+def cmd_list(args):
+    ssh_host = args.ssh_host
+    ssh_key  = args.ssh_key
+
+    if not Path(ssh_key).exists():
+        die(f"SSH ключ не найден: {ssh_key}")
+
+    server_bootstrap(ssh_host, ssh_key)
+    # Простейшее вычисление «активных»: ISSUE без последующего REVOKE
+    awk = r"""awk -F'\t' '
+    NR>1 {
+      ts=$1; action=$2; name=$3; uid=$4;
+      if (action=="ISSUE") { S[uid]=name; }
+      else if (action=="REVOKE") { delete S[uid]; }
     }
-    # сохранить
-    db["users"].append(entry)
-    save_db(db)
+    END { for (u in S) printf "%s\t%s\n", S[u], u; }'"""
+    out = remote(ssh_host, ssh_key, f"cat {shlex.quote(REMOTE_LEDGER)} | {awk}", capture=True, sudo=True)
+    if not out.strip():
+        print("Активных ключей не найдено.")
+        return
+    print("Имя\tUUID")
+    print(out, end="")
 
-    # ссылки в файл
-    fname = f"{datetime.datetime.now().strftime('%Y-%m-%d')}_{sanitize_filename(name)}_links.txt"
-    out_path = os.path.join(BASE_DIR, fname)
-    with open(out_path, "w") as f:
-        f.write(f"# {name} (type {acc_type}) {now_iso()}\n")
-        for k in keys:
-            f.write(make_vless_link(k["uuid"], name, host, port, sni, alpn) + "\n")
+# -----------------------------------------------------------------------------
+# Выгрузка журналов за последние 3 суток на Mac
+# -----------------------------------------------------------------------------
+def cmd_pull_logs(args):
+    ssh_host = args.ssh_host
+    ssh_key  = args.ssh_key
+    local_dir = args.local_dir
 
-    append_activity(f"ISSUE name='{name}' type={acc_type} keys={len(keys)} file='{fname}'")
-    return [k["uuid"] for k in keys], out_path
+    ensure_local_dir(local_dir)
 
-def list_active():
-    db = load_db()
-    out = []
-    for e in db.get("users", []):
-        e = normalize_entry(e)
-        for k in e["keys"]:
-            if k.get("status", "active") == "active":
-                out.append((e["name"], k["uuid"], e.get("type"), e.get("policy", {})))
-    return out
+    if not Path(ssh_key).exists():
+        die(f"SSH ключ не найден: {ssh_key}")
 
-def revoke_by_uuid(u: str):
-    db = load_db()
-    found = False
-    for e in db.get("users", []):
-        e = normalize_entry(e)
-        for k in e["keys"]:
-            if k["uuid"] == u and k.get("status","active") == "active":
-                k["status"] = "revoked"
-                k["revoked_at"] = now_iso()
-                found = True
-                append_activity(f"REVOKE uuid={u} name='{e.get('name','')}'")
-                break
-    if found:
-        save_db(db)
-    return found
+    server_bootstrap(ssh_host, ssh_key)
 
-def revoke_by_name(name: str):
-    db = load_db()
-    cnt = 0
-    for e in db.get("users", []):
-        e = normalize_entry(e)
-        if e.get("name","").strip().lower() == name.strip().lower():
-            for k in e["keys"]:
-                if k.get("status","active") == "active":
-                    k["status"] = "revoked"
-                    k["revoked_at"] = now_iso()
-                    cnt += 1
-            e["status"] = "revoked"
-    if cnt > 0:
-        save_db(db)
-        append_activity(f"REVOKE_ALL name='{name}' keys={cnt}")
-    return cnt
+    # Точку отсчёта (последние 3 суток)
+    out = remote(ssh_host, ssh_key, "date -u +%s", capture=True)
+    now_epoch = int(out.strip())
+    from_epoch = now_epoch - 3*24*3600
 
-def export_active_uuid_list():
-    act = list_active()
-    uuids = [u for _, u, _, _ in act]
-    txt_path = os.path.join(BASE_DIR, "active_uuids.txt")
-    with open(txt_path, "w") as f:
-        for u in uuids:
-            f.write(u + "\n")
-    # заодно JSON-вставка для Xray
-    clients = [{"id": u} for u in uuids]
-    json_snippet = json.dumps(clients, ensure_ascii=False, indent=2)
-    append_activity(f"EXPORT_ACTIVE count={len(uuids)} file='active_uuids.txt'")
-    return txt_path, json_snippet, len(uuids)
+    # На сервере соберём tar.gz из ledger.tsv и последних строк access.log
+    # Xray пишет даты вида: 2025/08/16 05:47:53 — распарсим в epoch через awk
+    bundle_cmd = f"""
+set -e
+ts=$(date -u +%F-%H%M%S)
+tmp="/tmp/xray_export_$ts"
+mkdir -p "$tmp"
+cp -a {shlex.quote(REMOTE_LEDGER)} "$tmp/ledger.tsv" || true
 
-def help_text():
-    return textwrap.dedent("""
-    Типы ключей:
-      1 — Безлимитный ключ (одно UUID, не ограничиваем устройства на уровне учёта)
-      2 — Один ключ = одна активная сессия (ограничение будем реализовывать серверной политикой)
-      3 — N ключей, каждый предназначен для одного устройства (–n N)
+if [ -s {shlex.quote(REMOTE_ACCESSLOG)} ]; then
+  awk -v since={from_epoch} '
+    match($0, /([0-9]{{4}})\\/([0-9]{{2}})\\/([0-9]{{2}}) ([0-9]{{2}}):([0-9]{{2}}):([0-9]{{2}})/, m) {{
+      # m1..m6: Y M D h m s
+      cmd = sprintf("date -u -d \\"%s-%s-%s %s:%s:%s\\" +%%s", m[1],m[2],m[3],m[4],m[5],m[6]);
+      cmd | getline epoch; close(cmd);
+      if (epoch >= since) print $0;
+    }}
+  ' {shlex.quote(REMOTE_ACCESSLOG)} > "$tmp/access_last3d.log" || true
+fi
 
-    Замечание: revoke помечает ключи как 'revoked' в учётной базе и логах.
-    Чтобы это вступило в силу на сервере Xray, нужно обновить список клиентских UUID (см. 'Export active UUIDs').
-    """)
+tar -C "$tmp" -czf "/tmp/xray_logs_$ts.tgz" .
+echo "/tmp/xray_logs_$ts.tgz"
+"""
+    remote_path = remote(ssh_host, ssh_key, bundle_cmd, capture=True, sudo=True).strip()
+    if not remote_path:
+        die("Не удалось сформировать архив логов на сервере")
 
-def menu():
+    local_file = str(Path(local_dir) / Path(remote_path).name)
+    scp_from(ssh_host, ssh_key, remote_path, local_file)
+    info(f"Скачано: {local_file}")
+
+# -----------------------------------------------------------------------------
+# «Меню» (интерактивное) — запросит параметры и вызовет нужные команды
+# -----------------------------------------------------------------------------
+def cmd_menu(args):
+    print("=== VPN Users Menu ===")
+    ssh_host = input(f"SSH host [{EC2_HOST_DEFAULT}]: ").strip() or EC2_HOST_DEFAULT
+    ssh_key  = input(f"SSH key  [{SSH_KEY_DEFAULT}]: ").strip() or SSH_KEY_DEFAULT
+
     while True:
-        print("\n=== VPN Users Menu ===")
-        print("1) Issue keys")
-        print("2) List active keys")
-        print("3) Revoke key by UUID")
-        print("4) Revoke ALL keys by Name")
-        print("5) Export active UUIDs (file + JSON snippet)")
-        print("h) Help on types")
-        print("q) Quit")
-        choice = input("Select: ").strip().lower()
+        print("""
+1) Выдать ключ(и)
+2) Отозвать ключ
+3) Список активных ключей
+4) Забрать журналы за 3 дня (на этот Mac)
+5) Выход
+        """)
+        choice = input("Выбор: ").strip()
         if choice == "1":
-            name = input("User name: ").strip()
-            t = int(input("Type (1/2/3): ").strip())
-            n = 1
+            name = input("Имя пользователя (например: Liudmila Bogdanova): ").strip()
+            print("Тип: 1=безлимит, 2=1 ключ, 3=N ключей")
+            t = int(input("Тип: ").strip())
+            count = 1
             if t == 3:
-                n = int(input("How many keys (N): ").strip())
-            uuids, path = add_user(name, t, n, DOMAIN, PORT, SNI, ALPN)
-            print(f"Issued {len(uuids)} key(s). Links saved: {path}")
+                count = int(input("N: ").strip())
+            cmd_issue(argparse.Namespace(
+                ssh_host=ssh_host, ssh_key=ssh_key, name=name, type=t, count=count
+            ))
         elif choice == "2":
-            items = list_active()
-            if not items:
-                print("No active keys.")
-            else:
-                for i,(name,u,t,policy) in enumerate(items,1):
-                    print(f"{i:3d}. {name:30s}  UUID={u}  type={t} policy={policy}")
-                print(f"Total: {len(items)}")
+            name = input("Имя: ").strip()
+            uid  = input("UUID: ").strip()
+            note = input("Примечание (необяз.): ").strip()
+            cmd_revoke(argparse.Namespace(
+                ssh_host=ssh_host, ssh_key=ssh_key, name=name, uuid=uid, note=note
+            ))
         elif choice == "3":
-            u = input("UUID to revoke: ").strip()
-            ok = revoke_by_uuid(u)
-            print("Revoked." if ok else "Not found or already revoked.")
+            cmd_list(argparse.Namespace(ssh_host=ssh_host, ssh_key=ssh_key))
         elif choice == "4":
-            name = input("Exact name to revoke all: ").strip()
-            cnt = revoke_by_name(name)
-            print(f"Revoked keys: {cnt}")
+            local_dir = input(f"Локальная папка [{LOCAL_USERS_DIR}]: ").strip() or LOCAL_USERS_DIR
+            cmd_pull_logs(argparse.Namespace(
+                ssh_host=ssh_host, ssh_key=ssh_key, local_dir=local_dir
+            ))
         elif choice == "5":
-            p, snippet, n = export_active_uuid_list()
-            print(f"Written: {p} (count={n})")
-            print("\nJSON for xray `settings.clients`:\n", snippet)
-        elif choice == "h":
-            print(help_text())
-        elif choice == "q":
+            print("Пока!")
             return
         else:
-            print("Unknown option.")
+            print("Не понял выбор.")
 
-def cli():
-    ap = argparse.ArgumentParser(description="Управление VLESS-ключами (выдача/список/revoke/экспорт).",
-                                 epilog="Без параметров запускается интерактивное меню.")
-    sub = ap.add_subparsers(dest="cmd")
+# -----------------------------------------------------------------------------
+# Аргументы CLI
+# -----------------------------------------------------------------------------
+def build_parser():
+    p = argparse.ArgumentParser(
+        description="Управление пользователями VLESS/TLS (Xray @ EC2) с публикацией «умных ссылок» и журналированием."
+    )
+    p.add_argument("--ssh-host", default=EC2_HOST_DEFAULT, help="SSH хост, например ec2-user@IP")
+    p.add_argument("--ssh-key",  default=SSH_KEY_DEFAULT,  help="Путь к приватному ключу для SSH")
+    sub = p.add_subparsers(dest="cmd", required=True)
 
-    a_issue = sub.add_parser("issue", help="Выдать ключ(и)")
-    a_issue.add_argument("name")
-    a_issue.add_argument("type", type=int, choices=[1,2,3])
-    a_issue.add_argument("-n","--num", type=int, default=1, help="Количество ключей для типа 3")
-    a_issue.add_argument("--host", default=DOMAIN)
-    a_issue.add_argument("--port", type=int, default=PORT)
-    a_issue.add_argument("--sni",  default=SNI)
-    a_issue.add_argument("--alpn", default=ALPN)
+    # issue
+    sp = sub.add_parser("issue", help="Выдать ключ(и)")
+    sp.add_argument("--name", required=True, help="Имя пользователя (например: Liudmila Bogdanova)")
+    sp.add_argument("--type", type=int, required=True, choices=[1,2,3], help="1=безлимит, 2=1 ключ, 3=N ключей")
+    sp.add_argument("--count", type=int, default=1, help="Для type=3 — количество ключей")
+    sp.set_defaults(func=cmd_issue)
 
-    sub.add_parser("list", help="Показать активные ключи")
+    # revoke
+    sp = sub.add_parser("revoke", help="Отозвать ключ (мягкий ревок — запись в журнал)")
+    sp.add_argument("--name", required=True)
+    sp.add_argument("--uuid", required=True)
+    sp.add_argument("--note", default="", help="Причина/пометка")
+    sp.set_defaults(func=cmd_revoke)
 
-    a_rev_u = sub.add_parser("revoke-uuid", help="Отозвать по UUID")
-    a_rev_u.add_argument("uuid")
+    # list
+    sp = sub.add_parser("list", help="Показать активные ключи (по журналу)")
+    sp.set_defaults(func=cmd_list)
 
-    a_rev_n = sub.add_parser("revoke-name", help="Отозвать все ключи по имени")
-    a_rev_n.add_argument("name")
+    # pull-logs
+    sp = sub.add_parser("pull-logs", help="Скачать журнал выдач и access.log за 3 дня (на Mac)")
+    sp.add_argument("--local-dir", default=LOCAL_USERS_DIR, help="Куда сохранить архив")
+    sp.set_defaults(func=cmd_pull_logs)
 
-    sub.add_parser("export-active", help="Сохранить active UUIDs в файл и напечатать JSON")
+    # menu
+    sp = sub.add_parser("menu", help="Интерактивное меню")
+    sp.set_defaults(func=cmd_menu)
 
-    sub.add_parser("help-types", help="Справка по типам")
+    return p
 
-    args = ap.parse_args()
-    if not args.cmd:
-        menu(); return
-
-    if args.cmd == "issue":
-        uuids, path = add_user(args.name, args.type, (args.num if args.type==3 else 1),
-                               args.host, args.port, args.sni, args.alpn)
-        print("\n=== LINKS ===")
-        for u in uuids:
-            print(make_vless_link(u, args.name, args.host, args.port, args.sni, args.alpn))
-        print(f"\nSaved: {path}\nDB: {USERS_JSON}\nLog: {ACTIVITY_LOG}")
-    elif args.cmd == "list":
-        items = list_active()
-        if not items:
-            print("No active keys."); return
-        for i,(name,u,t,policy) in enumerate(items,1):
-            print(f"{i:3d}. {name:30s}  UUID={u}  type={t} policy={policy}")
-        print(f"Total: {len(items)}")
-    elif args.cmd == "revoke-uuid":
-        print("Revoked." if revoke_by_uuid(args.uuid) else "Not found or already revoked.")
-    elif args.cmd == "revoke-name":
-        cnt = revoke_by_name(args.name)
-        print(f"Revoked keys: {cnt}")
-    elif args.cmd == "export-active":
-        p, snippet, n = export_active_uuid_list()
-        print(f"Written: {p} (count={n})")
-        print("\nJSON for xray `settings.clients`:\n", snippet)
-    elif args.cmd == "help-types":
-        print(help_text())
+# -----------------------------------------------------------------------------
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    try:
+        args.func(args)
+    except subprocess.CalledProcessError as e:
+        out = e.stdout if hasattr(e, "stdout") and e.stdout else str(e)
+        die(f"Команда завершилась с ошибкой.\n{out}")
+    except Exception as e:
+        die(str(e))
 
 if __name__ == "__main__":
-    cli()
+    main()
