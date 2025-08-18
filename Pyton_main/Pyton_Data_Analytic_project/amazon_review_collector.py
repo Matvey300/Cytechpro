@@ -14,10 +14,16 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 
 
-# ----------------------------- Constants ------------------------------------
+# ============================== Constants ===================================
 
 # Marketplace base URLs
 MARKET_BASE = {
@@ -26,13 +32,17 @@ MARKET_BASE = {
 }
 
 # Gentle pacing to reduce bot suspicion (seconds)
-PAGE_DELAY_SEC = 1.0
+PAGE_DELAY_SEC = 1.2
 
-# Max pages to traverse for reviews per ASIN (safety cap)
+# Safety cap for review pages per ASIN
 MAX_REVIEW_PAGES = 50
 
+# Enable manual sign-in before scraping by setting AMZ_ENABLE_LOGIN=1 in env.
+import os
+ENABLE_LOGIN = os.getenv("AMZ_ENABLE_LOGIN", "0") in {"1", "true", "yes"}
 
-# ----------------------------- Chrome bootstrap -----------------------------
+
+# ============================== Chrome bootstrap ============================
 
 @contextmanager
 def _temp_profile_dir():
@@ -50,7 +60,7 @@ def _temp_profile_dir():
 def _chrome_options_for_profile(profile_dir: str) -> ChromeOptions:
     """Build ChromeOptions for an isolated profile."""
     opts = ChromeOptions()
-    # Headed is safer for Amazon; enable headless if you really need it:
+    # Headed is safer for Amazon; enable headless only if you must:
     # opts.add_argument("--headless=new")
     opts.add_argument(f"--user-data-dir={profile_dir}")
     opts.add_argument("--profile-directory=Default")
@@ -82,7 +92,7 @@ def _make_driver() -> webdriver.Chrome:
     return _CtxChrome(options=_chrome_options_for_profile(profile_dir))
 
 
-# ----------------------------- Parsing utils --------------------------------
+# ============================== Utilities ===================================
 
 STAR_RE = re.compile(r"([0-5](?:\.\d)?) out of 5")
 PRICE_RE = re.compile(r"([€£$])\s*([\d\.,]+)")
@@ -145,10 +155,7 @@ def _parse_price_text(txt: str) -> tuple[Optional[float], Optional[str]]:
 
 
 def _extract_bsr_from_text(txt: str) -> tuple[Optional[int], Optional[str]]:
-    """
-    Extract Best Sellers Rank and category path from mixed text.
-    Returns (rank:int or None, path:str or None).
-    """
+    """Extract Best Sellers Rank and category path from mixed text."""
     if not txt:
         return None, None
     m = re.search(r"#\s*([\d,]+)", txt)
@@ -165,11 +172,43 @@ def _product_url(base: str, asin: str) -> str:
     return f"{base}/dp/{asin}"
 
 
-def _reviews_url(base: str, asin: str, page: int) -> str:
-    return f"{base}/product-reviews/{asin}/?sortBy=recent&pageNumber={page}"
+def _reviews_root_url(base: str, asin: str) -> str:
+    # Start at the root reviews page (Amazon manages paging client-side)
+    return f"{base}/product-reviews/{asin}/?sortBy=recent"
 
 
-# ----------------------------- Product meta ---------------------------------
+# ============================== Login (optional) ============================
+
+def _optional_manual_login(driver: webdriver.Chrome, base_url: str) -> None:
+    """
+    Optional manual login flow with proper waits. Enabled via AMZ_ENABLE_LOGIN=1.
+    We never collect credentials; the user completes sign-in in the opened window.
+    """
+    if not ENABLE_LOGIN:
+        return
+
+    signin_url = f"{base_url}/ap/signin"
+    print("\n[INFO] Opening Amazon sign-in page. Complete login in the browser window.")
+    driver.get(signin_url)
+
+    # Wait for the email field or page stability (not fatal if layout is different).
+    try:
+        WebDriverWait(driver, 20).until(
+            EC.any_of(
+                EC.presence_of_element_located((By.ID, "ap_email")),
+                EC.presence_of_element_located((By.ID, "ap_password")),
+                EC.presence_of_element_located((By.ID, "nav-link-accountList")),
+            )
+        )
+    except TimeoutException:
+        pass
+
+    input("[INFO] Press Enter here AFTER you have successfully signed in (or to continue anyway)... ")
+    # Give Amazon a moment to settle (MFA redirects, etc.)
+    time.sleep(3.0)
+
+
+# ============================== Product meta =================================
 
 def _fetch_product_meta(driver: webdriver.Chrome, base_url: str, asin: str) -> dict:
     """
@@ -182,7 +221,17 @@ def _fetch_product_meta(driver: webdriver.Chrome, base_url: str, asin: str) -> d
     meta = {"asin": asin, "buybox_price": None, "currency": None, "bsr_rank": None, "bsr_path": None}
     try:
         driver.get(url)
-        time.sleep(1.0)
+        # Wait for either price block or page body presence
+        try:
+            WebDriverWait(driver, 15).until(
+                EC.any_of(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#corePriceDisplay_desktop_feature_div")),
+                    EC.presence_of_element_located((By.TAG_NAME, "body")),
+                )
+            )
+        except TimeoutException:
+            pass
+        time.sleep(0.8)
 
         # --- Price: try core price block first ---
         price_txt = ""
@@ -244,7 +293,7 @@ def _fetch_product_meta(driver: webdriver.Chrome, base_url: str, asin: str) -> d
     return meta
 
 
-# ----------------------------- Reviews parsing ------------------------------
+# ============================== Reviews parsing ==============================
 
 def _parse_reviews_from_dom(driver: webdriver.Chrome, asin: str) -> List[Dict[str, Any]]:
     """Parse currently loaded reviews page into list of dicts."""
@@ -306,15 +355,56 @@ def _parse_reviews_from_dom(driver: webdriver.Chrome, asin: str) -> List[Dict[st
     return rows
 
 
-# ----------------------------- Public API -----------------------------------
+def _click_next_reviews_page(driver: webdriver.Chrome) -> bool:
+    """
+    Click the 'Next' pagination link on the reviews page.
+    Returns True if clicked (i.e., next page exists), False if at the last page.
+    Amazon uses 'li.a-last' item with anchor when a next page is available.
+    """
+    try:
+        # Wait for pagination container to be present or timeout
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "ul.a-pagination"))
+        )
+    except TimeoutException:
+        # No pagination visible → treat as single page
+        return False
+
+    # Detect 'Next' li
+    try:
+        last_li = driver.find_element(By.CSS_SELECTOR, "ul.a-pagination li.a-last")
+    except NoSuchElementException:
+        return False
+
+    # If it's disabled or has no link, there is no next page
+    cls = last_li.get_attribute("class") or ""
+    if "a-disabled" in cls.lower():
+        return False
+
+    # Otherwise, click the anchor inside
+    try:
+        link = last_li.find_element(By.TAG_NAME, "a")
+        driver.execute_script("arguments[0].click();", link)
+        # Wait for some sign of page change: presence of first review or pagination refresh
+        time.sleep(PAGE_DELAY_SEC)
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="review"]'))
+        )
+        return True
+    except Exception:
+        return False
+
+
+# ============================== Public API ===================================
 
 def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) -> pd.DataFrame:
     """
-    Selenium-only reviews collector.
+    Selenium-only collector with optional manual login and real 'Next' clicks.
     Steps per ASIN:
-      1) Fetch product meta (Buy Box price, currency, BSR rank/path) from /dp/<ASIN>.
-      2) Paginate recent reviews and parse all review cards.
-    Returns a DataFrame with at least:
+      1) (optional) Manual sign-in if AMZ_ENABLE_LOGIN=1.
+      2) Read product meta (price, BSR) from /dp/<ASIN>.
+      3) Open /product-reviews/<ASIN> and iterate pages by clicking 'Next'.
+    Returns DataFrame with columns:
       asin, review_id, review_date, rating, review_text, verified, helpful_votes,
       buybox_price, currency, bsr_rank, bsr_path
     """
@@ -322,6 +412,9 @@ def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) ->
     driver = _make_driver()
 
     try:
+        # 0) Optional sign-in (with proper waits)
+        _optional_manual_login(driver, base)
+
         all_rows: List[Dict[str, Any]] = []
 
         for raw_asin in asins:
@@ -332,18 +425,28 @@ def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) ->
             # 1) Product meta once per ASIN
             meta = _fetch_product_meta(driver, base, asin)
 
-            # 2) Reviews pagination
+            # 2) Reviews pagination with real "Next" clicks
             collected = 0
             seen_ids: set[str] = set()
-            page = 1
 
-            while collected < max_reviews and page <= MAX_REVIEW_PAGES:
-                url = _reviews_url(base, asin, page)
-                try:
-                    driver.get(url)
-                except WebDriverException:
-                    break
+            # Open root reviews page once
+            root = _reviews_root_url(base, asin)
+            try:
+                driver.get(root)
+            except WebDriverException:
+                continue
 
+            # Ensure first batch of reviews loaded
+            try:
+                WebDriverWait(driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="review"]'))
+                )
+            except TimeoutException:
+                # No reviews block → skip
+                continue
+
+            page_idx = 1
+            while collected < max_reviews and page_idx <= MAX_REVIEW_PAGES:
                 time.sleep(PAGE_DELAY_SEC)
 
                 rows = _parse_reviews_from_dom(driver, asin)
@@ -351,7 +454,7 @@ def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) ->
                     break
 
                 for r in rows:
-                    # attach product meta to each review row (useful for weekly aggregations)
+                    # attach product meta to each review row
                     r.setdefault("buybox_price", meta.get("buybox_price"))
                     r.setdefault("currency", meta.get("currency"))
                     r.setdefault("bsr_rank", meta.get("bsr_rank"))
@@ -369,8 +472,14 @@ def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) ->
                     if collected >= max_reviews:
                         break
 
-                page += 1
-                time.sleep(PAGE_DELAY_SEC)
+                if collected >= max_reviews:
+                    break
+
+                # Try to go to the next page by clicking 'Next'
+                page_idx += 1
+                moved = _click_next_reviews_page(driver)
+                if not moved:
+                    break  # last page reached
 
         # ---- Normalize to DataFrame and enforce schema ----
         df = pd.DataFrame(all_rows)
