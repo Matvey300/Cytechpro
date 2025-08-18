@@ -1,136 +1,36 @@
+# amazon_review_collector.py
 # All comments in English.
 
 from __future__ import annotations
 
-import inspect
-import traceback
-from datetime import datetime
-from typing import Any, Callable, Dict, Iterable, List
+import re
+import time
+from typing import Iterable, List, Dict, Any, Optional
 
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
-# We expect the user's original scraper to be renamed to:
-#   amazon_review_collector_legacy.py  (same folder)
-# This wrapper adapts any of its functions to a unified interface:
-#   collect_reviews(asins, max_reviews, marketplace) -> DataFrame
-try:
-    import amazon_review_collector_legacy as legacy  # your original module
-except Exception as e:
-    legacy = None
-    _legacy_import_error = e
+# ----------------------------- Config & Utils -----------------------------
 
+MARKET_BASE = {
+    # Marketplace → product-reviews base URL
+    "US": "https://www.amazon.com/product-reviews",
+    "UK": "https://www.amazon.co.uk/product-reviews",
+}
 
-# ---------- Helpers to call legacy per-ASIN function ----------
-
-_CANDIDATE_FN_NAMES = [
-    # most specific names first
-    "collect_reviews_for_asin",
-    "get_reviews_for_asin",
-    "scrape_reviews_for_asin",
-    # generic names
-    "collect_reviews",
-    "get_reviews",
-    "scrape_reviews",
-]
-
-def _pick_legacy_function(mod) -> Callable[..., Any] | None:
-    """Pick a single-ASIN function from the legacy module by best guess."""
-    if mod is None:
-        return None
-    for name in _CANDIDATE_FN_NAMES:
-        fn = getattr(mod, name, None)
-        if callable(fn):
-            return fn
-    return None
-
-
-def _call_legacy_for_asin(
-    fn: Callable[..., Any],
-    asin: str,
-    max_reviews: int,
-    marketplace: str,
-) -> List[Dict[str, Any]]:
-    """
-    Call the legacy function for a single ASIN with a robust signature adapter.
-    Accepts common legacy signatures, e.g.:
-      fn(asin), fn(asin, max_reviews), fn(asin, max_reviews, marketplace), ...
-    Returns: list of dict-like review rows (flexible).
-    """
-    sig = inspect.signature(fn)
-    params = list(sig.parameters.keys())
-
-    # Build args dynamically
-    kwargs: Dict[str, Any] = {}
-    args: List[Any] = []
-
-    # Common patterns:
-    # 1) (asin)
-    # 2) (asin, max_reviews)
-    # 3) (asin, marketplace)
-    # 4) (asin, max_reviews, marketplace)
-    # 5) keyword-only variants
-
-    if len(params) == 1:
-        args = [asin]
-    elif len(params) == 2:
-        # Decide by parameter names
-        p1, p2 = params
-        if "max" in p2 or "count" in p2 or "limit" in p2:
-            args = [asin, max_reviews]
-        else:
-            args = [asin, marketplace]
-    elif len(params) >= 3:
-        args = [asin, max_reviews, marketplace][:len(params)]
-    else:
-        # Fallback: try the simplest
-        args = [asin]
-
-    # Final safety: if names expose obvious keywords, pass as kwargs too
-    ba = {}
-    if "asin" in params and len(params) == 1:
-        kwargs = {"asin": asin}
-        args = []
-    if "max_reviews" in params:
-        kwargs["max_reviews"] = max_reviews
-    if "marketplace" in params:
-        kwargs["marketplace"] = marketplace
-
-    try:
-        res = fn(*args, **kwargs)
-    except TypeError:
-        # Retry with only the ASIN when signature mismatch happens
-        res = fn(asin)
-
-    # Normalize to list[dict]
-    if res is None:
-        return []
-    if isinstance(res, pd.DataFrame):
-        return res.to_dict(orient="records")
-    if isinstance(res, dict):
-        return [res]
-    if isinstance(res, (list, tuple)):
-        # try to ensure dict-like rows
-        out: List[Dict[str, Any]] = []
-        for r in res:
-            if isinstance(r, dict):
-                out.append(r)
-            elif isinstance(r, (list, tuple)) and len(r) >= 4:
-                # naive tuple mapping: asin, date, rating, text
-                out.append({
-                    "asin": asin,
-                    "review_date": r[0],
-                    "rating": r[1],
-                    "review_text": r[2] if len(r) > 2 else None,
-                    "review_id": r[3] if len(r) > 3 else None,
-                })
-            else:
-                out.append({"asin": asin, "raw": str(r)})
-        return out
-    # anything else -> wrap
-    return [{"asin": asin, "raw": str(res)}]
-
-
-# ---------- Normalization ----------
+HEADERS = {
+    # Very vanilla desktop UA; adjust if needed
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
 
 REQUIRED_COLS = [
     "asin",
@@ -142,115 +42,219 @@ REQUIRED_COLS = [
     "helpful_votes",
 ]
 
-def _coerce_to_df(rows: List[Dict[str, Any]]) -> pd.DataFrame:
-    """Coerce a list of dicts to DataFrame with required columns."""
-    df = pd.DataFrame(rows)
+STAR_RE = re.compile(r"([0-5](?:\.\d)?) out of 5")
+HELPFUL_RE = re.compile(r"([\d,]+|One)\s+person|people")  # matches "One person" or "2,345 people"
+DATE_CLEAN_RE = re.compile(r"on\s+", re.IGNORECASE)       # strip "on " before date
 
-    # Ensure presence of required columns
-    for col in REQUIRED_COLS:
-        if col not in df.columns:
-            df[col] = None
+def _market_base(marketplace: str) -> str:
+    """Resolve marketplace into base URL for reviews."""
+    return MARKET_BASE.get((marketplace or "US").upper(), MARKET_BASE["US"])
 
-    # Coerce types
-    # date
-    if "review_date" in df.columns:
-        df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce").dt.date.astype("string")
-    # rating
-    if "rating" in df.columns:
-        df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
-    # helpful votes
-    if "helpful_votes" in df.columns:
-        df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
-    # verified → bool
-    if "verified" in df.columns:
-        df["verified"] = df["verified"].astype("boolean")
+def _sleep_backoff(attempt: int, base: float = 1.0) -> None:
+    """Linear backoff with jitter."""
+    time.sleep(base * attempt + 0.25)
 
-    # Trim whitespace in text-ish fields
-    for c in ["review_text", "review_id"]:
-        if c in df.columns:
-            df[c] = df[c].astype("string").str.strip()
+def _parse_star(text: str) -> Optional[float]:
+    """Extract 'x out of 5' → float(x)."""
+    if not text:
+        return None
+    m = STAR_RE.search(text)
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except Exception:
+        return None
 
-    # Keep only relevant + any extra original columns (if needed later)
-    base = df[REQUIRED_COLS].copy()
-    # Drop rows without ASIN
-    base = base[base["asin"].astype("string").str.len() > 0]
-    return base.reset_index(drop=True)
+def _parse_helpful(text: str) -> int:
+    """Parse 'One person found this helpful' or '2,345 people found this helpful' → int."""
+    if not text:
+        return 0
+    # Normalize thousand separators
+    text = text.replace("\xa0", " ").strip()
+    if "One person" in text:
+        return 1
+    nums = re.findall(r"[\d,]+", text)
+    if nums:
+        try:
+            return int(nums[0].replace(",", ""))
+        except Exception:
+            return 0
+    return 0
 
+def _clean_review_date(text: str) -> str:
+    """
+    Amazon renders like:
+      'Reviewed in the United States on July 1, 2025'
+      'Reviewed in the United Kingdom on 12 May 2024'
+    We keep only the date part for robustness; later pipeline casts with pandas.
+    """
+    if not text:
+        return ""
+    # Keep the tail after 'on '
+    parts = DATE_CLEAN_RE.split(text, maxsplit=1)
+    date_part = parts[-1].strip() if parts else text.strip()
+    # Sometimes there's locale prefix 'Reviewed on 12 May 2024' → we still return the tail
+    return date_part
 
-def _dedupe(df: pd.DataFrame) -> pd.DataFrame:
-    """Dedupe strategy: prefer (asin, review_id); fallback (asin, review_date, rating, hash(text))."""
-    def _key(row) -> str:
-        asin = str(row.get("asin", "NA"))
-        rid = row.get("review_id")
-        if pd.notna(rid) and str(rid).strip():
-            return f"{asin}|{rid}"
-        date = str(row.get("review_date", "NA"))
-        rating = str(row.get("rating", "NA"))
-        text = str(row.get("review_text", ""))
-        return f"{asin}|{date}|{rating}|{hash(text)}"
+# ----------------------------- Core Scraper ------------------------------
 
-    keys = df.apply(_key, axis=1)
-    return df.loc[~keys.duplicated(keep="first")].reset_index(drop=True)
+def _reviews_page_url(market_base: str, asin: str, page: int) -> str:
+    # 'sortBy=recent' to get newest first; tweak if you need "top" order
+    return f"{market_base}/{asin}/?sortBy=recent&pageNumber={page}"
 
+def _fetch_html(session: requests.Session, url: str, attempt: int = 1, timeout: int = 25) -> Optional[str]:
+    """GET with basic retry/backoff. Returns HTML or None on failure/block."""
+    try:
+        r = session.get(url, timeout=timeout)
+        # Basic anti-bot: if we get a Captcha/503, bail out early
+        if r.status_code != 200:
+            return None
+        # If Amazon serves a robot/CAPTCHA page, it often lacks expected hooks
+        if 'captchacharacters' in r.text.lower() or 'sorry' in r.text[:200].lower():
+            return None
+        return r.text
+    except requests.RequestException:
+        return None
 
-# ---------- Public entry point ----------
+def _parse_reviews_from_html(html: str, asin: str) -> List[Dict[str, Any]]:
+    """Parse a single reviews page HTML into a list of dict rows."""
+    out: List[Dict[str, Any]] = []
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Each review is in a container with data-hook='review'
+    for div in soup.select('div[data-hook="review"]'):
+        # Review ID
+        review_id = div.get("id") or div.get("data-review-id") or None
+
+        # Rating (i[data-hook="review-star-rating"] > span)
+        rating_text = ""
+        star = div.select_one('i[data-hook="review-star-rating"] span')
+        if star and star.text:
+            rating_text = star.text.strip()
+        else:
+            # Some locales use 'cmps-review-star-rating'
+            star = div.select_one('i[data-hook="cmps-review-star-rating"] span')
+            rating_text = star.text.strip() if star else ""
+
+        rating = _parse_star(rating_text)
+
+        # Date
+        date_el = div.select_one('span[data-hook="review-date"]')
+        review_date = _clean_review_date(date_el.text.strip()) if date_el else ""
+
+        # Text
+        body_el = div.select_one('span[data-hook="review-body"]')
+        review_text = body_el.get_text(separator=" ", strip=True) if body_el else ""
+
+        # Verified badge
+        ver_el = div.select_one('span[data-hook="avp-badge"]')
+        verified = bool(ver_el and "Verified Purchase" in ver_el.text)
+
+        # Helpful votes
+        hv_el = div.select_one('span[data-hook="helpful-vote-statement"]')
+        helpful_votes = _parse_helpful(hv_el.text.strip()) if hv_el else 0
+
+        out.append({
+            "asin": asin,
+            "review_id": review_id,
+            "review_date": review_date,   # string; pipeline will cast with pandas later
+            "rating": rating,
+            "review_text": review_text,
+            "verified": verified,
+            "helpful_votes": helpful_votes,
+        })
+    return out
+
+def _dedupe_reviews(df: pd.DataFrame) -> pd.DataFrame:
+    """Deduplicate by (asin, review_id) then fallback to (asin, date, rating, hash(text))."""
+    df = df.copy()
+    # Primary key
+    if "review_id" in df.columns:
+        key1 = df["asin"].astype(str) + "|" + df["review_id"].astype(str)
+        df = df.loc[~key1.duplicated(keep="first")].reset_index(drop=True)
+    # Fallback key
+    key2 = (
+        df["asin"].astype(str) + "|" +
+        df["review_date"].astype(str) + "|" +
+        df["rating"].astype(str) + "|" +
+        df["review_text"].astype(str).map(lambda t: str(hash(t)))
+    )
+    df = df.loc[~key2.duplicated(keep="first")].reset_index(drop=True)
+    return df
+
+# ----------------------------- Public API --------------------------------
 
 def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) -> pd.DataFrame:
     """
-    Unified public function consumed by the app.
-    - asins: list of ASIN strings
-    - max_reviews: up to N reviews per ASIN
-    - marketplace: "US" / "UK" (passed to legacy if supported)
-    Returns a normalized DataFrame with at least columns REQUIRED_COLS.
+    Fetch up to `max_reviews` most recent reviews for each ASIN and return a normalized DataFrame.
+    Columns guaranteed: asin, review_id, review_date, rating, review_text, verified, helpful_votes
     """
-    if legacy is None:
-        raise ImportError(
-            "Failed to import amazon_review_collector_legacy. "
-            f"Original error: {getattr(globals(),'_legacy_import_error', 'unknown')}\n"
-            "Please rename your original file to 'amazon_review_collector_legacy.py' "
-            "and keep this wrapper as 'amazon_review_collector.py'."
-        )
-
-    per_asin_fn = _pick_legacy_function(legacy)
-    if per_asin_fn is None:
-        raise RuntimeError(
-            "Could not find a per-ASIN function in amazon_review_collector_legacy.py.\n"
-            f"Tried names: {', '.join(_CANDIDATE_FN_NAMES)}.\n"
-            "Please expose one of these functions (taking at least 'asin' argument)."
-        )
+    base = _market_base(marketplace)
+    session = requests.Session()
+    session.headers.update(HEADERS)
 
     all_rows: List[Dict[str, Any]] = []
-    seen = set()
 
     for asin in map(str, asins):
-        try:
-            rows = _call_legacy_for_asin(per_asin_fn, asin, max_reviews, marketplace)
-        except Exception:
-            # Continue collecting other ASINs on failure
-            traceback.print_exc()
-            rows = []
+        asin = asin.strip()
+        if not asin:
+            continue
 
-        # Cap to max_reviews per ASIN if legacy returned more
-        if max_reviews and isinstance(max_reviews, int) and max_reviews > 0:
-            # Keep only first N rows for this ASIN
-            cnt = 0
-            pruned = []
-            for r in rows:
-                if str(r.get("asin", asin)) != asin:
-                    r["asin"] = asin
-                pruned.append(r)
-                cnt += 1
-                if cnt >= max_reviews:
+        collected = 0
+        page = 1
+        seen_ids: set[str] = set()
+
+        # Up to ~50 pages to be safe; we stop earlier once max_reviews is reached.
+        while collected < max_reviews and page <= 50:
+            url = _reviews_page_url(base, asin, page)
+            html = _fetch_html(session, url, attempt=page)
+
+            if not html:
+                # If blocked or empty — small backoff and one more try
+                _sleep_backoff(page, base=0.8)
+                html = _fetch_html(session, url, attempt=page)
+                if not html:
+                    # Give up on this ASIN page
                     break
-            rows = pruned
 
-        for r in rows:
-            # ASIN safety
-            if str(r.get("asin", "")).strip() == "":
-                r["asin"] = asin
-            all_rows.append(r)
+            rows = _parse_reviews_from_html(html, asin)
 
-    # Normalize + dedupe
-    df = _coerce_to_df(all_rows)
-    df = _dedupe(df)
-    return df
+            if not rows:
+                # No reviews parsed on this page → likely out of pages
+                break
+
+            # Append, respecting max_reviews and avoiding duplicates by review_id within this run
+            for r in rows:
+                rid = str(r.get("review_id") or "")
+                if rid and rid in seen_ids:
+                    continue
+                all_rows.append(r)
+                if rid:
+                    seen_ids.add(rid)
+                collected += 1
+                if collected >= max_reviews:
+                    break
+
+            page += 1
+            # Gentle delay between pages to reduce bot-detection chance
+            _sleep_backoff(1, base=0.6)
+
+    # Normalize to DataFrame & enforce schema
+    df = pd.DataFrame(all_rows)
+
+    # Ensure required columns exist
+    for c in REQUIRED_COLS:
+        if c not in df.columns:
+            df[c] = None
+
+    # Type coercions
+    df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
+    # Keep date as string; your weekly builder will convert with pandas.to_datetime
+    df["verified"] = df["verified"].astype("boolean")
+    df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
+
+    # Final dedupe
+    df = _dedupe_reviews(df)
+
+    return df.reset_index(drop=True)
