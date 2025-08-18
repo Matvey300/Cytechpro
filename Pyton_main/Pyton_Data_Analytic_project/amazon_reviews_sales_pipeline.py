@@ -120,9 +120,11 @@ def week_agg_reviews(df_reviews: pd.DataFrame) -> pd.DataFrame:
     # Cumulative stats per ASIN
     weekly = weekly.sort_values(['asin', 'week'])
     weekly['cum_reviews'] = weekly.groupby('asin')['reviews_count_week'].cumsum()
-    weekly['cum_sum_rating'] = weekly.groupby('asin') \
-        .apply(lambda g: (g['avg_rating_week'] * g['reviews_count_week']).cumsum()) \
-        .reset_index(level=0, drop=True)
+    weekly['cum_sum_rating'] = (
+        (weekly['avg_rating_week'] * weekly['reviews_count_week'])
+        .groupby(weekly['asin'])
+        .cumsum()
+    )
     weekly['cum_avg_rating'] = weekly['cum_sum_rating'] / weekly['cum_reviews'].replace(0, np.nan)
     weekly.drop(columns=['cum_sum_rating'], inplace=True)
     return weekly
