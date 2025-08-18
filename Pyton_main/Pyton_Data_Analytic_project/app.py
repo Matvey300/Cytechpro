@@ -51,19 +51,39 @@ def main_menu():
             if not session.get("categories") or not session.get("marketplace"):
                 print("Please run steps (1) and (2) first.")
                 continue
-            out_dir_ts = new_out_dir(Path("Out"))
-            session["out_dir_ts"] = out_dir_ts
+
+            # Build a human-readable collection_id: "<cat-last-node>_<REGION>_<YYYYMMDD>"
+            # If multiple categories chosen, use first + "+N"
+            cats = session["categories"]
+            def _last_node(path: str) -> str:
+                parts = [p.strip() for p in path.split(">") if p.strip()]
+                return parts[-1] if parts else path
+            base = _last_node(cats[0])
+            suffix = f"+{len(cats)-1}" if len(cats) > 1 else ""
+            region = session["marketplace"].upper()
+            collection_id = f"{slugify(base)}{suffix}_{region}_{today_ymd()}"
+
+            # Create Out/<collection_id>
+            out_dir = new_out_dir_for_collection(Path("Out"), collection_id)
+            session["out_dir_ts"] = out_dir
+            session["collection_id"] = collection_id
 
             all_df = None
-            for cat in session["categories"]:
+            for cat in cats:
                 df = collect_asin_data(category_path=cat, region=session["marketplace"], top_k=100)
                 all_df = df if all_df is None else all_df._append(df, ignore_index=True)
             if all_df is not None and "asin" in all_df.columns:
                 all_df = all_df.drop_duplicates(subset=["asin"]).reset_index(drop=True)
 
-            coll_path = save_asin_collection(all_df, registry_path=Path("storage")/"registry.json", out_dir_ts=out_dir_ts)
+            coll_path = save_asin_collection(
+                all_df,
+                registry_path=Path("storage")/"registry.json",
+                out_dir_ts=out_dir,
+                collection_id=collection_id
+            )
             session["asin_df"] = all_df
             print(f"ASIN collection saved: {coll_path}")
+            print(f"Collection ID: {collection_id} (folder: {out_dir})")
 
         elif choice == "4":
             use_saved = input("> Use previously saved collection? [y/N]: ").strip().lower() == "y"
@@ -72,17 +92,26 @@ def main_menu():
                 if not reg:
                     print("No saved collections found.")
                     continue
-                for item in reg:
-                    print(f"[{item['id']}] {item['timestamp']} | {item['region']} | {len(item.get('categories', []))} cats | asin_count={item['asin_count']}")
-                sel = input("> Enter collection id to load: ").strip()
+
+                print("\nSaved collections:")
+                for i, item in enumerate(reg, 1):
+                    cats = item.get('categories', [])
+                    cats_display = ", ".join(cats[:2]) + ("..." if len(cats) > 2 else "")
+                    print(f"{i}) ID={item.get('id')} | {item.get('timestamp')} | {item.get('region')} | "
+                        f"{len(cats)} cats [{cats_display}] | ASINs={item.get('asin_count')}")
+
+                sel = input("> Enter number OR collection ID to load: ").strip()
                 df_asin, out_dir_ts = load_asin_collection_by_id(Path("storage") / "registry.json", sel)
                 session["out_dir_ts"] = out_dir_ts
+                session["asin_df"] = df_asin
+                # Try to remember collection_id for later steps
+                session["collection_id"] = str(sel) if not sel.isdigit() else reg[int(sel)-1].get("id")
             else:
                 if "asin_df" not in session or session["asin_df"] is None:
                     print("No ASINs in session. Please collect ASINs first.")
                     continue
                 df_asin = session["asin_df"]
-                out_dir_ts = session.get("out_dir_ts") or new_out_dir(Path("Out"))
+                out_dir_ts = session.get("out_dir_ts") or new_out_dir_for_collection(Path("Out"), session.get("collection_id", today_ymd()))
                 session["out_dir_ts"] = out_dir_ts
 
             reviews_df, per_cat_counts = collect_reviews_for_asins(
@@ -96,7 +125,6 @@ def main_menu():
                 print(f" - {cat}: {n} reviews")
                 total += n
             print(f"TOTAL: {total} reviews. Saved to: {dest}")
-
         elif choice == "5":
             out_dir_ts = session.get("out_dir_ts") or Path(input("> Enter Out/<timestamp> folder: ").strip())
             weekly_reviews = build_weekly_master_from_reviews_only(out_dir_ts)
@@ -118,9 +146,22 @@ def main_menu():
             if not reg:
                 print("No saved collections found.")
             else:
-                for item in reg:
-                    print(f"[{item['id']}] {item['timestamp']} | {item['region']} | {len(item.get('categories', []))} cats | asin_count={item['asin_count']}")
-
+                print("\nSaved collections:")
+                for i, item in enumerate(reg, 1):
+                    cats = item.get('categories', [])
+                    cats_display = ", ".join(cats[:2]) + ("..." if len(cats) > 2 else "")
+                    print(f"{i}) ID={item.get('id')} | {item.get('timestamp')} | {item.get('region')} | "
+                        f"{len(cats)} cats [{cats_display}] | ASINs={item.get('asin_count')}")
+                sel = input("> Enter number OR collection ID to load into session (or press Enter to cancel): ").strip()
+                if sel:
+                    try:
+                        df_asin, out_dir_ts = load_asin_collection_by_id(Path("storage") / "registry.json", sel)
+                        session["out_dir_ts"] = out_dir_ts
+                        session["asin_df"] = df_asin
+                        session["collection_id"] = str(sel) if not sel.isdigit() else reg[int(sel)-1].get("id")
+                        print(f"[INFO] Loaded into session: {session['collection_id']} ({out_dir_ts})")
+                    except Exception as e:
+                        print(f"Failed to load: {e}")
         elif choice == "7":
             if "asin_df" not in session or session["asin_df"] is None:
                 print("No ASINs in session. Please collect or load a collection first.")
