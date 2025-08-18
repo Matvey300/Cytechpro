@@ -6,12 +6,47 @@ from pathlib import Path
 from storage.io_utils import save_df_csv, new_out_dir_for_collection, today_ymd
 
 
+# asin_pipeline.py
+
+
 def collect_asin_data(category_path: str, region: str, top_k: int = 100) -> pd.DataFrame:
     """
-    Collect ASINs for a given category and region using existing legacy script.
+    Call user's ASIN collector from ASIN_data_import.py.
+    Supports both function names:
+      - Collect_ASIN_DATA(category, region)
+      - collect_asins(category, region, top_k)
+    Returns a normalized DataFrame with columns ['asin', 'region', 'category_path'].
     """
     mod = importlib.import_module("ASIN_data_import")
-    df = mod.collect_asins(category_path, region, top_k)
+
+    df = None
+    # 1) Preferred: Collect_ASIN_DATA(category, region) -> DataFrame
+    if hasattr(mod, "Collect_ASIN_DATA"):
+        df = mod.Collect_ASIN_DATA(category_path, region)
+    # 2) Alt: collect_asins(category, region, top_k) -> DataFrame
+    elif hasattr(mod, "collect_asins"):
+        try:
+            df = mod.collect_asins(category_path, region, top_k)
+        except TypeError:
+            # if legacy signature is (category, region)
+            df = mod.collect_asins(category_path, region)
+
+    if df is None or not isinstance(df, pd.DataFrame):
+        raise RuntimeError("ASIN_data_import must provide Collect_ASIN_DATA(category, region) "
+                           "or collect_asins(category, region[, top_k]) returning a pandas DataFrame.")
+
+    # Normalize columns
+    if "asin" not in df.columns:
+        for c in df.columns:
+            if c.lower() == "asin":
+                df = df.rename(columns={c: "asin"})
+                break
+    if "asin" not in df.columns:
+        raise RuntimeError("Returned DataFrame has no 'asin' column.")
+
+    df["region"] = region
+    df["category_path"] = category_path
+    df = df.drop_duplicates(subset=["asin"]).head(top_k).reset_index(drop=True)
     return df
 
 
