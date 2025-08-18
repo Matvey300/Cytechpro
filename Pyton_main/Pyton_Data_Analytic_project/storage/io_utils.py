@@ -69,3 +69,47 @@ def list_saved_collections(root: Path) -> list[Path]:
     if not root.exists():
         return []
     return sorted([p for p in root.iterdir() if p.is_dir()])
+
+
+def append_csv_with_dedupe(path: Path, df_new: pd.DataFrame, key_fn) -> None:
+    """
+    Append rows to CSV and drop duplicates using a custom row-level key function.
+    - path: target CSV path
+    - df_new: new rows as DataFrame
+    - key_fn: callable(row) -> str, used to compute unique keys
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        try:
+            df_old = pd.read_csv(path)
+        except Exception:
+            df_old = pd.DataFrame()
+        combined = pd.concat([df_old, df_new], ignore_index=True)
+    else:
+        combined = df_new.copy()
+
+    # Build unique keys for all rows
+    keys = combined.apply(key_fn, axis=1)
+    combined = combined.loc[~keys.duplicated(keep="first")].reset_index(drop=True)
+    combined.to_csv(path, index=False, encoding="utf-8-sig")
+
+
+def append_csv_with_upsert_keys(path: Path, df_new: pd.DataFrame, keys: list[str]) -> None:
+    """
+    Upsert rows into CSV by composite keys (e.g., ['asin','date']).
+    - If a row with the same key exists, the NEW row overwrites it.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        try:
+            df_old = pd.read_csv(path)
+        except Exception:
+            df_old = pd.DataFrame()
+        combined = pd.concat([df_old, df_new], ignore_index=True)
+    else:
+        combined = df_new.copy()
+
+    # Build composite key column
+    combined["__key__"] = combined[keys].astype(str).agg("|".join, axis=1)
+    combined = combined.drop_duplicates(subset=["__key__"], keep="last").drop(columns="__key__")
+    combined.to_csv(path, index=False, encoding="utf-8-sig")
