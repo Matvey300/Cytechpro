@@ -1,4 +1,3 @@
-# All comments in English.
 
 import sys
 from pathlib import Path
