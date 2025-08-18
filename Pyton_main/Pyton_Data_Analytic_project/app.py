@@ -1,5 +1,7 @@
 
 import sys
+import re
+
 from pathlib import Path
 
 from categories import choose_marketplace, search_categories_by_keyword, multi_select_categories
@@ -13,6 +15,18 @@ from analytics.extras import run_volatility_profile, run_sentiment_vs_rating_dri
 from screening.daily import run_daily_screening, has_30_days_of_snapshots
 
 SUPPORTED_MARKETPLACES = ["US", "UK"]  # DE removed by design
+
+from datetime import datetime
+
+def slugify(value: str) -> str:
+    """
+    Make a filesystem-safe slug from a string.
+    Example: "Headphones & Ear-buds" -> "headphones-ear-buds"
+    """
+    value = str(value).strip().lower()
+    # Replace any non-word character with dash
+    value = re.sub(r"[^\w]+", "-", value)
+    return value.strip("-")
 
 def main_menu():
     session = {}
