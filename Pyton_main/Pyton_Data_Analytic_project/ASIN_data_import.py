@@ -1,5 +1,4 @@
 # ASIN_data_import.py
-# All comments in English.
 
 from __future__ import annotations
 

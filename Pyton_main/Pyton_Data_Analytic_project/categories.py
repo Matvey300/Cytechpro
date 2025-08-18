@@ -1,4 +1,3 @@
-# All comments in English.
 
 import os
 from typing import List
