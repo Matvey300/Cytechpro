@@ -50,11 +50,20 @@ def save_asin_collection(df_asin: pd.DataFrame, registry_path: Path, out_dir_ts:
 def list_saved_collections(registry_path: Path):
     return load_registry(registry_path)
 
-def load_asin_collection_by_id(registry_path: Path, coll_id: str) -> Tuple[pd.DataFrame, Path]:
+def load_asin_collection_by_id(registry_path: Path, coll_id: str | int) -> Tuple[pd.DataFrame, Path]:
     reg = load_registry(registry_path)
-    for item in reg:
-        if item.get("id") == coll_id:
-            out_dir_ts = Path(item["out_dir_ts"])
-            df = pd.read_csv(out_dir_ts / "asin_list.csv")
-            return df, out_dir_ts
-    raise FileNotFoundError(f"Collection id {coll_id} not found.")
+    # allow numeric index pick
+    if isinstance(coll_id, str) and coll_id.isdigit():
+        idx = int(coll_id) - 1
+        if 0 <= idx < len(reg):
+            item = reg[idx]
+        else:
+            raise FileNotFoundError(f"Index {coll_id} is out of range.")
+    else:
+        item = next((r for r in reg if r.get("id") == coll_id), None)
+        if item is None:
+            raise FileNotFoundError(f"Collection id {coll_id} not found.")
+
+    out_dir_ts = Path(item["out_dir_ts"])
+    df = pd.read_csv(out_dir_ts / "asin_list.csv")
+    return df, out_dir_ts
