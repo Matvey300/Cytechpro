@@ -10,6 +10,10 @@ from typing import Iterable, List, Dict, Any, Optional
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+import psutil
+import time
+import sys
+
 
 # ----------------------------- Config & Utils -----------------------------
 
@@ -45,6 +49,19 @@ REQUIRED_COLS = [
 STAR_RE = re.compile(r"([0-5](?:\.\d)?) out of 5")
 HELPFUL_RE = re.compile(r"([\d,]+|One)\s+person|people")  # matches "One person" or "2,345 people"
 DATE_CLEAN_RE = re.compile(r"on\s+", re.IGNORECASE)       # strip "on " before date
+
+def ensure_chrome_closed():
+    """
+    Ensure no Chrome processes are running.
+    Ask user to close all Chrome windows if needed.
+    """
+    while True:
+        chrome_running = any("Google Chrome" in p.name() or "chrome" in p.name().lower()
+                             for p in psutil.process_iter(['name']))
+        if not chrome_running:
+            return
+        print("⚠️ Please close all Google Chrome windows before continuing...")
+        time.sleep(3)
 
 def _market_base(marketplace: str) -> str:
     """Resolve marketplace into base URL for reviews."""
