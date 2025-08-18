@@ -1,93 +1,107 @@
-# amazon_review_collector.py
 # All comments in English.
 
 from __future__ import annotations
 
 import re
 import time
+import shutil
+import tempfile
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Iterable, List, Dict, Any, Optional
 
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import psutil
-import time
-import sys
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 
 
-# ----------------------------- Config & Utils -----------------------------
+# ----------------------------- Constants ------------------------------------
 
+# Marketplace base URLs
 MARKET_BASE = {
-    # Marketplace → product-reviews base URL
-    "US": "https://www.amazon.com/product-reviews",
-    "UK": "https://www.amazon.co.uk/product-reviews",
+    "US": "https://www.amazon.com",
+    "UK": "https://www.amazon.co.uk",
 }
 
-HEADERS = {
-    # Very vanilla desktop UA; adjust if needed
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
-}
+# Gentle pacing to reduce bot suspicion (seconds)
+PAGE_DELAY_SEC = 1.0
 
-REQUIRED_COLS = [
-    "asin",
-    "review_id",
-    "review_date",
-    "rating",
-    "review_text",
-    "verified",
-    "helpful_votes",
-]
+# Max pages to traverse for reviews per ASIN (safety cap)
+MAX_REVIEW_PAGES = 50
+
+
+# ----------------------------- Chrome bootstrap -----------------------------
+
+@contextmanager
+def _temp_profile_dir():
+    """Create an isolated temporary Chrome profile directory; auto-clean on exit."""
+    d = tempfile.mkdtemp(prefix="amz_chrome_profile_")
+    try:
+        yield d
+    finally:
+        try:
+            shutil.rmtree(d, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def _chrome_options_for_profile(profile_dir: str) -> ChromeOptions:
+    """Build ChromeOptions for an isolated profile."""
+    opts = ChromeOptions()
+    # Headed is safer for Amazon; enable headless if you really need it:
+    # opts.add_argument("--headless=new")
+    opts.add_argument(f"--user-data-dir={profile_dir}")
+    opts.add_argument("--profile-directory=Default")
+    opts.add_argument("--no-first-run")
+    opts.add_argument("--no-default-browser-check")
+    opts.add_argument("--disable-features=Translate,PasswordManagerOnboarding")
+    opts.add_argument("--disable-notifications")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1280,1200")
+    return opts
+
+
+def _make_driver() -> webdriver.Chrome:
+    """Create a Chrome WebDriver with a temporary isolated profile."""
+    ctx = _temp_profile_dir()
+    profile_dir = ctx.__enter__()
+
+    class _CtxChrome(webdriver.Chrome):
+        def quit(self, *args, **kwargs):
+            try:
+                super().quit(*args, **kwargs)
+            finally:
+                try:
+                    ctx.__exit__(None, None, None)
+                except Exception:
+                    pass
+
+    return _CtxChrome(options=_chrome_options_for_profile(profile_dir))
+
+
+# ----------------------------- Parsing utils --------------------------------
 
 STAR_RE = re.compile(r"([0-5](?:\.\d)?) out of 5")
-HELPFUL_RE = re.compile(r"([\d,]+|One)\s+person|people")  # matches "One person" or "2,345 people"
-DATE_CLEAN_RE = re.compile(r"on\s+", re.IGNORECASE)       # strip "on " before date
-
-def ensure_chrome_closed():
-    """
-    Ensure no Chrome processes are running.
-    Ask user to close all Chrome windows if needed.
-    """
-    while True:
-        chrome_running = any("Google Chrome" in p.name() or "chrome" in p.name().lower()
-                             for p in psutil.process_iter(['name']))
-        if not chrome_running:
-            return
-        print("⚠️ Please close all Google Chrome windows before continuing...")
-        time.sleep(3)
-
-def _market_base(marketplace: str) -> str:
-    """Resolve marketplace into base URL for reviews."""
-    return MARKET_BASE.get((marketplace or "US").upper(), MARKET_BASE["US"])
-
-def _sleep_backoff(attempt: int, base: float = 1.0) -> None:
-    """Linear backoff with jitter."""
-    time.sleep(base * attempt + 0.25)
+PRICE_RE = re.compile(r"([€£$])\s*([\d\.,]+)")
 
 def _parse_star(text: str) -> Optional[float]:
     """Extract 'x out of 5' → float(x)."""
     if not text:
         return None
     m = STAR_RE.search(text)
-    if not m:
-        return None
     try:
-        return float(m.group(1))
+        return float(m.group(1)) if m else None
     except Exception:
         return None
+
 
 def _parse_helpful(text: str) -> int:
     """Parse 'One person found this helpful' or '2,345 people found this helpful' → int."""
     if not text:
         return 0
-    # Normalize thousand separators
     text = text.replace("\xa0", " ").strip()
     if "One person" in text:
         return 1
@@ -99,179 +113,301 @@ def _parse_helpful(text: str) -> int:
             return 0
     return 0
 
+
 def _clean_review_date(text: str) -> str:
     """
-    Amazon renders like:
-      'Reviewed in the United States on July 1, 2025'
-      'Reviewed in the United Kingdom on 12 May 2024'
-    We keep only the date part for robustness; later pipeline casts with pandas.
+    Keep only the date portion after 'on ' (works for en-US/en-UK).
+    Examples:
+      'Reviewed in the United States on July 1, 2025'  -> 'July 1, 2025'
+      'Reviewed in the United Kingdom on 12 May 2024'  -> '12 May 2024'
     """
     if not text:
         return ""
-    # Keep the tail after 'on '
-    parts = DATE_CLEAN_RE.split(text, maxsplit=1)
-    date_part = parts[-1].strip() if parts else text.strip()
-    # Sometimes there's locale prefix 'Reviewed on 12 May 2024' → we still return the tail
-    return date_part
+    parts = re.split(r"on\s+", text, maxsplit=1, flags=re.IGNORECASE)
+    return parts[-1].strip() if parts else text.strip()
 
-# ----------------------------- Core Scraper ------------------------------
 
-def _reviews_page_url(market_base: str, asin: str, page: int) -> str:
-    # 'sortBy=recent' to get newest first; tweak if you need "top" order
-    return f"{market_base}/{asin}/?sortBy=recent&pageNumber={page}"
-
-def _fetch_html(session: requests.Session, url: str, attempt: int = 1, timeout: int = 25) -> Optional[str]:
-    """GET with basic retry/backoff. Returns HTML or None on failure/block."""
+def _parse_price_text(txt: str) -> tuple[Optional[float], Optional[str]]:
+    """Parse text like '$29.99' or '£15.99' -> (29.99, 'USD/GBP/EUR')."""
+    if not txt:
+        return None, None
+    m = PRICE_RE.search(txt.replace("\xa0", " "))
+    if not m:
+        return None, None
+    sym, num = m.group(1), m.group(2)
+    num = num.replace(",", "")
     try:
-        r = session.get(url, timeout=timeout)
-        # Basic anti-bot: if we get a Captcha/503, bail out early
-        if r.status_code != 200:
-            return None
-        # If Amazon serves a robot/CAPTCHA page, it often lacks expected hooks
-        if 'captchacharacters' in r.text.lower() or 'sorry' in r.text[:200].lower():
-            return None
-        return r.text
-    except requests.RequestException:
-        return None
+        val = float(num)
+    except Exception:
+        return None, None
+    cur = {"$": "USD", "£": "GBP", "€": "EUR"}.get(sym)
+    return val, cur
 
-def _parse_reviews_from_html(html: str, asin: str) -> List[Dict[str, Any]]:
-    """Parse a single reviews page HTML into a list of dict rows."""
-    out: List[Dict[str, Any]] = []
-    soup = BeautifulSoup(html, "html.parser")
 
-    # Each review is in a container with data-hook='review'
-    for div in soup.select('div[data-hook="review"]'):
-        # Review ID
-        review_id = div.get("id") or div.get("data-review-id") or None
+def _extract_bsr_from_text(txt: str) -> tuple[Optional[int], Optional[str]]:
+    """
+    Extract Best Sellers Rank and category path from mixed text.
+    Returns (rank:int or None, path:str or None).
+    """
+    if not txt:
+        return None, None
+    m = re.search(r"#\s*([\d,]+)", txt)
+    rank = int(m.group(1).replace(",", "")) if m else None
+    path = None
+    m2 = re.search(r"in\s+([^\(]+)", txt)
+    if m2:
+        path = m2.group(1).strip()
+        path = re.sub(r"\s*\(.*$", "", path).strip()
+    return rank, path
 
-        # Rating (i[data-hook="review-star-rating"] > span)
-        rating_text = ""
-        star = div.select_one('i[data-hook="review-star-rating"] span')
-        if star and star.text:
-            rating_text = star.text.strip()
-        else:
-            # Some locales use 'cmps-review-star-rating'
-            star = div.select_one('i[data-hook="cmps-review-star-rating"] span')
-            rating_text = star.text.strip() if star else ""
 
-        rating = _parse_star(rating_text)
+def _product_url(base: str, asin: str) -> str:
+    return f"{base}/dp/{asin}"
 
-        # Date
-        date_el = div.select_one('span[data-hook="review-date"]')
-        review_date = _clean_review_date(date_el.text.strip()) if date_el else ""
 
-        # Text
-        body_el = div.select_one('span[data-hook="review-body"]')
-        review_text = body_el.get_text(separator=" ", strip=True) if body_el else ""
+def _reviews_url(base: str, asin: str, page: int) -> str:
+    return f"{base}/product-reviews/{asin}/?sortBy=recent&pageNumber={page}"
 
-        # Verified badge
-        ver_el = div.select_one('span[data-hook="avp-badge"]')
-        verified = bool(ver_el and "Verified Purchase" in ver_el.text)
 
-        # Helpful votes
-        hv_el = div.select_one('span[data-hook="helpful-vote-statement"]')
-        helpful_votes = _parse_helpful(hv_el.text.strip()) if hv_el else 0
+# ----------------------------- Product meta ---------------------------------
 
-        out.append({
-            "asin": asin,
-            "review_id": review_id,
-            "review_date": review_date,   # string; pipeline will cast with pandas later
-            "rating": rating,
-            "review_text": review_text,
-            "verified": verified,
-            "helpful_votes": helpful_votes,
-        })
-    return out
+def _fetch_product_meta(driver: webdriver.Chrome, base_url: str, asin: str) -> dict:
+    """
+    Open /dp/<ASIN> and extract:
+      - buybox_price (float)
+      - currency ('USD'/'GBP'/...)
+      - bsr_rank (Int) and bsr_path (str)
+    """
+    url = _product_url(base_url, asin)
+    meta = {"asin": asin, "buybox_price": None, "currency": None, "bsr_rank": None, "bsr_path": None}
+    try:
+        driver.get(url)
+        time.sleep(1.0)
 
-def _dedupe_reviews(df: pd.DataFrame) -> pd.DataFrame:
-    """Deduplicate by (asin, review_id) then fallback to (asin, date, rating, hash(text))."""
-    df = df.copy()
-    # Primary key
-    if "review_id" in df.columns:
-        key1 = df["asin"].astype(str) + "|" + df["review_id"].astype(str)
-        df = df.loc[~key1.duplicated(keep="first")].reset_index(drop=True)
-    # Fallback key
-    key2 = (
-        df["asin"].astype(str) + "|" +
-        df["review_date"].astype(str) + "|" +
-        df["rating"].astype(str) + "|" +
-        df["review_text"].astype(str).map(lambda t: str(hash(t)))
-    )
-    df = df.loc[~key2.duplicated(keep="first")].reset_index(drop=True)
-    return df
+        # --- Price: try core price block first ---
+        price_txt = ""
+        try:
+            price_txt = driver.find_element(By.CSS_SELECTOR, "#corePriceDisplay_desktop_feature_div span.a-offscreen").text.strip()
+        except Exception:
+            pass
+        if not price_txt:
+            # Fallback: any visible .a-offscreen (still fairly reliable)
+            try:
+                price_txt = driver.find_element(By.CSS_SELECTOR, "span.a-offscreen").text.strip()
+            except Exception:
+                pass
+        price, cur = _parse_price_text(price_txt)
+        if price is not None:
+            meta["buybox_price"] = price
+            meta["currency"] = cur
 
-# ----------------------------- Public API --------------------------------
+        # --- BSR: multiple placements across layouts ---
+        bsr_txt = ""
+        # 1) Detail bullets block
+        try:
+            blk = driver.find_element(By.ID, "detailBullets_feature_div").text
+            if "Best Sellers Rank" in blk or "#" in blk:
+                for line in blk.splitlines():
+                    if "Best Sellers Rank" in line or "#" in line:
+                        bsr_txt = line
+                        break
+        except Exception:
+            pass
+        # 2) Old technical table
+        if not bsr_txt:
+            try:
+                tbl = driver.find_element(By.ID, "productDetails_detailBullets_sections1").text
+                if "Best Sellers Rank" in tbl or "#" in tbl:
+                    for line in tbl.splitlines():
+                        if "Best Sellers Rank" in line or "#" in line:
+                            bsr_txt = line
+                            break
+            except Exception:
+                pass
+        # 3) Last-resort: scan full page text
+        if not bsr_txt:
+            try:
+                body_txt = driver.find_element(By.TAG_NAME, "body").text
+                m = re.search(r"Best Sellers Rank.*?#\s*[\d,]+\s+in\s+[^\n]+", body_txt, flags=re.IGNORECASE | re.DOTALL)
+                if m:
+                    bsr_txt = m.group(0)
+            except Exception:
+                pass
+
+        rank, path = _extract_bsr_from_text(bsr_txt)
+        meta["bsr_rank"] = rank
+        meta["bsr_path"] = path
+
+    except Exception:
+        # swallow meta errors; reviews scraping can still continue
+        pass
+    return meta
+
+
+# ----------------------------- Reviews parsing ------------------------------
+
+def _parse_reviews_from_dom(driver: webdriver.Chrome, asin: str) -> List[Dict[str, Any]]:
+    """Parse currently loaded reviews page into list of dicts."""
+    rows: List[Dict[str, Any]] = []
+    cards = driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="review"]')
+    for card in cards:
+        try:
+            review_id = card.get_attribute("id") or card.get_attribute("data-review-id") or None
+
+            # rating
+            rating_text = ""
+            try:
+                rating_text = card.find_element(By.CSS_SELECTOR, 'i[data-hook="review-star-rating"] span').text.strip()
+            except NoSuchElementException:
+                try:
+                    rating_text = card.find_element(By.CSS_SELECTOR, 'i[data-hook="cmps-review-star-rating"] span').text.strip()
+                except NoSuchElementException:
+                    rating_text = ""
+            rating = _parse_star(rating_text)
+
+            # date
+            try:
+                review_date = _clean_review_date(card.find_element(By.CSS_SELECTOR, 'span[data-hook="review-date"]').text.strip())
+            except NoSuchElementException:
+                review_date = ""
+
+            # text
+            try:
+                body_el = card.find_element(By.CSS_SELECTOR, 'span[data-hook="review-body"]')
+                review_text = body_el.text.strip()
+            except NoSuchElementException:
+                review_text = ""
+
+            # verified
+            try:
+                ver_el = card.find_element(By.CSS_SELECTOR, 'span[data-hook="avp-badge"]')
+                verified = "Verified Purchase" in ver_el.text
+            except NoSuchElementException:
+                verified = False
+
+            # helpful votes
+            try:
+                hv_text = card.find_element(By.CSS_SELECTOR, 'span[data-hook="helpful-vote-statement"]').text.strip()
+                helpful_votes = _parse_helpful(hv_text)
+            except NoSuchElementException:
+                helpful_votes = 0
+
+            rows.append({
+                "asin": asin,
+                "review_id": review_id,
+                "review_date": review_date,
+                "rating": rating,
+                "review_text": review_text,
+                "verified": verified,
+                "helpful_votes": helpful_votes,
+            })
+        except WebDriverException:
+            continue
+    return rows
+
+
+# ----------------------------- Public API -----------------------------------
 
 def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) -> pd.DataFrame:
     """
-    Fetch up to `max_reviews` most recent reviews for each ASIN and return a normalized DataFrame.
-    Columns guaranteed: asin, review_id, review_date, rating, review_text, verified, helpful_votes
+    Selenium-only reviews collector.
+    Steps per ASIN:
+      1) Fetch product meta (Buy Box price, currency, BSR rank/path) from /dp/<ASIN>.
+      2) Paginate recent reviews and parse all review cards.
+    Returns a DataFrame with at least:
+      asin, review_id, review_date, rating, review_text, verified, helpful_votes,
+      buybox_price, currency, bsr_rank, bsr_path
     """
-    base = _market_base(marketplace)
-    session = requests.Session()
-    session.headers.update(HEADERS)
+    base = MARKET_BASE.get((marketplace or "US").upper(), MARKET_BASE["US"])
+    driver = _make_driver()
 
-    all_rows: List[Dict[str, Any]] = []
+    try:
+        all_rows: List[Dict[str, Any]] = []
 
-    for asin in map(str, asins):
-        asin = asin.strip()
-        if not asin:
-            continue
+        for raw_asin in asins:
+            asin = str(raw_asin).strip()
+            if not asin:
+                continue
 
-        collected = 0
-        page = 1
-        seen_ids: set[str] = set()
+            # 1) Product meta once per ASIN
+            meta = _fetch_product_meta(driver, base, asin)
 
-        # Up to ~50 pages to be safe; we stop earlier once max_reviews is reached.
-        while collected < max_reviews and page <= 50:
-            url = _reviews_page_url(base, asin, page)
-            html = _fetch_html(session, url, attempt=page)
+            # 2) Reviews pagination
+            collected = 0
+            seen_ids: set[str] = set()
+            page = 1
 
-            if not html:
-                # If blocked or empty — small backoff and one more try
-                _sleep_backoff(page, base=0.8)
-                html = _fetch_html(session, url, attempt=page)
-                if not html:
-                    # Give up on this ASIN page
+            while collected < max_reviews and page <= MAX_REVIEW_PAGES:
+                url = _reviews_url(base, asin, page)
+                try:
+                    driver.get(url)
+                except WebDriverException:
                     break
 
-            rows = _parse_reviews_from_html(html, asin)
+                time.sleep(PAGE_DELAY_SEC)
 
-            if not rows:
-                # No reviews parsed on this page → likely out of pages
-                break
-
-            # Append, respecting max_reviews and avoiding duplicates by review_id within this run
-            for r in rows:
-                rid = str(r.get("review_id") or "")
-                if rid and rid in seen_ids:
-                    continue
-                all_rows.append(r)
-                if rid:
-                    seen_ids.add(rid)
-                collected += 1
-                if collected >= max_reviews:
+                rows = _parse_reviews_from_dom(driver, asin)
+                if not rows:
                     break
 
-            page += 1
-            # Gentle delay between pages to reduce bot-detection chance
-            _sleep_backoff(1, base=0.6)
+                for r in rows:
+                    # attach product meta to each review row (useful for weekly aggregations)
+                    r.setdefault("buybox_price", meta.get("buybox_price"))
+                    r.setdefault("currency", meta.get("currency"))
+                    r.setdefault("bsr_rank", meta.get("bsr_rank"))
+                    r.setdefault("bsr_path", meta.get("bsr_path"))
 
-    # Normalize to DataFrame & enforce schema
-    df = pd.DataFrame(all_rows)
+                    rid = str(r.get("review_id") or "")
+                    if rid and rid in seen_ids:
+                        continue
 
-    # Ensure required columns exist
-    for c in REQUIRED_COLS:
-        if c not in df.columns:
-            df[c] = None
+                    all_rows.append(r)
+                    if rid:
+                        seen_ids.add(rid)
 
-    # Type coercions
-    df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
-    # Keep date as string; your weekly builder will convert with pandas.to_datetime
-    df["verified"] = df["verified"].astype("boolean")
-    df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
+                    collected += 1
+                    if collected >= max_reviews:
+                        break
 
-    # Final dedupe
-    df = _dedupe_reviews(df)
+                page += 1
+                time.sleep(PAGE_DELAY_SEC)
 
-    return df.reset_index(drop=True)
+        # ---- Normalize to DataFrame and enforce schema ----
+        df = pd.DataFrame(all_rows)
+
+        # Ensure all expected columns exist
+        required = [
+            "asin", "review_id", "review_date", "rating", "review_text",
+            "verified", "helpful_votes", "buybox_price", "currency", "bsr_rank", "bsr_path"
+        ]
+        for c in required:
+            if c not in df.columns:
+                df[c] = None
+
+        # Types
+        df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
+        df["verified"] = df["verified"].astype("boolean")
+        df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
+        df["buybox_price"] = pd.to_numeric(df["buybox_price"], errors="coerce")
+        df["bsr_rank"] = pd.to_numeric(df["bsr_rank"], errors="coerce").astype("Int64")
+
+        # Deduplicate: (asin, review_id) primary; fallback (asin, date, rating, hash(text))
+        if not df.empty:
+            key1 = df["asin"].astype(str) + "|" + df["review_id"].astype(str)
+            df = df.loc[~key1.duplicated(keep="first")].reset_index(drop=True)
+
+            key2 = (
+                df["asin"].astype(str) + "|" +
+                df["review_date"].astype(str) + "|" +
+                df["rating"].astype(str) + "|" +
+                df["review_text"].astype(str).map(lambda t: str(hash(t)))
+            )
+            df = df.loc[~key2.duplicated(keep="first")].reset_index(drop=True)
+
+        return df
+
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass
