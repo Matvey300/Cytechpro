@@ -13,10 +13,12 @@ from analytics.integrity import run_distortion_test
 from analytics.impact import run_review_sales_impact
 from analytics.extras import run_volatility_profile, run_sentiment_vs_rating_drift, run_top_drivers
 from screening.daily import run_daily_screening, has_30_days_of_snapshots
+from datetime import datetime
+
+
 
 SUPPORTED_MARKETPLACES = ["US", "UK"]  # DE removed by design
 
-from datetime import datetime
 
 def slugify(value: str) -> str:
     """
@@ -28,6 +30,11 @@ def slugify(value: str) -> str:
     value = re.sub(r"[^\w]+", "-", value)
     return value.strip("-")
 
+def today_ymd() -> str:
+    """
+    Return today's date as YYYYMMDD string.
+    """
+    return datetime.today().strftime("%Y%m%d")
 def main_menu():
     session = {}
 
