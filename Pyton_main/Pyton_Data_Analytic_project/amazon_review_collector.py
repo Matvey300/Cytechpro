@@ -1,164 +1,256 @@
+# All comments in English.
 
-import os
-import time
-import subprocess
-import pandas as pd
-from bs4 import BeautifulSoup
+from __future__ import annotations
+
+import inspect
+import traceback
 from datetime import datetime
-from dateutil import parser as date_parser
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    WebDriverException,
-    NoSuchElementException,
-    TimeoutException
-)
-from webdriver_manager.chrome import ChromeDriverManager
+from typing import Any, Callable, Dict, Iterable, List
 
-# === ФУНКЦИЯ: Сбор HTML отзывов с Amazon ===
-def scrape_reviews(asin, country, pages, save_dir, profile_path):
-    domain = "amazon." + country
-    base_url = f"https://www.{domain}/product-reviews/{asin}/?pageNumber=1&language=en_US&sortBy=recent"
+import pandas as pd
 
-    chrome_options = Options()
-    chrome_options.add_argument(f'--user-data-dir={profile_path}')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
+# We expect the user's original scraper to be renamed to:
+#   amazon_review_collector_legacy.py  (same folder)
+# This wrapper adapts any of its functions to a unified interface:
+#   collect_reviews(asins, max_reviews, marketplace) -> DataFrame
+try:
+    import amazon_review_collector_legacy as legacy  # your original module
+except Exception as e:
+    legacy = None
+    _legacy_import_error = e
 
-    if subprocess.run(["pgrep", "-i", "chrome"], capture_output=True, text=True).stdout.strip():
-        print("❌ Chrome запущен! Закрой его и запусти скрипт снова.")
-        return
+
+# ---------- Helpers to call legacy per-ASIN function ----------
+
+_CANDIDATE_FN_NAMES = [
+    # most specific names first
+    "collect_reviews_for_asin",
+    "get_reviews_for_asin",
+    "scrape_reviews_for_asin",
+    # generic names
+    "collect_reviews",
+    "get_reviews",
+    "scrape_reviews",
+]
+
+def _pick_legacy_function(mod) -> Callable[..., Any] | None:
+    """Pick a single-ASIN function from the legacy module by best guess."""
+    if mod is None:
+        return None
+    for name in _CANDIDATE_FN_NAMES:
+        fn = getattr(mod, name, None)
+        if callable(fn):
+            return fn
+    return None
+
+
+def _call_legacy_for_asin(
+    fn: Callable[..., Any],
+    asin: str,
+    max_reviews: int,
+    marketplace: str,
+) -> List[Dict[str, Any]]:
+    """
+    Call the legacy function for a single ASIN with a robust signature adapter.
+    Accepts common legacy signatures, e.g.:
+      fn(asin), fn(asin, max_reviews), fn(asin, max_reviews, marketplace), ...
+    Returns: list of dict-like review rows (flexible).
+    """
+    sig = inspect.signature(fn)
+    params = list(sig.parameters.keys())
+
+    # Build args dynamically
+    kwargs: Dict[str, Any] = {}
+    args: List[Any] = []
+
+    # Common patterns:
+    # 1) (asin)
+    # 2) (asin, max_reviews)
+    # 3) (asin, marketplace)
+    # 4) (asin, max_reviews, marketplace)
+    # 5) keyword-only variants
+
+    if len(params) == 1:
+        args = [asin]
+    elif len(params) == 2:
+        # Decide by parameter names
+        p1, p2 = params
+        if "max" in p2 or "count" in p2 or "limit" in p2:
+            args = [asin, max_reviews]
+        else:
+            args = [asin, marketplace]
+    elif len(params) >= 3:
+        args = [asin, max_reviews, marketplace][:len(params)]
+    else:
+        # Fallback: try the simplest
+        args = [asin]
+
+    # Final safety: if names expose obvious keywords, pass as kwargs too
+    ba = {}
+    if "asin" in params and len(params) == 1:
+        kwargs = {"asin": asin}
+        args = []
+    if "max_reviews" in params:
+        kwargs["max_reviews"] = max_reviews
+    if "marketplace" in params:
+        kwargs["marketplace"] = marketplace
 
     try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        driver.get(f"https://www.{domain}/")
-    except WebDriverException as e:
-        print("❌ Chrome не запустился:", str(e))
-        return
+        res = fn(*args, **kwargs)
+    except TypeError:
+        # Retry with only the ASIN when signature mismatch happens
+        res = fn(asin)
 
-    input("🔐 Залогинься в открытом окне Chrome, затем нажми Enter...")
-
-    for page in range(1, pages + 1):
-        print(f"[{asin}] Скачиваем страницу {page}...")
-
-        if page == 1:
-            driver.get(base_url)
-        else:
-            time.sleep(4)
-
-        html = driver.page_source
-        filename = os.path.join(save_dir, f"{asin}_p{page}.html")
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"✅ Сохранено: {filename}")
-
-        if page < pages:
-            try:
-                next_button = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "li.a-last a"))
-                )
-                next_button.click()
-            except (NoSuchElementException, TimeoutException):
-                print("⚠️ Кнопка 'Следующая страница' не найдена.")
-                break
-
-    driver.quit()
-
-
-# === ФУНКЦИЯ: Парсинг HTML файлов в DataFrame ===
-def parse_reviews(asin, html_dir, pages):
-    reviews = []
-
-    for page in range(1, pages + 1):
-        file_path = os.path.join(html_dir, f"{asin}_p{page}.html")
-        if not os.path.exists(file_path):
-            continue
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f, "html.parser")
-            review_blocks = soup.find_all("li", {"data-hook": "review"})
-
-            for r in review_blocks:
-                try:
-                    author = r.find("span", class_="a-profile-name").get_text(strip=True)
-                    rating_tag = r.find("i", {"data-hook": "review-star-rating"}) or r.find("i", {"data-hook": "cmps-review-star-rating"})
-                    rating = float(rating_tag.find("span").get_text(strip=True).split()[0]) if rating_tag else None
-                    title = r.find("a", {"data-hook": "review-title"}).get_text(strip=True)
-                    date_raw = r.find("span", {"data-hook": "review-date"}).get_text(strip=True)
-                    date_iso = date_parser.parse(date_raw.split(" on ")[-1].strip()).strftime("%Y-%m-%d") if "on" in date_raw else None
-                    location = date_raw.split(" in ")[-1].split(" on ")[0].strip() if " in " in date_raw else "N/A"
-                    body = r.find("span", {"data-hook": "review-body"}).get_text(separator=" ", strip=True)
-                    verified_tag = r.find("span", {"data-hook": "avp-badge"})
-                    verified = bool(verified_tag and "Verified Purchase" in verified_tag.text)
-                    helpful_tag = r.find("span", {"data-hook": "helpful-vote-statement"})
-                    if helpful_tag:
-                        txt = helpful_tag.get_text(strip=True)
-                        if "One person found this helpful" in txt:
-                            helpful_votes = 1
-                        elif "people found this helpful" in txt:
-                            helpful_votes = int(txt.split()[0].replace(",", ""))
-                        else:
-                            helpful_votes = 0
-                    else:
-                        helpful_votes = 0
-
-                    reviews.append({
-                        "asin": asin,
-                        "author": author,
-                        "location": location,
-                        "date": date_iso,
-                        "rating": rating,
-                        "title": title,
-                        "body": body,
-                        "verified_purchase": verified,
-                        "helpful_votes": helpful_votes
-                    })
-
-                except Exception:
-                    continue
-
-    return pd.DataFrame(reviews)
+    # Normalize to list[dict]
+    if res is None:
+        return []
+    if isinstance(res, pd.DataFrame):
+        return res.to_dict(orient="records")
+    if isinstance(res, dict):
+        return [res]
+    if isinstance(res, (list, tuple)):
+        # try to ensure dict-like rows
+        out: List[Dict[str, Any]] = []
+        for r in res:
+            if isinstance(r, dict):
+                out.append(r)
+            elif isinstance(r, (list, tuple)) and len(r) >= 4:
+                # naive tuple mapping: asin, date, rating, text
+                out.append({
+                    "asin": asin,
+                    "review_date": r[0],
+                    "rating": r[1],
+                    "review_text": r[2] if len(r) > 2 else None,
+                    "review_id": r[3] if len(r) > 3 else None,
+                })
+            else:
+                out.append({"asin": asin, "raw": str(r)})
+        return out
+    # anything else -> wrap
+    return [{"asin": asin, "raw": str(res)}]
 
 
-# === MAIN ===
-def main():
-    asin_file = input("📄 Введите путь к файлу со списком ASIN (по умолчанию search_results.csv): ").strip() or "DATA/search_results.csv"
-    if not os.path.exists(asin_file):
-        print("❌ Файл не найден.")
-        return
+# ---------- Normalization ----------
 
-    df_asins = pd.read_csv(asin_file)
-    country = input("🌍 Введите код страны (например, com, co.uk, de): ").strip()
-    pages = input("📑 Сколько страниц отзывов собирать? (по умолчанию 10): ").strip()
-    pages = int(pages) if pages.isdigit() else 10
+REQUIRED_COLS = [
+    "asin",
+    "review_id",
+    "review_date",
+    "rating",
+    "review_text",
+    "verified",
+    "helpful_votes",
+]
 
-    SAVE_DIR = "DATA/review_pages"
-    PROFILE_PATH = "/Users/Matvej1/chrome-amazon-profile"
-    os.makedirs(SAVE_DIR, exist_ok=True)
+def _coerce_to_df(rows: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Coerce a list of dicts to DataFrame with required columns."""
+    df = pd.DataFrame(rows)
 
-    all_reviews = []
+    # Ensure presence of required columns
+    for col in REQUIRED_COLS:
+        if col not in df.columns:
+            df[col] = None
 
-    for _, row in df_asins.iterrows():
-        asin = row["asin"]
-        if row["country"] != country:
-            continue
+    # Coerce types
+    # date
+    if "review_date" in df.columns:
+        df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce").dt.date.astype("string")
+    # rating
+    if "rating" in df.columns:
+        df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
+    # helpful votes
+    if "helpful_votes" in df.columns:
+        df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
+    # verified → bool
+    if "verified" in df.columns:
+        df["verified"] = df["verified"].astype("boolean")
 
-        print(f"🔍 Обработка ASIN: {asin}")
-        scrape_reviews(asin, country, pages, SAVE_DIR, PROFILE_PATH)
-        df_reviews = parse_reviews(asin, SAVE_DIR, pages)
-        all_reviews.append(df_reviews)
+    # Trim whitespace in text-ish fields
+    for c in ["review_text", "review_id"]:
+        if c in df.columns:
+            df[c] = df[c].astype("string").str.strip()
 
-    if all_reviews:
-        result_df = pd.concat(all_reviews, ignore_index=True)
-        result_df.to_csv("DATA/all_reviews.csv", index=False, encoding="utf-8-sig")
-        print("✅ Все отзывы сохранены в DATA/all_reviews.csv")
-    else:
-        print("⚠️ Отзывы не найдены.")
+    # Keep only relevant + any extra original columns (if needed later)
+    base = df[REQUIRED_COLS].copy()
+    # Drop rows without ASIN
+    base = base[base["asin"].astype("string").str.len() > 0]
+    return base.reset_index(drop=True)
 
-if __name__ == "__main__":
-    main()
+
+def _dedupe(df: pd.DataFrame) -> pd.DataFrame:
+    """Dedupe strategy: prefer (asin, review_id); fallback (asin, review_date, rating, hash(text))."""
+    def _key(row) -> str:
+        asin = str(row.get("asin", "NA"))
+        rid = row.get("review_id")
+        if pd.notna(rid) and str(rid).strip():
+            return f"{asin}|{rid}"
+        date = str(row.get("review_date", "NA"))
+        rating = str(row.get("rating", "NA"))
+        text = str(row.get("review_text", ""))
+        return f"{asin}|{date}|{rating}|{hash(text)}"
+
+    keys = df.apply(_key, axis=1)
+    return df.loc[~keys.duplicated(keep="first")].reset_index(drop=True)
+
+
+# ---------- Public entry point ----------
+
+def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) -> pd.DataFrame:
+    """
+    Unified public function consumed by the app.
+    - asins: list of ASIN strings
+    - max_reviews: up to N reviews per ASIN
+    - marketplace: "US" / "UK" (passed to legacy if supported)
+    Returns a normalized DataFrame with at least columns REQUIRED_COLS.
+    """
+    if legacy is None:
+        raise ImportError(
+            "Failed to import amazon_review_collector_legacy. "
+            f"Original error: {getattr(globals(),'_legacy_import_error', 'unknown')}\n"
+            "Please rename your original file to 'amazon_review_collector_legacy.py' "
+            "and keep this wrapper as 'amazon_review_collector.py'."
+        )
+
+    per_asin_fn = _pick_legacy_function(legacy)
+    if per_asin_fn is None:
+        raise RuntimeError(
+            "Could not find a per-ASIN function in amazon_review_collector_legacy.py.\n"
+            f"Tried names: {', '.join(_CANDIDATE_FN_NAMES)}.\n"
+            "Please expose one of these functions (taking at least 'asin' argument)."
+        )
+
+    all_rows: List[Dict[str, Any]] = []
+    seen = set()
+
+    for asin in map(str, asins):
+        try:
+            rows = _call_legacy_for_asin(per_asin_fn, asin, max_reviews, marketplace)
+        except Exception:
+            # Continue collecting other ASINs on failure
+            traceback.print_exc()
+            rows = []
+
+        # Cap to max_reviews per ASIN if legacy returned more
+        if max_reviews and isinstance(max_reviews, int) and max_reviews > 0:
+            # Keep only first N rows for this ASIN
+            cnt = 0
+            pruned = []
+            for r in rows:
+                if str(r.get("asin", asin)) != asin:
+                    r["asin"] = asin
+                pruned.append(r)
+                cnt += 1
+                if cnt >= max_reviews:
+                    break
+            rows = pruned
+
+        for r in rows:
+            # ASIN safety
+            if str(r.get("asin", "")).strip() == "":
+                r["asin"] = asin
+            all_rows.append(r)
+
+    # Normalize + dedupe
+    df = _coerce_to_df(all_rows)
+    df = _dedupe(df)
+    return df
