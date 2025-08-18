@@ -41,7 +41,7 @@ def collect_reviews_for_asins(
         return pd.DataFrame(), {}
 
     asins = df_asin["asin"].astype(str).dropna().tolist()
-    reviews_df = collect_reviews(asins, max_reviews=max_reviews_per_asin, marketplace=marketplace)
+    reviews_df = collect_reviews(asins, max_reviews_per_asin=max_reviews_per_asin, marketplace=marketplace)
 
     # Attach category_path to each review if we have mapping
     cat_map = {}
