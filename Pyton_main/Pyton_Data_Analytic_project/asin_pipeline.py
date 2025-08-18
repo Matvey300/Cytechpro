@@ -27,21 +27,23 @@ def collect_asin_data(category_path: str, region: str, top_k: int = 100) -> pd.D
     df = df.drop_duplicates(subset=["asin"]).head(top_k).reset_index(drop=True)
     return df
 
-def save_asin_collection(df_asin: pd.DataFrame, registry_path: Path, out_dir_ts: Path) -> Path:
-    """Saves asin_list.csv to out_dir_ts and updates registry."""
+def save_asin_collection(df_asin: pd.DataFrame, registry_path: Path, out_dir_ts: Path, collection_id: str | None = None) -> Path:
+    """Saves asin_list.csv to out_dir_ts and updates registry with collection_id."""
     ensure_dir(out_dir_ts)
     dest = out_dir_ts / "asin_list.csv"
     write_csv(df_asin, dest)
+
     reg = load_registry(registry_path)
     entry = {
-        "id": now_ts_folder(),
+        "id": collection_id or now_ts_folder(),   # prefer human-friendly collection_id
         "timestamp": now_ts_folder(),
         "region": df_asin["region"].iloc[0] if ("region" in df_asin.columns and not df_asin.empty) else "NA",
-        "categories": sorted(df_asin["category_path"].dropna().unique().tolist()) if "category_path" in df_asin.columns else [],
+        "categories": sorted(df_asin.get("category_path", pd.Series(dtype=str)).dropna().unique().tolist()),
         "asin_count": int(df_asin["asin"].nunique()) if "asin" in df_asin.columns else 0,
         "out_dir_ts": str(out_dir_ts),
     }
-    reg.append(entry)
+    # If an entry with same id exists, update it (overwrite latest info)
+    reg = [r for r in reg if r.get("id") != entry["id"]] + [entry]
     save_registry(registry_path, reg)
     return dest
 
