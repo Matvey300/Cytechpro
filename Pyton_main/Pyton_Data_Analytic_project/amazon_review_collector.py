@@ -1,796 +1,473 @@
 # amazon_review_collector.py
-# All comments in English.
+# -*- coding: utf-8 -*-
+"""
+Full rewrite: stable Amazon reviews scraper using Selenium (Chrome) + BeautifulSoup.
+- Forces Chrome (no browser choice), assumes chromedriver is on PATH.
+- Manual login pause (blocking prompt) before scraping.
+- Opens canonical reviews URL with sort=recent and English-only filter.
+- Robust "Next page" navigation by clicking the real pagination button (no URL hacking).
+- Saves every reviews page HTML locally (per ASIN, per page).
+- Parses reviews from static HTML with BeautifulSoup (no JS execution assumptions).
+- Hard test limiter TEST_PAGE_LIMIT for early debugging.
+- Returns a pandas DataFrame with normalized fields.
+All comments are in English, as requested.
+"""
 
 from __future__ import annotations
 
 import os
-import re
+import sys
 import time
-import shutil
-import tempfile
-from contextlib import contextmanager
+import json
+import hashlib
+import traceback
 from pathlib import Path
-from typing import Iterable, List, Dict, Any, Optional, Tuple
-from urllib.parse import urljoin
+from typing import List, Dict, Tuple, Optional
 
 import pandas as pd
 from bs4 import BeautifulSoup
 
+# Selenium imports
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import (
     NoSuchElementException,
     TimeoutException,
     WebDriverException,
+    StaleElementReferenceException,
+    ElementClickInterceptedException,
 )
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# ============================== Configuration ===============================
+# -----------------------------
+# Config / constants
+# -----------------------------
 
-MARKET_BASE = {
-    "US": "https://www.amazon.com",
-    "UK": "https://www.amazon.co.uk",
-}
+# Save raw HTML pages locally for debug/audit
+SAVE_HTML_PAGES: bool = True
 
-# pacing and limits
-PAGE_DELAY_SEC = float(os.getenv("AMZ_PAGE_DELAY_SEC", "1.8"))
-MAX_REVIEW_PAGES = int(os.getenv("AMZ_MAX_REVIEW_PAGES", "50"))
-TEST_PAGE_LIMIT = int(os.getenv("AMZ_MAX_REVIEW_PAGES_TEST", "2"))  # 0 = no limit
+# Where to store raw pages
+RAW_DIR = Path("Out/_raw_review_pages")
 
-# raw HTML destination
-HTML_ROOT = Path("Out") / "html"
+# Default marketplace: "US" or "UK"
+DEFAULT_MARKETPLACE = "US"
 
-# persistent chrome profile (helps with Amazon device trust)
-PERSIST_PROFILE = os.getenv("AMZ_PERSIST_PROFILE", "0").lower() in {"1", "true", "yes"}
-PERSIST_DIR = (Path(".chrome-profile-clean").resolve() if PERSIST_PROFILE else None)
+# Max pages for TEST runs (env override: AMZ_MAX_REVIEW_PAGES_TEST)
+# Set to "2" by default per our testing need
+TEST_PAGE_LIMIT = int(os.getenv("AMZ_MAX_REVIEW_PAGES_TEST", "2"))
 
-# ============================== Chrome bootstrap ============================
+# How long we wait for page loaded and widgets visible (seconds)
+PAGE_LOAD_TIMEOUT = 20
 
-@contextmanager
-def _temp_profile_dir():
-    """Create an isolated temporary Chrome profile directory; auto-clean on exit."""
-    d = tempfile.mkdtemp(prefix="amz_chrome_profile_")
+# Small waits between actions to reduce anti-bot triggers
+SMALL_SLEEP = 0.8
+
+# -----------------------------
+# Helpers
+# -----------------------------
+
+def _domain(marketplace: str) -> str:
+    """Return Amazon domain for marketplace."""
+    mk = (marketplace or DEFAULT_MARKETPLACE).upper()
+    if mk == "UK":
+        return "https://www.amazon.co.uk"
+    # default US
+    return "https://www.amazon.com"
+
+
+def _reviews_url(asin: str, marketplace: str, page: int = 1) -> str:
+    """
+    Build canonical Customer Reviews URL.
+    - sort=recent (Most recent)
+    - reviewerType=all_reviews
+    - filterByLanguage=en_* to keep English-only
+    NOTE: We still click the dropdown later to guarantee sort order.
+    """
+    base = _domain(marketplace)
+    # Language filter used by Amazon; en_US works on .com, en_GB on .co.uk
+    lang = "en_GB" if (marketplace or DEFAULT_MARKETPLACE).upper() == "UK" else "en_US"
+    # We DO NOT rely on pageNumber here for pagination; actual navigation is by clicking Next.
+    return (
+        f"{base}/product-reviews/{asin}"
+        f"/?reviewerType=all_reviews&sortBy=recent&filterByLanguage={lang}&pageNumber={page}"
+    )
+
+
+def _ensure_dirs():
+    """Ensure directories exist for raw HTML saves."""
+    if SAVE_HTML_PAGES:
+        RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _slug(s: str) -> str:
+    return "".join(ch.lower() if ch.isalnum() else "-" for ch in s).strip("-")
+
+
+def _hash_text(s: str) -> str:
+    return hashlib.md5(s.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def _wait_visible(driver, by, selector, timeout=PAGE_LOAD_TIMEOUT):
+    return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, selector)))
+
+
+def _sleep(sec: float = SMALL_SLEEP):
+    time.sleep(sec)
+
+
+# -----------------------------
+# Chrome setup + login pause
+# -----------------------------
+
+def launch_chrome(headless: bool = False) -> webdriver.Chrome:
+    """
+    Launch Chrome with sensible defaults.
+    Requires chromedriver to be compatible with local Chrome.
+    """
+    options = Options()
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    # Make automation a bit less obvious
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+
     try:
-        yield d
-    finally:
-        try:
-            shutil.rmtree(d, ignore_errors=True)
-        except Exception:
-            pass
-
-
-def _chrome_options_for_profile(profile_dir: str, lang: str) -> ChromeOptions:
-    """Build ChromeOptions for a given profile directory."""
-    opts = ChromeOptions()
-    # Safer to keep headed; headless can trigger extra bot checks:
-    # opts.add_argument("--headless=new")
-    opts.add_argument(f"--user-data-dir={profile_dir}")
-    opts.add_argument("--profile-directory=Default")
-    opts.add_argument("--no-first-run")
-    opts.add_argument("--no-default-browser-check")
-    opts.add_argument("--disable-features=Translate,PasswordManagerOnboarding")
-    opts.add_argument("--disable-notifications")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--window-size=1280,1200")
-    # Pin UI language to reduce layout variance
-    opts.add_argument(f"--lang={lang}")
-    return opts
-
-
-def _make_driver(lang: str) -> webdriver.Chrome:
-    """Create a Chrome WebDriver with persistent or temporary profile."""
-    if PERSIST_PROFILE and PERSIST_DIR:
-        PERSIST_DIR.mkdir(parents=True, exist_ok=True)
-        return webdriver.Chrome(options=_chrome_options_for_profile(str(PERSIST_DIR), lang))
-
-    ctx = _temp_profile_dir()
-    profile_dir = ctx.__enter__()
-
-    class _CtxChrome(webdriver.Chrome):
-        def quit(self, *args, **kwargs):
-            try:
-                super().quit(*args, **kwargs)
-            finally:
-                try:
-                    ctx.__exit__(None, None, None)
-                except Exception:
-                    pass
-
-    return _CtxChrome(options=_chrome_options_for_profile(profile_dir, lang))
-
-# ============================== Generic helpers =============================
-
-def _save_html(path: Path, html: str) -> None:
-    """Write HTML snapshot to disk."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(html)
-
-
-def _accept_consent_if_any(driver) -> None:
-    """Click cookie/consent button if present (mostly UK/EU)."""
-    try:
-        btns = driver.find_elements(
-            By.CSS_SELECTOR,
-            "input#sp-cc-accept, input[name='accept'], button#sp-cc-accept, button[name='accept']"
+        driver = webdriver.Chrome(options=options)
+    except WebDriverException as e:
+        raise RuntimeError(
+            "Failed to start Chrome. Make sure Chrome and chromedriver versions match, "
+            "and chromedriver is on PATH. Original error: " + str(e)
         )
-        if btns:
-            try:
-                driver.execute_script("arguments[0].click();", btns[0])
-                time.sleep(0.7)
-            except Exception:
-                pass
-    except Exception:
-        pass
+    driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
+    return driver
 
 
-def _is_captcha(driver) -> bool:
-    """Heuristic check if we are on a CAPTCHA page."""
-    url = (driver.current_url or "").lower()
-    if "captcha" in url:
-        return True
-    try:
-        body = driver.find_element(By.TAG_NAME, "body").text.lower()
-        return "enter the characters you see" in body or "type the characters" in body
-    except Exception:
-        return False
-
-
-def _looks_signed_in(driver) -> bool:
-    """Detect if account nav no longer shows 'Sign in'."""
-    try:
-        el = driver.find_element(By.ID, "nav-link-accountList")
-        txt = (el.text or "").strip().lower()
-        return ("sign in" not in txt) and ("hello" in txt or "account" in txt or "returns" in txt)
-    except Exception:
-        return False
-
-
-def _go_to_signin_via_header(driver, base_url: str) -> None:
-    """Open base, accept consent, click the header 'Sign in' link (more stable than direct /ap/signin)."""
-    driver.get(base_url)
-    _accept_consent_if_any(driver)
-    try:
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.ID, "nav-link-accountList"))
-        )
-        el = driver.find_element(By.ID, "nav-link-accountList")
-        try:
-            a = el.find_element(By.TAG_NAME, "a")
-            driver.execute_script("arguments[0].click();", a)
-        except Exception:
-            driver.execute_script("arguments[0].click();", el)
-    except Exception:
-        driver.get(urljoin(base_url, "/ap/signin"))
-    time.sleep(1.0)
-
-
-def _ensure_on_market_home(driver, base_url: str) -> None:
-    """If we drifted away during login, bring browser back to marketplace home."""
-    try:
-        cu = driver.current_url or ""
-        if not cu.startswith(base_url):
-            driver.get(base_url)
-            _accept_consent_if_any(driver)
-            time.sleep(0.8)
-    except Exception:
-        pass
-
-
-def _require_manual_login(driver, base_url: str) -> None:
+def pause_for_manual_login(driver: webdriver.Chrome, marketplace: str):
     """
-    Hard stop until the user confirms login is complete.
-    We guide via header link; user completes login (CAPTCHA/MFA) and confirms in console.
+    Open Amazon and allow the user to login manually.
+    We block until user confirms in the console.
     """
-    print("\n[LOGIN] Opening Amazon and navigating to Sign in…")
-    _go_to_signin_via_header(driver, base_url)
+    home = _domain(marketplace)
+    signin_hint = f"{home}/ap/signin"
+    # Open reviews root to ensure correct domain + cookies
+    driver.get(home)
+    print("\n=== Manual login required ===")
+    print(f"1) If not redirected automatically, you can open: {signin_hint}")
+    print("2) Please complete Amazon login in this Chrome window.")
+    print("3) Close any modal/CAPTCHA if shown.")
+    input("Press ENTER here when login is complete and you see Amazon homepage...\n")
 
-    try:
-        WebDriverWait(driver, 20).until(
-            EC.any_of(
-                EC.presence_of_element_located((By.ID, "ap_email")),
-                EC.presence_of_element_located((By.ID, "ap_password")),
-                EC.presence_of_element_located((By.ID, "nav-link-accountList")),
-                EC.presence_of_element_located((By.TAG_NAME, "body")),
-            )
-        )
-    except Exception:
-        pass
-    _accept_consent_if_any(driver)
 
-    while True:
-        if _is_captcha(driver):
-            print("⚠️  CAPTCHA detected. Please solve it in the browser.")
-        ans = input("[LOGIN] Finished signing in? 'y' to continue, 'h' to re-open via header, 's' to skip: ").strip().lower()
-        if ans == "h":
-            _go_to_signin_via_header(driver, base_url)
-            continue
-        if ans == "s":
-            print("[LOGIN] Skipping login. Proceeding unauthenticated.")
-            break
-        if ans == "y":
-            try:
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "nav-link-accountList"))
-                )
-            except Exception:
-                pass
-            time.sleep(2.0)
-            if _is_captcha(driver):
-                print("⚠️  Still on CAPTCHA. Solve it and press 'y' again.")
-                continue
-            if _looks_signed_in(driver):
-                print("[LOGIN] Login detected. Continuing…")
-            else:
-                print("ℹ️  Could not confirm login heuristically. Continuing anyway.")
-            break
+# -----------------------------
+# Sorting + pagination controls
+# -----------------------------
 
-    _ensure_on_market_home(driver, base_url)
-
-# ============================== URL builders & regex ========================
-
-def _product_url(base: str, asin: str) -> str:
-    return f"{base}/dp/{asin}"
-
-STAR_RE = re.compile(r"([0-5](?:\.\d)?) out of 5")
-PRICE_RE = re.compile(r"([€£$])\s*([\d\.,]+)")
-
-def _parse_star(text: str) -> Optional[float]:
-    if not text:
-        return None
-    m = STAR_RE.search(text)
-    try:
-        return float(m.group(1)) if m else None
-    except Exception:
-        return None
-
-def _parse_helpful(text: str) -> int:
-    if not text:
-        return 0
-    tx = text.replace("\xa0", " ").strip()
-    if "One person" in tx:
-        return 1
-    nums = re.findall(r"[\d,]+", tx)
-    if nums:
-        try:
-            return int(nums[0].replace(",", ""))
-        except Exception:
-            return 0
-    return 0
-
-def _clean_review_date(text: str) -> str:
-    if not text:
-        return ""
-    parts = re.split(r"on\s+", text, maxsplit=1, flags=re.IGNORECASE)
-    return parts[-1].strip() if parts else text.strip()
-
-def _parse_price_text(txt: str) -> Tuple[Optional[float], Optional[str]]:
-    if not txt:
-        return None, None
-    m = PRICE_RE.search(txt.replace("\xa0", " "))
-    if not m:
-        return None, None
-    sym, num = m.group(1), m.group(2)
-    num = num.replace(",", "")
-    try:
-        val = float(num)
-    except Exception:
-        return None, None
-    cur = {"$": "USD", "£": "GBP", "€": "EUR"}.get(sym)
-    return val, cur
-
-def _extract_bsr_from_text(txt: str) -> Tuple[Optional[int], Optional[str]]:
-    if not txt:
-        return None, None
-    m = re.search(r"#\s*([\d,]+)", txt)
-    rank = int(m.group(1).replace(",", "")) if m else None
-    path = None
-    m2 = re.search(r"in\s+([^\(]+)", txt)
-    if m2:
-        path = m2.group(1).strip()
-        path = re.sub(r"\s*\(.*$", "", path).strip()
-    return rank, path
-
-# ============================== Reviews root & UI setup =====================
-
-def _resolve_reviews_root_url(driver, base_url: str, asin: str) -> Optional[str]:
+def force_sort_most_recent(driver: webdriver.Chrome) -> None:
     """
-    Open /dp/<ASIN>, accept possible interstitials, and extract the real
-    'See all reviews' URL from the page.
+    Ensure 'Most recent' is selected in the reviews sort dropdown.
+    We first try URL param sortBy=recent; this function double-guarantees via UI.
     """
-    driver.get(_product_url(base_url, asin))
-    _accept_consent_if_any(driver)
-
     try:
-        WebDriverWait(driver, 20).until(
-            EC.any_of(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "#corePriceDisplay_desktop_feature_div")),
-                EC.presence_of_element_located((By.ID, "detailBullets_feature_div")),
-                EC.presence_of_element_located((By.TAG_NAME, "body")),
-            )
-        )
-    except Exception:
-        pass
-    time.sleep(0.8)
-
-    selectors = [
-        'a[data-hook="see-all-reviews-link-foot"]',
-        'a[data-hook="see-all-reviews-link"]',
-        'a[href*="/product-reviews/"]',
-    ]
-    for sel in selectors:
-        try:
-            el = driver.find_element(By.CSS_SELECTOR, sel)
-            href = el.get_attribute("href")
-            if href and "/product-reviews/" in href:
-                _accept_consent_if_any(driver)
-                return href
-        except Exception:
-            continue
-
-    cu = driver.current_url or ""
-    if "/product-reviews/" in cu:
-        _accept_consent_if_any(driver)
-        return cu
-
-    return f"{base_url}/product-reviews/{asin}/?sortBy=recent"
-
-
-def _choose_all_reviewers_if_possible(driver) -> None:
-    """
-    Switch from 'Top reviews from …' to 'All reviewers' if such control exists.
-    Handles both modern and legacy dropdown layouts.
-    """
-    # Modern dropdown bubble near the banner
-    try:
-        trigger = driver.find_element(By.CSS_SELECTOR, '#reviews-filter-info-segment-dropdown')
-        driver.execute_script("arguments[0].click();", trigger)
-        time.sleep(0.3)
-        items = driver.find_elements(By.CSS_SELECTOR, '.a-popover-wrapper a.a-dropdown-link')
-        for it in items:
-            if "all reviewers" in (it.text or "").strip().lower():
-                driver.execute_script("arguments[0].click();", it)
-                time.sleep(1.0)
+        # There are two common sort UIs:
+        # A) select#sort-order-dropdown (or data-hook="review-star-count-dropdown")
+        # B) a fake button that opens aul dropdown with role="listbox".
+        # We try the native select first.
+        _sleep(0.5)
+        select = driver.find_elements(By.ID, "sort-order-dropdown")
+        if select:
+            select[0].click()
+            _sleep(0.3)
+            # "Most recent" option usually has value "recent"
+            opts = driver.find_elements(By.XPATH, '//select[@id="sort-order-dropdown"]/option[contains(@value,"recent")]')
+            if opts:
+                opts[0].click()
+                _sleep(1.0)
                 return
-    except Exception:
-        pass
 
-    # Legacy a-dropdown near the filter info
-    try:
-        triggers = driver.find_elements(By.CSS_SELECTOR, 'span[data-action="a-dropdown-button"]')
-        for t in triggers:
-            driver.execute_script("arguments[0].click();", t)
-            time.sleep(0.3)
-            links = driver.find_elements(By.CSS_SELECTOR, 'ul.a-nostyle.a-list-link a')
-            for a in links:
-                if "all reviewers" in (a.text or "").strip().lower():
-                    driver.execute_script("arguments[0].click();", a)
-                    time.sleep(1.0)
-                    return
+        # Fallback: click the faux dropdown and choose 'Most recent'
+        trigger = driver.find_elements(By.XPATH, '//span[@data-action="a-dropdown-button"]//span[contains(@class,"a-dropdown-prompt")]')
+        if trigger:
+            trigger[0].click()
+            _sleep(0.4)
+            choice = driver.find_elements(By.XPATH, '//a[contains(@class,"a-dropdown-link") and (contains(., "Most recent") or contains(., "Newest"))]')
+            if choice:
+                choice[0].click()
+                _sleep(1.2)
     except Exception:
+        # Non-fatal; sorting via URL may already be applied.
         pass
 
 
-def _set_sort_most_recent(driver) -> None:
+def english_only_filter_is_on(driver: webdriver.Chrome) -> bool:
     """
-    Force 'Most recent' sorting. Prefer the native <select>, fallback to dropdown menu.
-    """
-    # Native select control
-    try:
-        sel = driver.find_element(By.CSS_SELECTOR, 'select#sort-order-dropdown')
-        # Option by value
-        opts = sel.find_elements(By.TAG_NAME, 'option')
-        target = None
-        for o in opts:
-            if (o.get_attribute("value") or "").lower() in {"recent", "recent"}:
-                target = o
-                break
-            if "most recent" in (o.text or "").strip().lower():
-                target = o
-                break
-        if target is not None:
-            driver.execute_script("arguments[0].selected = true;", target)
-            driver.execute_script("arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", sel)
-            time.sleep(1.2)
-            return
-    except Exception:
-        pass
-
-    # Dropdown variant near "Sort by"
-    try:
-        # find a 'Sort by' container dropdown
-        triggers = driver.find_elements(By.CSS_SELECTOR, 'span[data-action="a-dropdown-button"] > span.a-button-inner')
-        for t in triggers:
-            driver.execute_script("arguments[0].click();", t)
-            time.sleep(0.3)
-            links = driver.find_elements(By.CSS_SELECTOR, 'ul.a-nostyle.a-list-link a')
-            for a in links:
-                if "most recent" in (a.text or "").strip().lower():
-                    driver.execute_script("arguments[0].click();", a)
-                    time.sleep(1.2)
-                    return
-    except Exception:
-        pass
-
-
-def _scroll_to_reviews_list(driver) -> None:
-    """Scroll the reviews list into view to trigger lazy rendering."""
-    try:
-        container = driver.find_element(By.CSS_SELECTOR, "#cm_cr-review_list")
-        driver.execute_script("arguments[0].scrollIntoView({block:'start'});", container)
-        time.sleep(0.8)
-    except Exception:
-        # fallback: first review
-        try:
-            card = driver.find_element(By.CSS_SELECTOR, 'div[data-hook="review"]')
-            driver.execute_script("arguments[0].scrollIntoView({block:'start'});", card)
-            time.sleep(0.8)
-        except Exception:
-            pass
-
-# ============================== Product meta =================================
-
-def _fetch_product_meta(driver: webdriver.Chrome, base_url: str, asin: str) -> dict:
-    """Get Buy Box price and BSR from /dp/<ASIN>."""
-    url = _product_url(base_url, asin)
-    meta = {"asin": asin, "buybox_price": None, "currency": None, "bsr_rank": None, "bsr_path": None}
-    try:
-        driver.get(url)
-        try:
-            WebDriverWait(driver, 15).until(
-                EC.any_of(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "#corePriceDisplay_desktop_feature_div")),
-                    EC.presence_of_element_located((By.TAG_NAME, "body")),
-                )
-            )
-        except TimeoutException:
-            pass
-        time.sleep(0.8)
-
-        # Price
-        price_txt = ""
-        try:
-            price_txt = driver.find_element(By.CSS_SELECTOR, "#corePriceDisplay_desktop_feature_div span.a-offscreen").text.strip()
-        except Exception:
-            pass
-        if not price_txt:
-            try:
-                price_txt = driver.find_element(By.CSS_SELECTOR, "span.a-offscreen").text.strip()
-            except Exception:
-                pass
-        price, cur = _parse_price_text(price_txt)
-        if price is not None:
-            meta["buybox_price"] = price
-            meta["currency"] = cur
-
-        # BSR
-        bsr_txt = ""
-        try:
-            blk = driver.find_element(By.ID, "detailBullets_feature_div").text
-            if "Best Sellers Rank" in blk or "#" in blk:
-                for line in blk.splitlines():
-                    if "Best Sellers Rank" in line or "#" in line:
-                        bsr_txt = line
-                        break
-        except Exception:
-            pass
-        if not bsr_txt:
-            try:
-                tbl = driver.find_element(By.ID, "productDetails_detailBullets_sections1").text
-                if "Best Sellers Rank" in tbl or "#" in tbl:
-                    for line in tbl.splitlines():
-                        if "Best Sellers Rank" in line or "#" in line:
-                            bsr_txt = line
-                            break
-            except Exception:
-                pass
-        if not bsr_txt:
-            try:
-                body_txt = driver.find_element(By.TAG_NAME, "body").text
-                m = re.search(r"Best Sellers Rank.*?#\s*[\d,]+\s+in\s+[^\n]+", body_txt, flags=re.IGNORECASE | re.DOTALL)
-                if m:
-                    bsr_txt = m.group(0)
-            except Exception:
-                pass
-
-        rank, path = _extract_bsr_from_text(bsr_txt)
-        meta["bsr_rank"] = rank
-        meta["bsr_path"] = path
-
-    except Exception:
-        pass
-    return meta
-
-# ============================== Parsing reviews ==============================
-
-def _parse_reviews_from_html(html: str, asin: str) -> List[Dict[str, Any]]:
-    """Parse reviews from a saved HTML source using BeautifulSoup."""
-    out: List[Dict[str, Any]] = []
-    soup = BeautifulSoup(html, "html.parser")
-    # Try multiple card patterns
-    cards = soup.select('div[data-hook="review"]')
-    if not cards:
-        cards = soup.select('div[data-hook="cmps-review"]')
-
-    for card in cards:
-        try:
-            review_id = card.get("id") or card.get("data-review-id")
-            # rating
-            rating_text = ""
-            star_span = card.select_one('i[data-hook="review-star-rating"] span') or \
-                        card.select_one('i[data-hook="cmps-review-star-rating"] span')
-            if star_span and star_span.text:
-                rating_text = star_span.text.strip()
-            rating = _parse_star(rating_text)
-
-            # date
-            date_el = card.select_one('span[data-hook="review-date"]')
-            review_date = _clean_review_date(date_el.text.strip()) if date_el and date_el.text else ""
-
-            # title
-            title_el = card.select_one('a[data-hook="review-title"] span')
-            review_title = title_el.text.strip() if title_el and title_el.text else ""
-
-            # text
-            text_el = card.select_one('span[data-hook="review-body"]')
-            review_text = text_el.text.strip() if text_el and text_el.text else ""
-
-            # verified
-            avp = card.select_one('span[data-hook="avp-badge"]')
-            verified = bool(avp and "Verified Purchase" in avp.text)
-
-            # helpful
-            hv = card.select_one('span[data-hook="helpful-vote-statement"]')
-            helpful_votes = _parse_helpful(hv.text.strip()) if hv and hv.text else 0
-
-            out.append({
-                "asin": asin,
-                "review_id": review_id,
-                "review_date": review_date,
-                "review_title": review_title,
-                "review_text": review_text,
-                "rating": rating,
-                "verified": verified,
-                "helpful_votes": helpful_votes,
-            })
-        except Exception:
-            continue
-    return out
-
-# ============================== Pagination ==================================
-
-def _click_next_reviews_page(driver: webdriver.Chrome) -> bool:
-    """
-    Click the 'Next' pagination link on the reviews page.
-    Returns True if the page number advanced (content changed), else False.
+    Check that the page state says English filter is active.
+    We look for cr-state-object JSON blob and inspect language settings.
     """
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "ul.a-pagination"))
-        )
-    except TimeoutException:
+        span = driver.find_element(By.ID, "cr-state-object")
+        raw = span.get_attribute("data-state") or "{}"
+        data = json.loads(raw)
+        # Amazon uses languageOfPreference + filterByLanguage; we accept either hint
+        lang_pref = (data.get("languageOfPreference") or "").lower()
+        return "en" in lang_pref or data.get("filterByLanguage", "").startswith("en")
+    except Exception:
         return False
 
-    def _current_page_no() -> Optional[int]:
-        try:
-            sel = driver.find_element(By.CSS_SELECTOR, "ul.a-pagination li.a-selected")
-            num = (sel.text or "").strip()
-            return int(re.sub(r"[^\d]", "", num)) if num else None
-        except Exception:
-            return None
 
-    def _first_review_fingerprint() -> str:
-        try:
-            first = driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="review"]') or \
-                    driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="cmps-review"]')
-            if not first:
-                return ""
-            first = first[0]
-            rid = first.get_attribute("id") or ""
-            txt = ""
-            try:
-                txt = first.find_element(By.CSS_SELECTOR, 'span[data-hook="review-body"]').text[:64]
-            except Exception:
-                pass
-            return f"{rid}|{txt}"
-        except Exception:
-            return ""
-
-    cur_no = _current_page_no()
-    cur_fp = _first_review_fingerprint()
-
+def click_next_page(driver: webdriver.Chrome) -> bool:
+    """
+    Click 'Next' in reviews pagination.
+    Returns True if navigation started, False if no further pages available.
+    """
     try:
-        last_li = driver.find_element(By.CSS_SELECTOR, "ul.a-pagination li.a-last")
-    except NoSuchElementException:
-        return False
-
-    cls = (last_li.get_attribute("class") or "").lower()
-    if "a-disabled" in cls:
-        return False
-
-    try:
-        link = last_li.find_element(By.TAG_NAME, "a")
-        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", link)
-        time.sleep(0.2)
-        driver.execute_script("arguments[0].click();", link)
-    except Exception:
-        # fallback by href
-        try:
-            href = last_li.find_element(By.TAG_NAME, "a").get_attribute("href")
-            if href:
-                driver.get(href)
-            else:
-                return False
-        except Exception:
+        # Typical structure: ul.a-pagination li.a-last a
+        ul = driver.find_element(By.XPATH, '//ul[contains(@class,"a-pagination")]')
+        # If next is disabled: li.a-disabled.a-last
+        disabled = ul.find_elements(By.XPATH, './/li[contains(@class,"a-disabled") and contains(@class,"a-last")]')
+        if disabled:
             return False
-
-    # Wait for content to change (new active page OR first review changed)
-    try:
-        WebDriverWait(driver, 20).until(
-            lambda d: (
-                (_current_page_no() is not None and cur_no is not None and _current_page_no() != cur_no)
-                or _first_review_fingerprint() != cur_fp
-            )
-        )
-        time.sleep(PAGE_DELAY_SEC)
+        nxt = ul.find_elements(By.XPATH, './/li[contains(@class,"a-last")]//a')
+        if not nxt:
+            return False
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", nxt[0])
+        _sleep(0.2)
+        nxt[0].click()
         return True
-    except TimeoutException:
+    except (NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException):
         return False
 
-# ============================== Public API ==================================
 
-def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) -> pd.DataFrame:
+# -----------------------------
+# Parsing
+# -----------------------------
+
+def parse_reviews_from_html(html: str, asin: str, marketplace: str) -> List[Dict]:
     """
-    Selenium collector that:
-      - pauses for manual login confirmation via header "Sign in",
-      - switches to 'All reviewers' and 'Most recent',
-      - saves every reviews page to Out/html/<MARKET>/<ASIN>/<ASIN>_p{N}.html,
-      - parses reviews from saved HTML,
-      - collects Buy Box price and BSR once per ASIN.
-
-    Returns DataFrame with at least:
-      asin, review_id, review_date, review_title, review_text, rating,
-      verified, helpful_votes, buybox_price, currency, bsr_rank, bsr_path
+    Static parse of review blocks.
+    Returns list of dicts.
     """
-    market_key = (marketplace or "US").upper()
-    base = MARKET_BASE.get(market_key, MARKET_BASE["US"])
-    lang = "en-GB" if market_key == "UK" else "en-US"
+    soup = BeautifulSoup(html, "html.parser")
+    blocks = soup.select('div[data-hook="review"]')
+    items: List[Dict] = []
 
-    driver = _make_driver(lang=lang)
+    for b in blocks:
+        try:
+            review_id = b.get("id") or ""
+            title = (b.select_one('a[data-hook="review-title"] span') or {}).get_text(strip=True) if b.select_one('a[data-hook="review-title"] span') else ""
+            rating_el = b.select_one('i[data-hook="review-star-rating"] span') or b.select_one('i[data-hook="cmps-review-star-rating"] span')
+            rating_text = rating_el.get_text(strip=True) if rating_el else ""
+            # Rating like "5.0 out of 5 stars"
+            rating = None
+            if rating_text:
+                try:
+                    rating = float(rating_text.split()[0].replace(",", "."))
+                except Exception:
+                    rating = None
+            date_el = b.select_one('span[data-hook="review-date"]')
+            review_date = date_el.get_text(strip=True) if date_el else ""
+            body = (b.select_one('span[data-hook="review-body"]') or {}).get_text(strip=True) if b.select_one('span[data-hook="review-body"]') else ""
+            verified = bool(b.select_one('span[data-hook="avp-badge"]'))
 
-    try:
-        # Hard stop for manual login before scraping
-        _require_manual_login(driver, base)
+            helpful = None
+            help_el = b.select_one('span[data-hook="helpful-vote-statement"]')
+            if help_el:
+                txt = help_el.get_text(strip=True)
+                # "12 people found this helpful" or "One person found this helpful"
+                try:
+                    if txt.lower().startswith("one"):
+                        helpful = 1
+                    else:
+                        helpful = int("".join(ch for ch in txt.split()[0] if ch.isdigit()))
+                except Exception:
+                    helpful = None
 
-        all_rows: List[Dict[str, Any]] = []
+            # Fallback dedupe hash if no review_id
+            fallback_key = _hash_text(f"{asin}|{review_date}|{rating}|{title}|{body[:80]}")
 
-        for raw_asin in asins:
-            asin = str(raw_asin).strip()
-            if not asin:
-                continue
-
-            print(f"[ASIN] {asin} — fetching meta…")
-            meta = _fetch_product_meta(driver, base, asin)
-
-            # Prepare folder for HTML dumps
-            asin_dir = HTML_ROOT / market_key / asin
-            asin_dir.mkdir(parents=True, exist_ok=True)
-
-            # Resolve real "See all reviews" URL
-            print(f"[ASIN] {asin} — resolving reviews root…")
-            root = _resolve_reviews_root_url(driver, base, asin)
-            try:
-                driver.get(root)
-            except WebDriverException:
-                print(f"[WARN] Failed to open reviews root for {asin}")
-                continue
-
-            # UI setup: consent + All reviewers + Most recent + scroll
-            _accept_consent_if_any(driver)
-            _choose_all_reviewers_if_possible(driver)
-            _set_sort_most_recent(driver)
-            _scroll_to_reviews_list(driver)
-
-            # Ensure first batch of reviews loaded (wider set of selectors)
-            try:
-                WebDriverWait(driver, 25).until(
-                    EC.any_of(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="review"]')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="cmps-review"]')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '#cm_cr-review_list div[data-hook="review"]')),
-                    )
-                )
-            except TimeoutException:
-                _save_html(asin_dir / f"{asin}_p1.html", driver.page_source)
-                print(f"[WARN] No reviews block for {asin} (saved p1 for debug).")
-                continue
-
-            collected = 0
-            page_idx = 1
-            seen_ids: set[str] = set()
-
-            while collected < max_reviews and page_idx <= MAX_REVIEW_PAGES:
-                time.sleep(PAGE_DELAY_SEC)
-
-                # Save current page
-                html_path = asin_dir / f"{asin}_p{page_idx}.html"
-                _save_html(html_path, driver.page_source)
-                print(f"[SAVE] {html_path}")
-
-                # Parse current page
-                rows = _parse_reviews_from_html((driver.page_source or ""), asin)
-                if not rows:
-                    print(f"[INFO] No review cards on page {page_idx} for {asin}.")
-                    break
-
-                for r in rows:
-                    # attach product meta
-                    r.setdefault("buybox_price", meta.get("buybox_price"))
-                    r.setdefault("currency", meta.get("currency"))
-                    r.setdefault("bsr_rank", meta.get("bsr_rank"))
-                    r.setdefault("bsr_path", meta.get("bsr_path"))
-
-                    rid = str(r.get("review_id") or "")
-                    if rid and rid in seen_ids:
-                        continue
-                    if rid:
-                        seen_ids.add(rid)
-
-                    all_rows.append(r)
-                    collected += 1
-                    if collected >= max_reviews:
-                        break
-
-                if collected >= max_reviews:
-                    break
-
-                # Test limiter: stop after first N pages
-                if TEST_PAGE_LIMIT > 0 and page_idx >= TEST_PAGE_LIMIT:
-                    print(f"[TEST] Page limit reached ({TEST_PAGE_LIMIT}).")
-                    break
-
-                # Move to next page by clicking "Next"
-                moved = _click_next_reviews_page(driver)
-                if not moved:
-                    print(f"[INFO] No Next page for {asin} after page {page_idx}.")
-                    break
-
-                page_idx += 1
-
-        # ---- Normalize to DataFrame and enforce schema ----
-        df = pd.DataFrame(all_rows)
-        required = [
-            "asin", "review_id", "review_date", "review_title", "review_text",
-            "rating", "verified", "helpful_votes",
-            "buybox_price", "currency", "bsr_rank", "bsr_path"
-        ]
-        for c in required:
-            if c not in df.columns:
-                df[c] = None
-
-        # Basic types
-        df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
-        df["verified"] = df["verified"].astype("boolean")
-        df["helpful_votes"] = pd.to_numeric(df["helpful_votes"], errors="coerce").fillna(0).astype("Int64")
-        df["buybox_price"] = pd.to_numeric(df["buybox_price"], errors="coerce")
-        df["bsr_rank"] = pd.to_numeric(df["bsr_rank"], errors="coerce").astype("Int64")
-
-        # Deduplicate: (asin, review_id) primary; fallback (asin, date, rating, hash(text))
-        if not df.empty:
-            key1 = df["asin"].astype(str) + "|" + df["review_id"].astype(str)
-            df = df.loc[~key1.duplicated(keep="first")].reset_index(drop=True)
-
-            key2 = (
-                df["asin"].astype(str) + "|" +
-                df["review_date"].astype(str) + "|" +
-                df["rating"].astype(str) + "|" +
-                df["review_text"].astype(str).map(lambda t: str(hash(t)))
+            items.append(
+                {
+                    "asin": asin,
+                    "marketplace": marketplace.upper(),
+                    "review_id": review_id or f"FALLBACK-{fallback_key}",
+                    "review_date_raw": review_date,
+                    "rating": rating,
+                    "title": title,
+                    "body": body,
+                    "verified_purchase": verified,
+                    "helpful_votes": helpful,
+                }
             )
-            df = df.loc[~key2.duplicated(keep="first")].reset_index(drop=True)
+        except Exception:
+            # Keep scraping even if one block fails
+            continue
 
+    return items
+
+
+# -----------------------------
+# ASIN-level collection
+# -----------------------------
+
+def _save_page(asin: str, page_idx: int, html: str):
+    if not SAVE_HTML_PAGES:
+        return
+    _ensure_dirs()
+    fname = RAW_DIR / f"{asin}_p{page_idx}.html"
+    fname.write_text(html, encoding="utf-8", errors="ignore")
+
+
+def _wait_reviews_loaded(driver: webdriver.Chrome):
+    """Wait until review container appears."""
+    _wait_visible(driver, By.ID, "cm_cr-review_list", timeout=PAGE_LOAD_TIMEOUT)
+
+
+def collect_reviews_for_one_asin(
+    driver: webdriver.Chrome,
+    asin: str,
+    marketplace: str,
+    max_pages: int,
+    max_reviews: int,
+) -> Tuple[List[Dict], int]:
+    """
+    Navigate through 'Most recent' review pages by clicking Next; parse each page.
+    Returns (reviews_list, pages_scraped).
+    """
+    pages_done = 0
+    collected: List[Dict] = []
+
+    # Open page 1
+    url = _reviews_url(asin, marketplace, page=1)
+    driver.get(url)
+
+    # Force 'Most recent' and English filter if possible
+    try:
+        _wait_reviews_loaded(driver)
+    except TimeoutException:
+        # Sometimes lazy load; try small scroll
+        driver.execute_script("window.scrollTo(0, 600);")
+        _sleep(1.0)
+        _wait_reviews_loaded(driver)
+
+    # Ensure sorting
+    force_sort_most_recent(driver)
+    _sleep(0.6)
+
+    # If language filter isn't English, reload with explicit filter param (already in URL but double check)
+    if not english_only_filter_is_on(driver):
+        driver.get(_reviews_url(asin, marketplace, page=1))
+        _wait_reviews_loaded(driver)
+        force_sort_most_recent(driver)
+        _sleep(0.5)
+
+    # Paginate
+    while pages_done < max_pages and (len(collected) < max_reviews):
+        # Wait list visible
+        _wait_reviews_loaded(driver)
+        _sleep(0.4)
+
+        # Save raw page
+        html = driver.page_source
+        pages_done += 1
+        _save_page(asin, pages_done, html)
+
+        # Parse
+        page_items = parse_reviews_from_html(html, asin, marketplace)
+        collected.extend(page_items)
+
+        # Early stop if we've got enough reviews
+        if len(collected) >= max_reviews:
+            break
+
+        # Try next page
+        moved = click_next_page(driver)
+        if not moved:
+            break
+
+        # Wait for navigation (either URL changes or list refreshed)
+        try:
+            WebDriverWait(driver, PAGE_LOAD_TIMEOUT).until(
+                EC.staleness_of(driver.find_element(By.ID, "cm_cr-review_list"))
+            )
+        except Exception:
+            pass
+
+        # Then list becomes visible again
+        _wait_reviews_loaded(driver)
+        _sleep(0.4)
+
+    return collected[:max_reviews], pages_done
+
+
+# -----------------------------
+# Public API
+# -----------------------------
+
+def collect_reviews(
+    asins: List[str],
+    max_reviews_per_asin: int = 500,
+    marketplace: str = DEFAULT_MARKETPLACE,
+) -> pd.DataFrame:
+    """
+    Main entry used by our pipeline.
+    - Launches Chrome
+    - Pauses for manual login
+    - Iterates ASINs, scrapes up to TEST_PAGE_LIMIT pages (override via env) or until max_reviews_per_asin
+    - Returns a DataFrame with deduplication across all ASINs
+
+    Columns:
+        asin, marketplace, review_id, review_date_raw, rating, title, body,
+        verified_purchase, helpful_votes
+    """
+    _ensure_dirs()
+    mk = (marketplace or DEFAULT_MARKETPLACE).upper()
+
+    # Decide page cap: for MVP/testing we use TEST_PAGE_LIMIT
+    max_pages = max(1, TEST_PAGE_LIMIT)
+
+    driver = launch_chrome(headless=False)
+    try:
+        pause_for_manual_login(driver, mk)
+
+        all_items: List[Dict] = []
+        for idx, asin in enumerate(asins, start=1):
+            print(f"[{idx}/{len(asins)}] ASIN={asin}: collecting (up to {max_pages} pages, {max_reviews_per_asin} reviews)...")
+            try:
+                items, pages_done = collect_reviews_for_one_asin(
+                    driver=driver,
+                    asin=asin,
+                    marketplace=mk,
+                    max_pages=max_pages,
+                    max_reviews=max_reviews_per_asin,
+                )
+                print(f"  ✓ pages scraped: {pages_done}, reviews parsed: {len(items)}")
+                all_items.extend(items)
+            except Exception as e:
+                print(f"  ✗ failed for ASIN={asin}: {e}")
+                traceback.print_exc()
+                # Keep going with next ASIN
+                continue
+
+        if not all_items:
+            return pd.DataFrame(columns=[
+                "asin","marketplace","review_id","review_date_raw","rating","title",
+                "body","verified_purchase","helpful_votes"
+            ])
+
+        df = pd.DataFrame(all_items)
+
+        # Deduplicate: first by (asin, review_id); fallback on hash if review_id starts with FALLBACK-
+        # This keeps the earliest occurrence (stable order).
+        df["_key"] = df.apply(
+            lambda r: (r["asin"], r["review_id"]) if not str(r["review_id"]).startswith("FALLBACK-")
+            else (r["asin"], _hash_text(f'{r["asin"]}|{r["review_date_raw"]}|{r["rating"]}|{r["title"]}|{r["body"][:80]}')),
+            axis=1
+        )
+        df = df.drop_duplicates(subset="_key", keep="first").drop(columns=["_key"]).reset_index(drop=True)
         return df
 
     finally:
@@ -798,3 +475,25 @@ def collect_reviews(asins: Iterable[str], max_reviews: int, marketplace: str) ->
             driver.quit()
         except Exception:
             pass
+
+
+# -----------------------------
+# CLI test hook
+# -----------------------------
+
+if __name__ == "__main__":
+    # Quick manual test:
+    #   python amazon_review_collector.py B09DSXQZ37 B08MC6PLT4 --mk US --max 200
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Amazon reviews collector (Most recent, English)")
+    parser.add_argument("asins", nargs="+", help="List of ASINs")
+    parser.add_argument("--mk", default=DEFAULT_MARKETPLACE, help="Marketplace: US or UK")
+    parser.add_argument("--max", type=int, default=200, help="Max reviews per ASIN")
+    args = parser.parse_args()
+
+    df = collect_reviews(args.asins, max_reviews_per_asin=args.max, marketplace=args.mk)
+    out = Path("Out/reviews_sample.csv")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out, index=False)
+    print(f"Saved {len(df)} rows -> {out}")
