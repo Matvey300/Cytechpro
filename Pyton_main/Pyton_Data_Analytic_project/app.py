@@ -221,6 +221,16 @@ def main_menu():
 
         elif choice == "5":
             out_dir = session.get("out_dir")
+            reviews_csv = out_dir / "reviews.csv"
+            if not reviews_csv.exists():
+                print("No reviews.csv yet. Please run '3) Collect reviews' to gather data first.")
+                return
+
+            rows = sum(1 for _ in open(reviews_csv, "r", encoding="utf-8", errors="ignore")) - 1
+            if rows < 100:
+                print(f"Only {rows} reviews collected so far. Gather more before running tests (need >= 100).")
+                return
+
             if not out_dir:
                 # allow manual input
                 out_dir = _pick_collection_interactive()
