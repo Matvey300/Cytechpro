@@ -1,149 +1,146 @@
 # ASIN_data_import.py
+# All comments in English.
 
 from __future__ import annotations
 
-import re
+import os
 import time
-from dataclasses import dataclass
-from typing import Iterable, List, Tuple
+from typing import List, Dict, Optional
 
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 
+AMZ_DOMAIN = {"US": "amazon.com", "UK": "amazon.co.uk"}
 
-@dataclass(frozen=True)
-class MarketCfg:
-    base: str      # e.g. "https://www.amazon.com"
-    locale: str    # e.g. "en_US"
-    currency: str  # e.g. "USD"
+# ----------------------------
+# Internal helpers
+# ----------------------------
 
+def _serpapi_key() -> Optional[str]:
+    k = os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
+    return k.strip() if k else None
 
-def _marketplace_config(region: str) -> MarketCfg:
-    """Return marketplace settings for a given region code."""
-    region = (region or "").upper()
-    if region == "US":
-        return MarketCfg(base="https://www.amazon.com",  locale="en_US", currency="USD")
-    if region == "UK":
-        return MarketCfg(base="https://www.amazon.co.uk", locale="en_GB", currency="GBP")
-    # Fallback to US if something unexpected is passed
-    return MarketCfg(base="https://www.amazon.com", locale="en_US", currency="USD")
+def _amazon_domain(region: str) -> str:
+    return AMZ_DOMAIN.get((region or "US").upper(), AMZ_DOMAIN["US"])
 
+def _serpapi_search_page(query: str, region: str, page: int = 1, timeout: int = 20) -> Optional[Dict]:
+    """
+    Calls SerpApi Amazon engine for a single page of results.
+    IMPORTANT: for Amazon engine the keyword parameter is 'k', not 'q'.
+    """
+    key = _serpapi_key()
+    if not key:
+        raise RuntimeError("SERPAPI_KEY is not set in environment")
 
-def _headers(locale: str) -> dict:
-    """Basic anti-bot-ish headers. Adjust if needed."""
-    return {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
+    url = "https://serpapi.com/search.json"
+    params = {
+        "engine": "amazon",
+        "amazon_domain": _amazon_domain(region),
+        "k": query,
+        "page": page,
+        "api_key": key,
     }
+    try:
+        r = requests.get(url, params=params, timeout=timeout)
+        if r.status_code != 200:
+            # Soft-fail with None; caller will stop on empty responses
+            return None
+        return r.json()
+    except Exception:
+        return None
 
+def _extract_asins(data: Dict) -> List[str]:
+    """
+    Extract ASINs from SerpApi response.
+    Primary source: 'organic_results'[i]['asin'].
+    """
+    asins: List[str] = []
+    if not isinstance(data, dict):
+        return asins
+    for item in (data.get("organic_results") or []):
+        asin = item.get("asin")
+        if asin:
+            asins.append(str(asin).strip())
+    # Dedup preserving order
+    seen = set()
+    out = []
+    for a in asins:
+        if a and a not in seen:
+            seen.add(a)
+            out.append(a)
+    return out
 
-_ASIN_RE = re.compile(r"/([A-Z0-9]{10})(?:[/?]|$)")
+# ----------------------------
+# Public API expected by app.py
+# ----------------------------
 
+def collect_asins(category_path: str, region: str = "US", top_k: int = 100, max_pages: int = 10, sleep_sec: float = 1.0) -> pd.DataFrame:
+    """
+    Collect up to top_k unique ASINs for the given category_path by querying SerpApi Amazon search.
+    We use the human-readable 'category_path' as the search phrase (works robustly enough for MVP).
 
-def _extract_asins_from_html(html: str) -> List[str]:
-    """Extract ASINs from a search result page HTML."""
-    soup = BeautifulSoup(html, "html.parser")
-    asins: set[str] = set()
+    Returns DataFrame with columns:
+      - asin
+      - category_path
+    """
+    if not category_path or not str(category_path).strip():
+        raise ValueError("category_path must be a non-empty string")
 
-    # 1) Try product containers with 'data-asin'
-    for div in soup.select("div.s-result-item[data-asin]"):
-        asin = div.get("data-asin", "").strip()
-        if len(asin) == 10 and asin.isalnum():
-            asins.add(asin)
-
-    # 2) Fallback: scan all hrefs for '/dp/ASIN' or '/gp/.../ASIN'
-    for a in soup.select("a[href]"):
-        href = a["href"]
-        m = _ASIN_RE.search(href)
-        if m:
-            candidate = m.group(1)
-            if len(candidate) == 10 and candidate.isalnum():
-                asins.add(candidate)
-
-    return list(asins)
-
-
-def _search_url(cfg: MarketCfg, query: str, page: int) -> str:
-    """Build Amazon search URL for a given query and page."""
-    # Simple search; you can enrich with department/category filters later.
-    return f"{cfg.base}/s?k={requests.utils.quote(query)}&page={page}"
-
-
-def _fetch_asins_via_search(
-    cfg: MarketCfg,
-    query: str,
-    max_items: int = 100,
-    max_pages: int = 10,
-    delay_sec: float = 1.5,
-) -> List[str]:
-    """Fetch ASINs by iterating search result pages until max_items or max_pages is reached."""
-    session = requests.Session()
-    session.headers.update(_headers(cfg.locale))
-
-    found: List[str] = []
-    seen: set[str] = set()
-
-    for page in range(1, max_pages + 1):
-        url = _search_url(cfg, query=query, page=page)
-        resp = session.get(url, timeout=20)
-        if resp.status_code != 200:
-            # Soft break on blocks or errors
+    region = (region or "US").upper()
+    bag: List[str] = []
+    for p in range(1, max_pages + 1):
+        data = _serpapi_search_page(query=str(category_path), region=region, page=p)
+        page_asins = _extract_asins(data or {})
+        # Stop if no results returned
+        if not page_asins:
             break
-
-        page_asins = _extract_asins_from_html(resp.text)
+        # Accumulate unique
         for a in page_asins:
-            if a not in seen:
-                seen.add(a)
-                found.append(a)
-                if len(found) >= max_items:
-                    return found
+            if a not in bag:
+                bag.append(a)
+                if len(bag) >= int(top_k or 100):
+                    break
+        if len(bag) >= int(top_k or 100):
+            break
+        # be polite with the API
+        time.sleep(float(sleep_sec or 0))
 
-        # Polite delay between pages
-        time.sleep(delay_sec)
-
-    return found
-
-
-def _last_two_nodes(category_path: str) -> str:
-    """Return the last two nodes of a 'A > B > C' path; fallback to full if <2 nodes."""
-    parts = [p.strip() for p in (category_path or "").split(">") if p.strip()]
-    if len(parts) >= 2:
-        return " ".join(parts[-2:])
-    if parts:
-        return parts[-1]
-    return category_path or ""
-
-
-def Collect_ASIN_DATA(category_path: str, region: str) -> pd.DataFrame:
-    """
-    Public entry-point used by the app.
-    Inputs:
-      - category_path: normalized category path, e.g. "Electronics > Headphones > Earbuds"
-      - region: "US" or "UK"
-    Output:
-      - pandas.DataFrame with columns at least: ['asin', 'region', 'category_path']
-    """
-    cfg = _marketplace_config(region)
-
-    # For MVP we convert category path to a search query using the two last nodes.
-    # Example: "Electronics > Headphones > Earbuds" -> "Headphones Earbuds"
-    query = _last_two_nodes(category_path)
-
-    # Fetch up to 100 ASINs via plain search (you can swap this to your existing parser)
-    asins = _fetch_asins_via_search(cfg, query=query, max_items=100, max_pages=10, delay_sec=1.0)
-
-    df = pd.DataFrame({"asin": asins})
-    # Normalize + metadata expected by the pipeline
-    df = df.drop_duplicates(subset=["asin"]).reset_index(drop=True)
-    df["region"] = region.upper()
-    df["category_path"] = category_path
-
+    df = pd.DataFrame({"asin": bag})
+    df["category_path"] = str(category_path)
     return df
+
+def collect_asins_for_categories(categories: List[str], region: str = "US", top_k: int = 100) -> pd.DataFrame:
+    """
+    Convenience helper: collect ASINs for multiple categories and concat.
+    """
+    frames: List[pd.DataFrame] = []
+    for cat in categories or []:
+        try:
+            df = collect_asins(category_path=cat, region=region, top_k=top_k)
+            frames.append(df)
+        except Exception:
+            # Skip failing category silently (MVP behavior)
+            continue
+    if not frames:
+        return pd.DataFrame(columns=["asin", "category_path"])
+    # If same ASIN appears across categories, keep first occurrence
+    all_df = pd.concat(frames, ignore_index=True)
+    all_df = all_df.drop_duplicates(subset=["asin"], keep="first")
+    return all_df
+
+# ----------------------------
+# CLI (optional quick test)
+# ----------------------------
+
+if __name__ == "__main__":
+    import sys as _sys
+    if len(_sys.argv) < 2:
+        print("Usage: python ASIN_data_import.py 'Category Path' [US|UK] [top_k]")
+        _sys.exit(1)
+    cat = _sys.argv[1]
+    reg = _sys.argv[2] if len(_sys.argv) > 2 else "US"
+    k = int(_sys.argv[3]) if len(_sys.argv) > 3 else 50
+    print(f"Collecting up to {k} ASIN for [{cat}] in {reg}…")
+    df_test = collect_asins(category_path=cat, region=reg, top_k=k)
+    print(df_test.head())
+    print(f"Total collected: {len(df_test)}")
