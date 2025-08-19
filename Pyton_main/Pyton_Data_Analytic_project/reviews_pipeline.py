@@ -49,22 +49,47 @@ def _floor_to_minute(dt_str: str) -> str:
 
 def _stable_row_key(row: pd.Series) -> str:
     """
-    Stable dedupe key:
-      1) Prefer (asin, review_id) when review_id is present and not fallback.
-      2) Otherwise, build SHA1 over (asin | date_floor_minute | rating | title | body_norm[:200]).
-         This collapses 'second-only' duplicates (same review cloned with a small timestamp delta).
+    Dedupe only *exact* technical duplicates:
+      - Primary: (asin, review_id) if review_id present and not fallback.
+      - Fallback (no review_id): SHA1 over FULL timestamp + content.
+    NOTE: We do NOT floor timestamps here — we preserve near-duplicates that differ by seconds.
     """
     asin = str(row.get("asin", ""))
     review_id = str(row.get("review_id", "") or "")
     if review_id and not review_id.startswith("FALLBACK-"):
         return f"{asin}|{review_id}"
 
-    date_floor_min = _floor_to_minute(row.get("review_date_raw", ""))
+    # Keep full timestamp (no minute flooring) to avoid collapsing second-level differences
+    date_full = str(row.get("review_date_raw", ""))
     rating = str(row.get("rating", ""))
-    title = _canon_text(row.get("title", ""))
-    body_norm = _canon_text(row.get("body", ""))[:200]  # cap to 200 chars to keep hash stable
-    payload = f"{asin}|{date_floor_min}|{rating}|{title}|{body_norm}"
+    title = (str(row.get("title", "")) or "").strip()
+    body  = (str(row.get("body", ""))  or "").strip()
+    payload = f"{asin}|{date_full}|{rating}|{title}|{body}"
     return f"{asin}|SHA1-{sha1(payload.encode('utf-8', 'ignore')).hexdigest()}"
+
+def _tag_near_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add analysis tags for near-duplicates without dropping them:
+      - near_dup_min_bucket: date floored to minute
+      - content_hash_200: SHA1 of normalized title+body (first 200 chars)
+    """
+    if df is None or df.empty:
+        return df
+    def _canon(s): return " ".join(str(s or "").lower().split())
+    def _h(s):    return sha1(_canon(s)[:200].encode("utf-8", "ignore")).hexdigest()
+
+    # safe floor-to-minute (keep original intact)
+    def _floor_min_safe(s):
+        try:
+            dt = pd.to_datetime(s, errors="coerce", utc=False)
+            return None if pd.isna(dt) else dt.floor("T").isoformat()
+        except Exception:
+            return None
+
+    df = df.copy()
+    df["near_dup_min_bucket"] = df["review_date_raw"].map(_floor_min_safe)
+    df["content_hash_200"] = (df["title"].fillna("") + " | " + df["body"].fillna("")).map(_h)
+    return df
 
 def _append_and_dedupe(out_csv: Path, batch: pd.DataFrame) -> int:
     """
@@ -149,6 +174,7 @@ def collect_reviews_for_asins(
 
     def _per_page_sink(asin: str, page_idx: int, page_df: pd.DataFrame):
         """Called by the collector after EACH page is parsed."""
+        page_df = _tag_near_duplicates(page_df)   # <-- mark, do not drop
         added = _append_and_dedupe(reviews_csv, page_df)
         print(f"[CSV] ASIN={asin} p{page_idx} -> +{added} unique rows (total so far: {sum(1 for _ in open(reviews_csv, 'r', encoding='utf-8'))-1 if reviews_csv.exists() else 0})")
         # update checkpoint
