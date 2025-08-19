@@ -174,8 +174,7 @@ def serpapi_key() -> Optional[str]:
 def serpapi_search_categories(keyword: str, marketplace: str) -> List[str]:
     """
     Query SerpApi Amazon engine to suggest categories for a keyword.
-    Return list of category display names (best-effort).
-    Fallback to empty list if no key or request fails.
+    Returns a list of category display names (best-effort).
     """
     key = serpapi_key()
     if not key:
@@ -183,30 +182,36 @@ def serpapi_search_categories(keyword: str, marketplace: str) -> List[str]:
 
     domain = AMZ_DOMAIN.get(marketplace.upper(), AMZ_DOMAIN["US"])
     url = "https://serpapi.com/search.json"
+
+    # IMPORTANT: for Amazon engine the keyword parameter is 'k', not 'q'
     params = {
         "engine": "amazon",
         "amazon_domain": domain,
-        "q": keyword,
+        "k": keyword,          # <-- fixed (used to be 'q')
         "api_key": key,
+        "page": 1,
     }
+
     try:
         r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
+        if r.status_code != 200:
+            return []
         data = r.json()
     except Exception:
         return []
 
     cats: List[str] = []
 
-    # 1) categories block if present
+    # Common buckets where SerpApi returns categories for Amazon
     for k in ("categories", "category_results", "category_information"):
-        if isinstance(data.get(k), list):
-            for item in data[k]:
-                name = (item.get("name") or item.get("title") or "").strip()
+        items = data.get(k)
+        if isinstance(items, list):
+            for item in items:
+                name = (item.get("name") or item.get("title") or item.get("category") or "").strip()
                 if name:
                     cats.append(name)
 
-    # 2) from organic results breadcrumbs
+    # Fallback: derive from breadcrumbs of organic results
     for res in (data.get("organic_results") or []):
         breadcrumbs = res.get("breadcrumbs") or res.get("category_browse_nodes")
         if isinstance(breadcrumbs, list):
@@ -312,10 +317,9 @@ def create_collection_by_keyword_flow() -> None:
 
     df_all = pd.concat(all_rows, ignore_index=True)
     # Basic sanity: ensure unique ASINs while preserving category info
-    # If same ASIN encountered in multiple categories, keep first occurrence
     df_all = df_all.drop_duplicates(subset=["asin"], keep="first")
 
-    # Ask base name and save
+    # Save
     base = slugify(keyword) or "asin-collection"
     collection_id = f"{base}_kw_{marketplace}_{today_ymd()}"
     path = save_asin_collection(df_all, collection_id, marketplace)
@@ -392,10 +396,10 @@ def action_load_saved_collection_and_collect_reviews():
         return
 
     # set session by metadata market
-    mk = "-"
+    mk = "US"
     try:
         meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
-        mk = meta.get("marketplace", "-")
+        mk = meta.get("marketplace", "US")
     except Exception:
         pass
 
