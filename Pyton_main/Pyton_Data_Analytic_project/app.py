@@ -3,24 +3,24 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import json
 import time
-import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import pandas as pd
 import requests
 
-# Pipelines
+# Reviews pipeline (incremental CSV append via per_page_sink)
 from reviews_pipeline import collect_reviews_for_asins
 
-# Optional imports for daily screening & 30-day correlation entrypoint
+# Optional: daily screening & 30-day correlation entrypoints
 try:
     from screening.daily import run_daily_screening, has_30_days_of_snapshots
 except Exception:
-    # Safe fallbacks if the module is not present yet
+    # Fallbacks if the module is not present yet
     def run_daily_screening(df_asin: pd.DataFrame, out_dir: Path):
         raise RuntimeError("screening.daily.run_daily_screening is not available")
 
@@ -28,9 +28,9 @@ except Exception:
         return False
 
 
-# -----------------------------------------------------------------------------
-# Simple console helpers
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Console helpers
+# ---------------------------------------------------------------------------
 
 def info(msg: str) -> None:
     print(f"[INFO] {msg}")
@@ -49,23 +49,26 @@ def ask(prompt: str) -> str:
         return ""
 
 def slugify(s: str) -> str:
+    """Make a filesystem-friendly slug."""
     import re
-    s = s.strip().lower()
+    s = (s or "").strip().lower()
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-")
 
 def today_ymd() -> str:
+    """UTC YYYYMMDD for collection id."""
     from datetime import datetime, timezone
     return datetime.now(tz=timezone.utc).strftime("%Y%m%d")
 
-def re_split_tokens(s: str) -> List[str]:
+def split_tokens(s: str) -> List[str]:
+    """Split by comma/space and drop empties."""
     import re
-    return [t for t in re.split(r"[,\s]+", s) if t]
+    return [t for t in re.split(r"[,\s]+", (s or "")) if t]
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Storage helpers (collections listing / loading / saving)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 OUT_BASE = Path("Out").resolve()
 
@@ -73,7 +76,7 @@ def _is_collection_dir(p: Path) -> bool:
     """
     A valid collection directory:
       - is a directory;
-      - does NOT start with '_' (skip service dirs like _raw_review_pages);
+      - name does NOT start with '_' (skip service dirs like _raw_review_pages);
       - contains 'asins.csv'
     """
     if not p.is_dir():
@@ -88,7 +91,7 @@ def list_saved_collections() -> List[Tuple[str, Path]]:
     Sorted by mtime desc.
     """
     OUT_BASE.mkdir(parents=True, exist_ok=True)
-    cols = []
+    cols: List[Tuple[str, Path]] = []
     for child in OUT_BASE.iterdir():
         if _is_collection_dir(child):
             cols.append((child.name, child))
@@ -109,7 +112,6 @@ def print_collections(cols: List[Tuple[str, Path]]) -> None:
                 mk = meta.get("marketplace", "-")
         except Exception:
             pass
-        # count asins
         asin_count = 0
         try:
             asin_df = pd.read_csv(path / "asins.csv")
@@ -127,14 +129,12 @@ def load_asin_collection_by_selector(selector: str) -> Tuple[str, pd.DataFrame, 
     if not cols:
         raise ValueError("No saved collections were found under ./Out")
 
-    # number?
     if selector.isdigit():
         idx = int(selector)
         if idx < 1 or idx > len(cols):
             raise ValueError("Invalid number.")
         cid, path = cols[idx - 1]
     else:
-        # by id
         matches = [x for x in cols if x[0] == selector]
         if not matches:
             raise ValueError(f"Collection '{selector}' not found.")
@@ -144,50 +144,49 @@ def load_asin_collection_by_selector(selector: str) -> Tuple[str, pd.DataFrame, 
     df = pd.read_csv(asins_csv)
     return cid, df, path
 
-
-# -----------------------------------------------------------------------------
-# Minimal ASIN collection utilities (save + meta)
-# -----------------------------------------------------------------------------
-
-def save_asin_collection(df_asin: pd.DataFrame, collection_id: str, marketplace: str) -> Path:
+def save_asin_collection(df_asin: pd.DataFrame, collection_id: str, marketplace: str, meta_extra: Optional[Dict]=None) -> Path:
     """
-    Save ASIN DataFrame and a tiny meta.json. Return collection path.
+    Save ASIN DataFrame and meta.json. Return collection path.
     """
     path = OUT_BASE / collection_id
     path.mkdir(parents=True, exist_ok=True)
     df_asin.to_csv(path / "asins.csv", index=False)
     meta = {"collection_id": collection_id, "marketplace": marketplace, "saved_at": int(time.time())}
+    if meta_extra:
+        meta.update(meta_extra)
     (path / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return path
 
 
-# -----------------------------------------------------------------------------
-# SerpApi helpers (keyword → categories)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# SerpApi helpers (keyword → categories; strict filtering)
+# ---------------------------------------------------------------------------
 
 AMZ_DOMAIN = {"US": "amazon.com", "UK": "amazon.co.uk"}
 
 def serpapi_key() -> Optional[str]:
+    """Fetch SerpApi key from environment."""
     key = os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
     return key.strip() if key else None
 
-def serpapi_search_categories(keyword: str, marketplace: str) -> List[str]:
+def _amazon_domain(marketplace: str) -> str:
+    return AMZ_DOMAIN.get((marketplace or "US").upper(), AMZ_DOMAIN["US"])
+
+def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str]:
     """
-    Query SerpApi Amazon engine to suggest categories for a keyword.
-    Returns a list of category display names (best-effort).
+    Query SerpApi (Amazon engine) and return ONLY categories/paths
+    that contain the keyword (or its synonyms) case-insensitively.
+    This avoids noisy departments like 'Gift Cards', 'Sell', etc.
     """
     key = serpapi_key()
     if not key:
         return []
 
-    domain = AMZ_DOMAIN.get(marketplace.upper(), AMZ_DOMAIN["US"])
     url = "https://serpapi.com/search.json"
-
-    # IMPORTANT: for Amazon engine the keyword parameter is 'k', not 'q'
     params = {
         "engine": "amazon",
-        "amazon_domain": domain,
-        "k": keyword,          # <-- fixed (used to be 'q')
+        "amazon_domain": _amazon_domain(marketplace),
+        "k": keyword,  # IMPORTANT: Amazon engine expects 'k' for the keyword parameter
         "api_key": key,
         "page": 1,
     }
@@ -200,49 +199,49 @@ def serpapi_search_categories(keyword: str, marketplace: str) -> List[str]:
     except Exception:
         return []
 
-    cats: List[str] = []
+    # Simple synonyms to catch common variants
+    kw = (keyword or "").strip().lower()
+    SYNONYMS = {
+        "headphones": ["headphones", "earbuds", "earbud", "earphone", "earphones", "headset", "over-ear", "in-ear"],
+    }
+    tokens = set([kw] + SYNONYMS.get(kw, []))
 
-    # Common buckets where SerpApi returns categories for Amazon
+    def _match(s: str) -> bool:
+        s_norm = (s or "").lower()
+        return any(tok in s_norm for tok in tokens)
+
+    candidates: List[str] = []
+
+    # Category-like blocks
     for k in ("categories", "category_results", "category_information"):
         items = data.get(k)
         if isinstance(items, list):
-            for item in items:
-                name = (item.get("name") or item.get("title") or item.get("category") or "").strip()
-                if name:
-                    cats.append(name)
+            for it in items:
+                name = (it.get("name") or it.get("title") or it.get("category") or "").strip()
+                if name and _match(name):
+                    candidates.append(name)
 
-    # Fallback: derive from breadcrumbs of organic results
+    # Breadcrumb trails from organic results
     for res in (data.get("organic_results") or []):
         breadcrumbs = res.get("breadcrumbs") or res.get("category_browse_nodes")
-        if isinstance(breadcrumbs, list):
+        if isinstance(breadcrumbs, list) and breadcrumbs:
             trail = " > ".join([str(b).strip() for b in breadcrumbs if str(b).strip()])
-            if trail:
-                cats.append(trail)
+            if trail and _match(trail):
+                candidates.append(trail)
 
     # Deduplicate preserving order
     seen = set()
-    out = []
-    for c in cats:
+    out: List[str] = []
+    for c in candidates:
         if c not in seen:
             seen.add(c)
             out.append(c)
     return out
 
 
-# -----------------------------------------------------------------------------
-# Session
-# -----------------------------------------------------------------------------
-
-SESSION: Dict[str, object] = {
-    "collection_id": None,       # current working collection id
-    "collection_path": None,     # Path
-    "df_asin": None,             # pandas DataFrame with 'asin' (and optional 'category_path')
-}
-
-
-# -----------------------------------------------------------------------------
-# Create collection (submenu)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Create collection flows (submenu)
+# ---------------------------------------------------------------------------
 
 def prompt_marketplace_inside() -> str:
     print("Select marketplace: 1) US   2) UK")
@@ -251,7 +250,7 @@ def prompt_marketplace_inside() -> str:
 
 def create_collection_by_keyword_flow() -> None:
     """
-    Keyword → categories (multi-select) → collect top-100 ASIN per category (via your ASIN_data_import)
+    Keyword → categories (multi-select) → collect top-100 ASIN per category (via ASIN_data_import).
     Marketplace is chosen INSIDE this flow.
     """
     marketplace = prompt_marketplace_inside()
@@ -260,13 +259,13 @@ def create_collection_by_keyword_flow() -> None:
         warn("Empty keyword. Aborting.")
         return
 
-    # Try SerpApi categories
-    cats = serpapi_search_categories(keyword, marketplace)
+    # Strict SerpApi categories
+    cats = serpapi_search_categories_strict(keyword, marketplace)
     if not cats:
-        warn("Could not fetch categories via SerpApi (no key or empty result).")
-        print("You can type category paths manually (e.g., 'Headphones > Earbuds').")
+        warn("Could not fetch categories via SerpApi (no key, rate-limit, or empty result).")
+        print("You may type category paths manually (e.g., 'Electronics > Headphones > Earbuds').")
         manual = ask("Enter categories (comma-separated): ").strip()
-        cats = re_split_tokens(manual)
+        cats = split_tokens(manual)
 
     if not cats:
         warn("No categories to select from. Aborting.")
@@ -278,8 +277,8 @@ def create_collection_by_keyword_flow() -> None:
         print(f"{i}) {c}")
 
     sel = ask("Select categories by numbers (comma-separated, e.g., '1,3,5'): ").strip()
-    idxs = []
-    for tok in re_split_tokens(sel):
+    idxs: List[int] = []
+    for tok in split_tokens(sel):
         if tok.isdigit():
             k = int(tok)
             if 1 <= k <= len(cats):
@@ -290,7 +289,7 @@ def create_collection_by_keyword_flow() -> None:
 
     selected_cats = [cats[i] for i in idxs]
 
-    # Collect top-100 ASIN per category using your ASIN_data_import
+    # Use your ASIN_data_import.collect_asins(category_path, region, top_k)
     try:
         import importlib
         mod = importlib.import_module("ASIN_data_import")
@@ -298,10 +297,9 @@ def create_collection_by_keyword_flow() -> None:
         err(f"ASIN_data_import module is missing: {e}")
         return
 
-    all_rows = []
+    all_rows: List[pd.DataFrame] = []
     for cat in selected_cats:
         try:
-            # Expect your module to have: collect_asins(category_path, region, top_k)
             df_cat = mod.collect_asins(category_path=cat, region=marketplace, top_k=100)
             df_cat = df_cat.copy()
             if "category_path" not in df_cat.columns:
@@ -316,13 +314,12 @@ def create_collection_by_keyword_flow() -> None:
         return
 
     df_all = pd.concat(all_rows, ignore_index=True)
-    # Basic sanity: ensure unique ASINs while preserving category info
     df_all = df_all.drop_duplicates(subset=["asin"], keep="first")
 
-    # Save
+    # Save collection
     base = slugify(keyword) or "asin-collection"
     collection_id = f"{base}_kw_{marketplace}_{today_ymd()}"
-    path = save_asin_collection(df_all, collection_id, marketplace)
+    path = save_asin_collection(df_all, collection_id, marketplace, meta_extra={"keyword": keyword, "categories": selected_cats})
     SESSION["collection_id"] = collection_id
     SESSION["collection_path"] = path
     SESSION["df_asin"] = df_all
@@ -340,7 +337,7 @@ def create_collection_manual_flow() -> None:
 
     print("Enter ASINs (comma or space separated):")
     raw = ask("> ").strip()
-    asins = [a.strip().upper() for a in re_split_tokens(raw)]
+    asins = [a.strip().upper() for a in split_tokens(raw)]
     if not asins:
         warn("No ASINs provided, aborting.")
         return
@@ -374,9 +371,15 @@ def action_create_collection_menu() -> None:
             print("Unknown choice.")
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Reviews & collections actions
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+SESSION: Dict[str, object] = {
+    "collection_id": None,       # current working collection id
+    "collection_path": None,     # Path
+    "df_asin": None,             # pandas DataFrame with 'asin' (and optional 'category_path')
+}
 
 def action_load_saved_collection_and_collect_reviews():
     """
@@ -395,7 +398,7 @@ def action_load_saved_collection_and_collect_reviews():
         err(str(e))
         return
 
-    # set session by metadata market
+    # Derive marketplace from meta.json (fallback to US)
     mk = "US"
     try:
         meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
@@ -409,16 +412,15 @@ def action_load_saved_collection_and_collect_reviews():
     info(f"Loaded collection '{cid}' (market={mk}, ASINs={len(df)})")
 
     # Run reviews collection immediately
-    out_dir = path
     try:
         reviews_df, per_cat_counts = collect_reviews_for_asins(
             df_asin=df,
             max_reviews_per_asin=500,
-            marketplace=str(mk if mk in ("US", "UK") else "US"),
-            out_dir=out_dir,
+            marketplace=str(mk),
+            out_dir=path,
             collection_id=cid,
         )
-        info(f"Collected {len(reviews_df)} rows (incremental CSV is under {out_dir}/reviews.csv)")
+        info(f"Collected {len(reviews_df)} rows (incremental CSV is under {path}/reviews.csv)")
     except Exception as e:
         err(f"Review collection failed: {e}")
 
@@ -459,9 +461,9 @@ def action_list_saved_collections():
     print_collections(cols)
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Daily screening & correlations
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 def action_run_daily_screening():
     """
@@ -470,7 +472,7 @@ def action_run_daily_screening():
     df = SESSION.get("df_asin")
     path = SESSION.get("collection_path")
     if df is None or path is None:
-        warn("No active ASIN collection. Load a saved collection first (menu option 4).")
+        warn("No active ASIN collection. Load a saved collection first (menu option 2).")
         return
     try:
         run_daily_screening(df_asin=df, out_dir=path)
@@ -484,7 +486,7 @@ def action_run_correlation_tests():
     """
     path = SESSION.get("collection_path")
     if path is None:
-        warn("No active ASIN collection. Load a saved collection first (menu option 4).")
+        warn("No active ASIN collection. Load a saved collection first (menu option 2).")
         return
     try:
         if not has_30_days_of_snapshots(path):
@@ -497,9 +499,9 @@ def action_run_correlation_tests():
         err(f"Correlation tests failed: {e}")
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Menu loop
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 def main_menu():
     while True:
