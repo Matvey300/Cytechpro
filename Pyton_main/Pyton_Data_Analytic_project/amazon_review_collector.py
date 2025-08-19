@@ -11,7 +11,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, List, Dict, Any, Optional, Tuple
+from typing import Iterable, List, Dict, Any, Optional
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -29,30 +29,23 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-# -----------------------------
-# Config
-# -----------------------------
+# ============================== Config =======================================
 
 MARKET_BASE = {
     "US": "https://www.amazon.com",
     "UK": "https://www.amazon.co.uk",
 }
 
-# pacing & limits
 PAGE_DELAY_SEC = float(os.getenv("AMZ_PAGE_DELAY_SEC", "1.6"))
 MAX_REVIEW_PAGES = int(os.getenv("AMZ_MAX_REVIEW_PAGES", "50"))
 TEST_PAGE_LIMIT = int(os.getenv("AMZ_MAX_REVIEW_PAGES_TEST", "2"))  # 0 = unlimited
 
-# raw HTML destination (organized by market/asin)
 HTML_ROOT = Path("Out") / "_raw_review_pages"
 
-# persistent chrome profile (helps with Amazon device trust)
 PERSIST_PROFILE = os.getenv("AMZ_PERSIST_PROFILE", "0").lower() in {"1", "true", "yes"}
 PERSIST_DIR = (Path(".chrome-profile-clean").resolve() if PERSIST_PROFILE else None)
 
-# -----------------------------
-# Chrome bootstrap
-# -----------------------------
+# ============================== Chrome bootstrap ============================
 
 @contextmanager
 def _temp_profile_dir():
@@ -64,7 +57,7 @@ def _temp_profile_dir():
 
 def _chrome_options_for_profile(profile_dir: str, lang: str) -> ChromeOptions:
     opts = ChromeOptions()
-    # Headed is safer for Amazon
+    # Headed is safer for Amazon challenges:
     # opts.add_argument("--headless=new")
     opts.add_argument(f"--user-data-dir={profile_dir}")
     opts.add_argument("--profile-directory=Default")
@@ -76,7 +69,7 @@ def _chrome_options_for_profile(profile_dir: str, lang: str) -> ChromeOptions:
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1280,1200")
     opts.add_argument(f"--lang={lang}")
-    # Slightly reduce obvious automation flags
+    # Reduce obvious automation flags
     opts.add_experimental_option("excludeSwitches", ["enable-automation"])
     opts.add_experimental_option("useAutomationExtension", False)
     return opts
@@ -101,16 +94,17 @@ def _make_driver(lang: str) -> webdriver.Chrome:
 
     return _CtxChrome(options=_chrome_options_for_profile(profile_dir, lang))
 
-# -----------------------------
-# Small helpers
-# -----------------------------
+# ============================== Small helpers ===============================
 
 def _ensure_dir(p: Path):
     p.mkdir(parents=True, exist_ok=True)
 
 def _save_html(path: Path, html: str) -> None:
     _ensure_dir(path.parent)
-    path.write_text(html, encoding="utf-8", errors="ignore")
+    path.write_text(html or "", encoding="utf-8", errors="ignore")
+
+def _base(marketplace: str) -> str:
+    return MARKET_BASE.get((marketplace or "US").upper(), MARKET_BASE["US"])
 
 def _accept_consent_if_any(driver) -> None:
     """Click cookie/consent button if present (mostly UK/EU)."""
@@ -146,9 +140,7 @@ def _looks_signed_in(driver) -> bool:
     except Exception:
         return False
 
-# -----------------------------
-# Login flow
-# -----------------------------
+# ============================== Login flow ==================================
 
 def _go_to_signin_via_header(driver, base_url: str) -> None:
     driver.get(base_url)
@@ -221,12 +213,7 @@ def _require_manual_login(driver, base_url: str) -> None:
             break
     _ensure_on_market_home(driver, base_url)
 
-# -----------------------------
-# URL builders & parsing utils
-# -----------------------------
-
-def _base(marketplace: str) -> str:
-    return MARKET_BASE.get((marketplace or "US").upper(), MARKET_BASE["US"])
+# ============================== URL builders & parse utils ===================
 
 def _reviews_url(asin: str, marketplace: str, page: int = 1) -> str:
     base = _base(marketplace)
@@ -254,9 +241,7 @@ def _parse_helpful(text: str) -> Optional[int]:
             return None
     return None
 
-# -----------------------------
-# Reviews UI preparation
-# -----------------------------
+# ============================== Reviews UI preparation ======================
 
 def _choose_all_reviewers_if_possible(driver) -> None:
     """Switch from 'Top reviews from …' to 'All reviewers' if dropdown exists."""
@@ -323,9 +308,7 @@ def _scroll_to_reviews_list(driver) -> None:
     except Exception:
         pass
 
-# -----------------------------
-# Parsing reviews from HTML
-# -----------------------------
+# ============================== Parsing reviews from HTML ===================
 
 def _parse_reviews_from_html(html: str, asin: str, marketplace: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html or "", "html.parser")
@@ -365,9 +348,7 @@ def _parse_reviews_from_html(html: str, asin: str, marketplace: str) -> List[Dic
             continue
     return out
 
-# -----------------------------
-# Pagination
-# -----------------------------
+# ============================== Pagination ==================================
 
 def _click_next_reviews_page(driver: webdriver.Chrome) -> bool:
     """Click 'Next' in pagination; return True if navigation is possible."""
@@ -386,9 +367,7 @@ def _click_next_reviews_page(driver: webdriver.Chrome) -> bool:
     except (NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException):
         return False
 
-# -----------------------------
-# Freshness gate
-# -----------------------------
+# ============================== Freshness gate ==============================
 
 def _has_new_vs_checkpoint(page_rows: List[Dict[str, Any]], chk: Optional[Dict[str, Any]]) -> bool:
     """
@@ -406,9 +385,7 @@ def _has_new_vs_checkpoint(page_rows: List[Dict[str, Any]], chk: Optional[Dict[s
             return True
     return False
 
-# -----------------------------
-# Public API
-# -----------------------------
+# ============================== Public API ==================================
 
 def collect_reviews(
     asins: List[str],
@@ -521,7 +498,7 @@ def collect_reviews(
                     print(f"  [INFO] no Next page after p{page_idx}.")
                     break
 
-                # Wait content refresh
+                # Wait for content refresh
                 try:
                     WebDriverWait(driver, 20).until(
                         EC.presence_of_element_located((By.ID, "cm_cr-review_list"))
@@ -544,9 +521,8 @@ def collect_reviews(
 
             print(f"  ✓ pages scraped: {page_idx}, reviews parsed: {collected}")
 
-        # Return DataFrame (even if we already wrote CSV via sink)
+        # Return DataFrame (even if CSV already persisted via sink)
         df = pd.DataFrame(all_rows)
-        # normalize dtypes
         if not df.empty:
             df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
             df["verified_purchase"] = df["verified_purchase"].astype("boolean")
@@ -560,9 +536,7 @@ def collect_reviews(
         except Exception:
             pass
 
-# -----------------------------
-# CLI test hook
-# -----------------------------
+# ============================== CLI test hook ===============================
 
 if __name__ == "__main__":
     import argparse
