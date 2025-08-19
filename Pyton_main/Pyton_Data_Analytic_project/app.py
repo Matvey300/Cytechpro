@@ -180,13 +180,14 @@ def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str
     """
     key = serpapi_key()
     if not key:
+        warn("SerpApi key not found in environment.")
         return []
 
     url = "https://serpapi.com/search.json"
     params = {
         "engine": "amazon",
         "amazon_domain": _amazon_domain(marketplace),
-        "k": keyword,  # IMPORTANT: Amazon engine expects 'k' for the keyword parameter
+        "keyword": keyword,  # ✅ Correct param name
         "api_key": key,
         "page": 1,
     }
@@ -194,12 +195,16 @@ def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str
     try:
         r = requests.get(url, params=params, timeout=15)
         if r.status_code != 200:
+            warn(f"SerpApi responded with status {r.status_code}")
+            print(f"[DEBUG] URL: {r.url}")
+            print(f"[DEBUG] Response snippet: {r.text[:500]}")
             return []
         data = r.json()
-    except Exception:
+    except Exception as e:
+        err(f"SerpApi request failed: {e}")
         return []
 
-    # Simple synonyms to catch common variants
+    # Define synonyms to improve matching
     kw = (keyword or "").strip().lower()
     SYNONYMS = {
         "headphones": ["headphones", "earbuds", "earbud", "earphone", "earphones", "headset", "over-ear", "in-ear"],
@@ -212,7 +217,7 @@ def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str
 
     candidates: List[str] = []
 
-    # Category-like blocks
+    # Try common category fields
     for k in ("categories", "category_results", "category_information"):
         items = data.get(k)
         if isinstance(items, list):
@@ -221,7 +226,7 @@ def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str
                 if name and _match(name):
                     candidates.append(name)
 
-    # Breadcrumb trails from organic results
+    # Parse breadcrumbs from search results
     for res in (data.get("organic_results") or []):
         breadcrumbs = res.get("breadcrumbs") or res.get("category_browse_nodes")
         if isinstance(breadcrumbs, list) and breadcrumbs:
@@ -229,15 +234,18 @@ def serpapi_search_categories_strict(keyword: str, marketplace: str) -> List[str
             if trail and _match(trail):
                 candidates.append(trail)
 
-    # Deduplicate preserving order
+    # Deduplicate while preserving order
     seen = set()
     out: List[str] = []
     for c in candidates:
         if c not in seen:
             seen.add(c)
             out.append(c)
-    return out
 
+    if not out:
+        warn("No matching categories found in SerpApi response.")
+
+    return out
 
 # ---------------------------------------------------------------------------
 # Create collection flows (submenu)
