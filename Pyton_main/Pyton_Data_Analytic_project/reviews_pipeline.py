@@ -1,82 +1,191 @@
+# reviews_pipeline.py
+# All comments in English.
 
 from __future__ import annotations
 
+import json
+from hashlib import sha1
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, Callable
 
 import pandas as pd
 
+# Import the Selenium-based collector
 from amazon_review_collector import collect_reviews
-from storage.io_utils import append_csv_with_dedupe
 
+# -----------------------------
+# CSV & checkpoint utilities
+# -----------------------------
 
-def _dedupe_key(row: pd.Series) -> str:
+def _atomic_write_csv(path: Path, df: pd.DataFrame) -> None:
+    """Atomic write to avoid partial files on crash."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    df.to_csv(tmp, index=False)
+    tmp.replace(path)
+
+def _canon_text(s: str) -> str:
+    """Normalize text for hashing: lowercase, collapse whitespace."""
+    if s is None:
+        return ""
+    return " ".join(str(s).lower().split())
+
+def _floor_to_minute(dt_str: str) -> str:
     """
-    Dedupe key for reviews CSV:
-      - primary: (asin, review_id)
-      - fallback: (asin, review_date, rating, hash(review_text))
+    Floor datetime string to minutes.
+    If no time present → keep date only.
+    We use pandas to parse robustly; NaT falls back to original string.
     """
-    asin = str(row.get("asin", "NA"))
-    rid = row.get("review_id")
-    if pd.notna(rid) and str(rid).strip():
-        return f"{asin}|{rid}"
-    date = str(row.get("review_date", "NA"))
-    rating = str(row.get("rating", "NA"))
-    text = str(row.get("review_text", "") or "")
-    return f"{asin}|{date}|{rating}|{hash(text)}"
+    if not dt_str:
+        return ""
+    try:
+        dt = pd.to_datetime(dt_str, errors="coerce", utc=False)
+        if pd.isna(dt):
+            return str(dt_str)
+        # floor to minute to collapse 'second-only' manipulations
+        return dt.floor("T").isoformat()
+    except Exception:
+        return str(dt_str)
 
+def _stable_row_key(row: pd.Series) -> str:
+    """
+    Stable dedupe key:
+      1) Prefer (asin, review_id) when review_id is present and not fallback.
+      2) Otherwise, build SHA1 over (asin | date_floor_minute | rating | title | body_norm[:200]).
+         This collapses 'second-only' duplicates (same review cloned with a small timestamp delta).
+    """
+    asin = str(row.get("asin", ""))
+    review_id = str(row.get("review_id", "") or "")
+    if review_id and not review_id.startswith("FALLBACK-"):
+        return f"{asin}|{review_id}"
+
+    date_floor_min = _floor_to_minute(row.get("review_date_raw", ""))
+    rating = str(row.get("rating", ""))
+    title = _canon_text(row.get("title", ""))
+    body_norm = _canon_text(row.get("body", ""))[:200]  # cap to 200 chars to keep hash stable
+    payload = f"{asin}|{date_floor_min}|{rating}|{title}|{body_norm}"
+    return f"{asin}|SHA1-{sha1(payload.encode('utf-8', 'ignore')).hexdigest()}"
+
+def _append_and_dedupe(out_csv: Path, batch: pd.DataFrame) -> int:
+    """
+    Append batch to CSV with stable dedupe. Returns the number of NEW unique rows added.
+    Safe against second-only timestamp tweaks.
+    """
+    if batch is None or batch.empty:
+        return 0
+
+    if out_csv.exists():
+        base = pd.read_csv(out_csv)
+        df = pd.concat([base, batch], ignore_index=True)
+    else:
+        base = pd.DataFrame(columns=batch.columns)
+        df = batch.copy()
+
+    df["_k"] = df.apply(_stable_row_key, axis=1)
+    df = df.drop_duplicates(subset="_k", keep="first").drop(columns=["_k"]).reset_index(drop=True)
+    before = len(base)
+    _atomic_write_csv(out_csv, df)
+    return len(df) - before
+
+def _state_path(out_dir: Path) -> Path:
+    return out_dir / "checkpoint.json"
+
+def load_checkpoint(out_dir: Path) -> Dict:
+    """Load per-ASIN last-seen state."""
+    p = _state_path(out_dir)
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+def save_checkpoint(out_dir: Path, state: Dict) -> None:
+    p = _state_path(out_dir)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
+# -----------------------------
+# Public pipeline
+# -----------------------------
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
-    max_reviews_per_asin: int,
-    marketplace: str
-) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    max_reviews_per_asin: int = 500,
+    marketplace: str = "US",
+    out_dir: Optional[Path] = None,
+    collection_id: Optional[str] = None,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    For a DataFrame of ASINs (requires column 'asin', optional 'category_path'),
-    fetch up to N reviews per ASIN using Selenium collector, and return:
-      - reviews_df: unified DataFrame with required columns
-      - per_cat_counts: dict category_path -> number_of_reviews
+    High-level pipeline:
+      - Runs Selenium collector for given ASIN list.
+      - Appends to CSV incrementally after EACH page (via per_page_sink).
+      - Maintains a JSON checkpoint to skip ASINs without new content.
+      - Returns (reviews_df, per_category_counts).
+
+    Expected df_asin columns at minimum:
+      - 'asin'
+      - optional 'category_path' (for per-category counts)
     """
-    if df_asin is None or df_asin.empty or "asin" not in df_asin.columns:
-        return pd.DataFrame(), {}
+    if out_dir is None:
+        # default Out/<collection_id> if provided, else Out/session
+        base = Path("Out")
+        if collection_id:
+            out_dir = base / collection_id
+        else:
+            out_dir = base / "session"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    asins = df_asin["asin"].astype(str).dropna().tolist()
-    reviews_df = collect_reviews(asins, max_reviews_per_asin=max_reviews_per_asin, marketplace=marketplace)
+    reviews_csv = out_dir / "reviews.csv"
+    state = load_checkpoint(out_dir)  # {asin: { "last_ids": [...], "last_date": "..." }}
 
-    # Attach category_path to each review if we have mapping
-    cat_map = {}
+    # Prepare 'last_seen' map for collector
+    last_seen = {}
+    for asin, meta in (state or {}).items():
+        last_seen[asin] = {
+            "ids": list(meta.get("last_ids", [])),
+            "date": meta.get("last_date"),
+        }
+
+    def _per_page_sink(asin: str, page_idx: int, page_df: pd.DataFrame):
+        """Called by the collector after EACH page is parsed."""
+        added = _append_and_dedupe(reviews_csv, page_df)
+        print(f"[CSV] ASIN={asin} p{page_idx} -> +{added} unique rows (total so far: {sum(1 for _ in open(reviews_csv, 'r', encoding='utf-8'))-1 if reviews_csv.exists() else 0})")
+        # update checkpoint
+        if asin not in state:
+            state[asin] = {}
+        if not page_df.empty:
+            # store top-50 review_ids and the top-most review date (as seen on pX)
+            state[asin]["last_ids"] = list(page_df["review_id"].dropna().astype(str).head(50))
+            # top-most row
+            try:
+                state[asin]["last_date"] = str(page_df["review_date_raw"].iloc[0])
+            except Exception:
+                pass
+        save_checkpoint(out_dir, state)
+
+    asins = list(dict.fromkeys(df_asin["asin"].astype(str).tolist()))  # unique, preserve order
+
+    # Run Selenium collector (will call _per_page_sink on each page)
+    full_df = collect_reviews(
+        asins=asins,
+        max_reviews_per_asin=max_reviews_per_asin,
+        marketplace=marketplace,
+        last_seen=last_seen,
+        per_page_sink=_per_page_sink,
+    )
+
+    # Ensure CSV reflects all rows from this session too
+    _append_and_dedupe(reviews_csv, full_df)
+
+    # Per-category counts (if category present)
     if "category_path" in df_asin.columns:
-        # take the first occurrence per ASIN
-        cat_map = df_asin.dropna(subset=["asin"]).drop_duplicates(subset=["asin"]).set_index("asin")["category_path"].to_dict()
+        per_cat = df_asin.groupby("category_path", dropna=False).size().reset_index(name="asins")
+    else:
+        per_cat = pd.DataFrame(columns=["category_path", "asins"])
 
-    if not reviews_df.empty:
-        reviews_df["category_path"] = reviews_df["asin"].map(cat_map)
+    return full_df, per_cat
 
-    # Per-category counts
-    per_cat_counts: Dict[str, int] = {}
-    if not reviews_df.empty:
-        tmp = reviews_df.copy()
-        tmp["category_path"] = tmp["category_path"].fillna("Unknown")
-        per = tmp.groupby("category_path")["review_id"].count()
-        per_cat_counts = per.to_dict()
-
-    return reviews_df, per_cat_counts
-
-
-def append_and_dedupe_reviews(out_dir_ts: Path, reviews_df: pd.DataFrame) -> Path:
-    """
-    Append reviews into Out/<collection_id>/reviews.csv with deduplication.
-    Returns path to the file.
-    """
-    out_path = Path(out_dir_ts) / "reviews.csv"
-    if reviews_df is None or reviews_df.empty:
-        # Still make sure file exists (create if missing with headers)
-        if not out_path.exists():
-            pd.DataFrame(columns=[
-                "asin","review_id","review_date","rating","review_text",
-                "verified","helpful_votes","buybox_price","currency","bsr_rank","bsr_path","category_path"
-            ]).to_csv(out_path, index=False, encoding="utf-8-sig")
-        return out_path
-
-    append_csv_with_dedupe(out_path, reviews_df, key_fn=_dedupe_key)
-    return out_path
+def append_and_dedupe_reviews(out_csv: Path, batch: pd.DataFrame) -> int:
+    """Kept for compatibility with older app.py imports."""
+    return _append_and_dedupe(out_csv, batch)
