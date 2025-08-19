@@ -14,6 +14,18 @@ import pandas as pd
 # Pipelines
 from reviews_pipeline import collect_reviews_for_asins
 
+# Optional imports for daily screening & 30-day correlation entrypoint
+try:
+    from screening.daily import run_daily_screening, has_30_days_of_snapshots
+except Exception:
+    # Safe fallbacks if the module is not present yet
+    def run_daily_screening(df_asin: pd.DataFrame, out_dir: Path):
+        raise RuntimeError("screening.daily.run_daily_screening is not available")
+
+    def has_30_days_of_snapshots(collection_path: Path) -> bool:
+        return False
+
+
 # -----------------------------------------------------------------------------
 # Simple console helpers
 # -----------------------------------------------------------------------------
@@ -169,6 +181,10 @@ def action_set_marketplace():
         SESSION["marketplace"] = "US"
     info(f"Marketplace set to {SESSION['marketplace']}")
 
+def re_split_tokens(s: str) -> List[str]:
+    import re
+    return re.split(r"[,\s]+", s)
+
 def action_collect_asin_list():
     """
     Placeholder for your ASIN collector UI (category selection, etc.).
@@ -176,11 +192,11 @@ def action_collect_asin_list():
     Replace this with your existing ASIN collection flow when ready.
     """
     base = ask("Collection base name (e.g., 'headphones'): ").strip() or "asin-collection"
-    suffix = "-" + ask("Optional suffix (Enter to skip): ").strip() if ask else ""
+    suffix_inp = ask("Optional suffix (Enter to skip): ").strip()
+    suffix = f"-{suffix_inp}" if suffix_inp else ""
     market = str(SESSION["marketplace"])
     collection_id = f"{slugify(base)}{suffix}_{market}_{today_ymd()}"
 
-    # Simple input for demo; replace with your real category-driven collector:
     print("Enter ASINs (comma or space separated):")
     raw = ask("> ").strip()
     asins = [a.strip().upper() for a in re_split_tokens(raw) if a.strip()]
@@ -194,10 +210,6 @@ def action_collect_asin_list():
     SESSION["collection_path"] = path
     SESSION["df_asin"] = df
     info(f"ASIN collection saved: {collection_id} (ASINs={len(df)})")
-
-def re_split_tokens(s: str) -> List[str]:
-    import re
-    return re.split(r"[,\s]+", s)
 
 def action_load_saved_collection_and_collect_reviews():
     """
@@ -263,6 +275,40 @@ def action_list_saved_collections():
     cols = list_saved_collections()
     print_collections(cols)
 
+def action_run_daily_screening():
+    """
+    Run daily screening (BSR/Price/Reviews count snapshots) for the CURRENT collection.
+    """
+    df = SESSION.get("df_asin")
+    path = SESSION.get("collection_path")
+    if df is None or path is None:
+        warn("No active ASIN collection. Load a saved collection first (menu option 4).")
+        return
+    try:
+        run_daily_screening(df_asin=df, out_dir=path)
+        info("Daily screening completed.")
+    except Exception as e:
+        err(f"Daily screening failed: {e}")
+
+def action_run_correlation_tests():
+    """
+    Run reputation–sales correlation tests if at least 30 daily snapshots exist.
+    """
+    path = SESSION.get("collection_path")
+    if path is None:
+        warn("No active ASIN collection. Load a saved collection first (menu option 4).")
+        return
+    try:
+        if not has_30_days_of_snapshots(path):
+            warn("Not enough daily snapshots yet. Wait until 30 days of data collected.")
+            return
+        # Placeholder for your correlation entrypoint; replace with actual call when ready:
+        info("Running reputation–sales correlation tests…")
+        # e.g.: analytics.correlations.run(path)
+        info("Correlation tests finished (placeholder).")
+    except Exception as e:
+        err(f"Correlation tests failed: {e}")
+
 
 # -----------------------------------------------------------------------------
 # Menu loop
@@ -278,7 +324,9 @@ def main_menu():
         print("3) Collect reviews for CURRENT loaded collection")
         print("4) Load saved ASIN collection & collect reviews (can be used immediately)")
         print("5) List saved ASIN collections")
-        choice = ask("> Enter choice [0-5]: ").strip()
+        print("6) Run daily screening for current ASIN collection")
+        print("7) Run Reputation–Sales correlation tests (available after 30 days)")
+        choice = ask("> Enter choice [0-7]: ").strip()
 
         if choice == "0":
             print("Bye!")
@@ -293,6 +341,10 @@ def main_menu():
             action_load_saved_collection_and_collect_reviews()
         elif choice == "5":
             action_list_saved_collections()
+        elif choice == "6":
+            action_run_daily_screening()
+        elif choice == "7":
+            action_run_correlation_tests()
         else:
             print("Unknown choice.")
 
