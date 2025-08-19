@@ -1,311 +1,304 @@
+# app.py
+# All comments in English.
 
-from pathlib import Path
+from __future__ import annotations
+
 import sys
-from typing import List
+import json
+import time
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-from categories import (
-    choose_marketplace,
-    search_categories_by_keyword,
-    multi_select_categories,
-)
+import pandas as pd
 
-# We only need collect_asin_data; saving/loading we will handle here to avoid legacy helpers
-from asin_pipeline import collect_asin_data
+# Pipelines
+from reviews_pipeline import collect_reviews_for_asins
 
-from reviews_pipeline import (
-    collect_reviews_for_asins,
-    append_and_dedupe_reviews,
-)
+# -----------------------------------------------------------------------------
+# Simple console helpers
+# -----------------------------------------------------------------------------
 
-from screening.daily import (
-    run_daily_screening,
-    has_30_days_of_snapshots,
-)
+def info(msg: str) -> None:
+    print(f"[INFO] {msg}")
 
-from analytics.weekly_builder import (
-    build_weekly_master_from_reviews_only,
-    merge_daily_into_weekly,
-)
-from analytics.integrity import run_distortion_test
-from analytics.impact import run_review_sales_impact
-from analytics.extras import (
-    run_volatility_profile,
-    run_sentiment_vs_rating_drift,
-    run_top_drivers,
-)
+def warn(msg: str) -> None:
+    print(f"[WARN] {msg}")
 
-# Clean IO utilities (no legacy helpers)
-from storage.io_utils import (
-    slugify,
-    today_ymd,
-    new_out_dir_for_collection,
-    save_df_csv,
-    load_df_csv,
-    list_saved_collections,
-)
+def err(msg: str) -> None:
+    print(f"[ERROR] {msg}", file=sys.stderr)
 
-SUPPORTED_MARKETPLACES = ["US", "UK"]  # DE intentionally excluded
+def ask(prompt: str) -> str:
+    try:
+        return input(prompt)
+    except KeyboardInterrupt:
+        print()
+        return ""
+
+def slugify(s: str) -> str:
+    import re
+    s = s.strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    return s.strip("-")
+
+def today_ymd() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(tz=timezone.utc).strftime("%Y%m%d")
 
 
-# ---------- Helpers local to app ----------
+# -----------------------------------------------------------------------------
+# Storage helpers (collections listing / loading / saving)
+# -----------------------------------------------------------------------------
 
-def _last_node(path: str) -> str:
-    """Return the last node of a 'A > B > C' path; fallback to full if empty."""
-    parts = [p.strip() for p in (path or "").split(">") if p.strip()]
-    return parts[-1] if parts else (path or "")
+OUT_BASE = Path("Out").resolve()
 
-
-def _determine_collection_id(categories: List[str], region: str) -> str:
+def _is_collection_dir(p: Path) -> bool:
     """
-    Build a human-friendly collection_id:
-      "<last-node>[+N]_<REGION>_<YYYYMMDD>"
+    A valid collection directory:
+      - is a directory;
+      - does NOT start with '_' (skip service dirs like _raw_review_pages);
+      - contains 'asins.csv'
     """
-    base = _last_node(categories[0]) if categories else "collection"
-    suffix = f"+{len(categories)-1}" if len(categories) > 1 else ""
-    return f"{slugify(base)}{suffix}_{region.upper()}_{today_ymd()}"
+    if not p.is_dir():
+        return False
+    if p.name.startswith("_"):
+        return False
+    return (p / "asins.csv").exists()
 
-
-def _ensure_collection_folder(collection_id: str) -> Path:
-    """Create Out/<collection_id> folder (idempotent)."""
-    return new_out_dir_for_collection(Path("Out"), collection_id)
-
-
-def _save_asins(out_dir: Path, df):
-    """Save ASIN list under Out/<collection_id>/asins_<YYYYMMDD>.csv"""
-    csv_path = out_dir / f"asins_{today_ymd()}.csv"
-    save_df_csv(df, csv_path)
-    return csv_path
-
-
-def _load_latest_asins(out_dir: Path):
-    """Load the newest asins_*.csv from Out/<collection_id>."""
-    candidates = sorted(out_dir.glob("asins_*.csv"))
-    if not candidates:
-        # Backward compatibility: old name
-        legacy = out_dir / "asin_list.csv"
-        if legacy.exists():
-            return load_df_csv(legacy)
-        raise FileNotFoundError(f"No ASIN CSV found in {out_dir}")
-    return load_df_csv(candidates[-1])
-
-
-def _pick_collection_interactive() -> Path | None:
+def list_saved_collections() -> List[Tuple[str, Path]]:
     """
-    Show a numbered list of Out/<collection> folders and return the chosen Path.
+    Return list of (collection_id, path) for all valid collections under Out/.
+    Sorted by mtime desc.
     """
-    roots = list_saved_collections(Path("Out"))
-    if not roots:
-        print("No saved collections in Out/.")
-        return None
-    print("\nSaved collections:")
-    for i, p in enumerate(roots, 1):
-        # Try to show a short info line
-        asin_csvs = sorted(p.glob("asins_*.csv"))
-        asin_count = "?"
-        if asin_csvs:
-            try:
-                import pandas as pd
-                df = pd.read_csv(asin_csvs[-1])
-                asin_count = df["asin"].nunique() if "asin" in df.columns else len(df)
-            except Exception:
-                pass
-        print(f"{i}) {p.name}  |  ASINs≈{asin_count}")
-    sel = input("> Enter number (or press Enter to cancel): ").strip()
-    if not sel:
-        return None
-    if sel.isdigit():
-        idx = int(sel) - 1
-        if 0 <= idx < len(roots):
-            return roots[idx]
-        print("Index out of range.")
-        return None
-    # Also allow direct typing of folder name
-    direct = Path("Out") / sel
-    if direct.exists():
-        return direct
-    print("Unknown selection.")
-    return None
+    OUT_BASE.mkdir(parents=True, exist_ok=True)
+    cols = []
+    for child in OUT_BASE.iterdir():
+        if _is_collection_dir(child):
+            cols.append((child.name, child))
+    # sort newest first
+    cols.sort(key=lambda x: x[1].stat().st_mtime, reverse=True)
+    return cols
 
+def print_collections(cols: List[Tuple[str, Path]]) -> None:
+    if not cols:
+        print("No saved ASIN collections found under ./Out")
+        return
+    print("Saved collections:")
+    for i, (cid, path) in enumerate(cols, start=1):
+        mk = "-"
+        try:
+            meta_path = path / "meta.json"
+            if meta_path.exists():
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                mk = meta.get("marketplace", "-")
+        except Exception:
+            pass
+        # count asins
+        asin_count = 0
+        try:
+            asin_df = pd.read_csv(path / "asins.csv")
+            asin_count = len(asin_df)
+        except Exception:
+            pass
+        print(f"{i}) ID={cid} | market={mk} | ASINs={asin_count}")
+
+def load_asin_collection_by_selector(selector: str) -> Tuple[str, pd.DataFrame, Path]:
+    """
+    Load by (number in list) or by collection_id string. Returns (collection_id, df_asin, path).
+    Raises ValueError if not found.
+    """
+    cols = list_saved_collections()
+    if not cols:
+        raise ValueError("No saved collections were found under ./Out")
+
+    # number?
+    if selector.isdigit():
+        idx = int(selector)
+        if idx < 1 or idx > len(cols):
+            raise ValueError("Invalid number.")
+        cid, path = cols[idx - 1]
+    else:
+        # by id
+        matches = [x for x in cols if x[0] == selector]
+        if not matches:
+            raise ValueError(f"Collection '{selector}' not found.")
+        cid, path = matches[0]
+
+    asins_csv = path / "asins.csv"
+    df = pd.read_csv(asins_csv)
+    return cid, df, path
+
+
+# -----------------------------------------------------------------------------
+# Minimal ASIN collection utilities (save + meta)
+# -----------------------------------------------------------------------------
+
+def save_asin_collection(df_asin: pd.DataFrame, collection_id: str, marketplace: str) -> Path:
+    """
+    Save ASIN DataFrame and a tiny meta.json. Return collection path.
+    """
+    path = OUT_BASE / collection_id
+    path.mkdir(parents=True, exist_ok=True)
+    df_asin.to_csv(path / "asins.csv", index=False)
+    meta = {"collection_id": collection_id, "marketplace": marketplace, "saved_at": int(time.time())}
+    (path / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return path
+
+
+# -----------------------------------------------------------------------------
+# Session
+# -----------------------------------------------------------------------------
+
+SESSION: Dict[str, object] = {
+    "marketplace": "US",         # or "UK"
+    "collection_id": None,       # current working collection id
+    "collection_path": None,     # Path
+    "df_asin": None,             # pandas DataFrame with 'asin' (and optional 'category_path')
+}
+
+
+# -----------------------------------------------------------------------------
+# Menu actions
+# -----------------------------------------------------------------------------
+
+def action_set_marketplace():
+    print("Choose marketplace: 1) US   2) UK")
+    ch = ask("> Enter 1 or 2: ").strip()
+    if ch == "2":
+        SESSION["marketplace"] = "UK"
+    else:
+        SESSION["marketplace"] = "US"
+    info(f"Marketplace set to {SESSION['marketplace']}")
+
+def action_collect_asin_list():
+    """
+    Placeholder for your ASIN collector UI (category selection, etc.).
+    For now we just ask user to type a collection name and a few ASINs.
+    Replace this with your existing ASIN collection flow when ready.
+    """
+    base = ask("Collection base name (e.g., 'headphones'): ").strip() or "asin-collection"
+    suffix = "-" + ask("Optional suffix (Enter to skip): ").strip() if ask else ""
+    market = str(SESSION["marketplace"])
+    collection_id = f"{slugify(base)}{suffix}_{market}_{today_ymd()}"
+
+    # Simple input for demo; replace with your real category-driven collector:
+    print("Enter ASINs (comma or space separated):")
+    raw = ask("> ").strip()
+    asins = [a.strip().upper() for a in re_split_tokens(raw) if a.strip()]
+    if not asins:
+        warn("No ASINs provided, aborting.")
+        return
+
+    df = pd.DataFrame({"asin": asins})
+    path = save_asin_collection(df, collection_id, market)
+    SESSION["collection_id"] = collection_id
+    SESSION["collection_path"] = path
+    SESSION["df_asin"] = df
+    info(f"ASIN collection saved: {collection_id} (ASINs={len(df)})")
+
+def re_split_tokens(s: str) -> List[str]:
+    import re
+    return re.split(r"[,\s]+", s)
+
+def action_load_saved_collection_and_collect_reviews():
+    """
+    Load an existing ASIN collection and immediately run review collection on it.
+    This action is allowed at any time (no prerequisite steps).
+    """
+    cols = list_saved_collections()
+    if not cols:
+        warn("No saved ASIN collections under ./Out. Create one first.")
+        return
+    print_collections(cols)
+    sel = ask("> Enter number OR collection ID to load: ").strip()
+    try:
+        cid, df, path = load_asin_collection_by_selector(sel)
+    except ValueError as e:
+        err(str(e))
+        return
+
+    SESSION["collection_id"] = cid
+    SESSION["collection_path"] = path
+    SESSION["df_asin"] = df
+    info(f"Loaded collection '{cid}' (ASINs={len(df)})")
+
+    # Run reviews collection immediately
+    out_dir = path
+    try:
+        reviews_df, per_cat_counts = collect_reviews_for_asins(
+            df_asin=df,
+            max_reviews_per_asin=500,
+            marketplace=str(SESSION["marketplace"]),
+            out_dir=out_dir,
+            collection_id=cid,
+        )
+        info(f"Collected {len(reviews_df)} rows (incremental CSV is under {out_dir}/reviews.csv)")
+    except Exception as e:
+        err(f"Review collection failed: {e}")
+
+def action_collect_reviews_for_current_collection():
+    """
+    Collect reviews for the ASIN list already in SESSION (if present).
+    If not present — guide user to load an existing collection.
+    """
+    df = SESSION.get("df_asin")
+    cid = SESSION.get("collection_id")
+    path = SESSION.get("collection_path")
+    if df is None or cid is None or path is None:
+        warn("No active ASIN collection. Please use menu 'Load saved ASIN collection & collect reviews'.")
+        return
+
+    try:
+        reviews_df, per_cat_counts = collect_reviews_for_asins(
+            df_asin=df,
+            max_reviews_per_asin=500,
+            marketplace=str(SESSION["marketplace"]),
+            out_dir=path,
+            collection_id=str(cid),
+        )
+        info(f"Collected {len(reviews_df)} rows (incremental CSV is under {path}/reviews.csv)")
+    except Exception as e:
+        err(f"Review collection failed: {e}")
+
+def action_list_saved_collections():
+    cols = list_saved_collections()
+    print_collections(cols)
+
+
+# -----------------------------------------------------------------------------
+# Menu loop
+# -----------------------------------------------------------------------------
 
 def main_menu():
-    session = {}  # stores marketplace, categories, collection_id, out_dir, asin_df
-
     while True:
-        print("\n=== Amazon Reviews – CLI ===")
-        print("1) Choose marketplace (US / UK)")
-        print("2) Find categories by keyword (multi-select)")
-        print("3) Collect ASINs (TOP-100 per chosen category; de-dup; create collection)")
-        print("4) Collect reviews for chosen or previously saved ASIN collection (up to 500 per ASIN)")
-        print("5) Run analytics/tests (integrity, volatility, sentiment)")
-        print("6) Load a previously saved ASIN collection into session")
-        print("7) Daily screening (price + BSR + new reviews): run now")
-        print("8) Run Reputation - Sales correlation tests (available after 30 daily snapshots)")
+        print("\n--- Amazon Reviews Tool ---")
+        print(f"Market: {SESSION['marketplace']}")
         print("0) Exit")
+        print("1) Set marketplace (US/UK)")
+        print("2) Create & save new ASIN collection (simple input)")
+        print("3) Collect reviews for CURRENT loaded collection")
+        print("4) Load saved ASIN collection & collect reviews (can be used immediately)")
+        print("5) List saved ASIN collections")
+        choice = ask("> Enter choice [0-5]: ").strip()
 
-        choice = input("> Enter choice [0-8]: ").strip()
-
-        if choice == "1":
-            session["marketplace"] = choose_marketplace(SUPPORTED_MARKETPLACES)
-            print(f"[INFO] Marketplace selected: {session['marketplace']}")
-
+        if choice == "0":
+            print("Bye!")
+            return
+        elif choice == "1":
+            action_set_marketplace()
         elif choice == "2":
-            if "marketplace" not in session:
-                session["marketplace"] = choose_marketplace(SUPPORTED_MARKETPLACES)
-            kw = input("> Enter keyword (e.g., 'headphones'): ").strip()
-            candidates = search_categories_by_keyword(kw, session["marketplace"])
-            chosen = multi_select_categories(candidates)
-            if not chosen:
-                print("No categories chosen.")
-                continue
-            session["categories"] = chosen
-            print(f"[INFO] Selected categories: {', '.join(chosen)}")
-
+            action_collect_asin_list()
         elif choice == "3":
-            if not session.get("categories") or not session.get("marketplace"):
-                print("Please run steps (1) and (2) first.")
-                continue
-
-            # Create collection folder
-            collection_id = _determine_collection_id(session["categories"], session["marketplace"])
-            out_dir = _ensure_collection_folder(collection_id)
-            session["collection_id"] = collection_id
-            session["out_dir"] = out_dir
-
-            # Collect ASINs across selected categories
-            all_df = None
-            for cat in session["categories"]:
-                df = collect_asin_data(category_path=cat, region=session["marketplace"], top_k=100)
-                all_df = df if all_df is None else all_df._append(df, ignore_index=True)
-            if all_df is not None and "asin" in all_df.columns:
-                all_df = all_df.drop_duplicates(subset=["asin"]).reset_index(drop=True)
-
-            _save_asins(out_dir, all_df)
-            session["asin_df"] = all_df
-            print(f"[INFO] ASIN collection saved under Out/{collection_id}")
-
+            action_collect_reviews_for_current_collection()
         elif choice == "4":
-            use_saved = input("> Use previously saved collection? [y/N]: ").strip().lower() == "y"
-            if use_saved:
-                out_dir = _pick_collection_interactive()
-                if not out_dir:
-                    continue
-                session["out_dir"] = out_dir
-                session["collection_id"] = out_dir.name
-                try:
-                    df_asin = _load_latest_asins(out_dir)
-                except Exception as e:
-                    print(f"Failed to load ASINs: {e}")
-                    continue
-                session["asin_df"] = df_asin
-            else:
-                if "asin_df" not in session or session["asin_df"] is None:
-                    print("No ASINs in session. Please collect ASINs first.")
-                    continue
-                out_dir = session.get("out_dir") or _ensure_collection_folder(
-                    _determine_collection_id(session.get("categories", ["collection"]), session.get("marketplace", "US"))
-                )
-                session["out_dir"] = out_dir
-
-            df_asin = session["asin_df"]
-            reviews_df, per_cat_counts = collect_reviews_for_asins(
-                df_asin, max_reviews_per_asin=500, marketplace=session.get("marketplace", "US")
-            )
-            dest = append_and_dedupe_reviews(session["out_dir"], reviews_df)
-
-            print("\nReview collection summary:")
-            total = 0
-            for cat, n in per_cat_counts.items():
-                print(f" - {cat}: {n} reviews")
-                total += n
-            print(f"TOTAL: {total} reviews. Saved to: {dest}")
-
+            action_load_saved_collection_and_collect_reviews()
         elif choice == "5":
-            out_dir = session.get("out_dir")
-            reviews_csv = out_dir / "reviews.csv"
-            if not reviews_csv.exists():
-                print("No reviews.csv yet. Please run '3) Collect reviews' to gather data first.")
-                return
-
-            rows = sum(1 for _ in open(reviews_csv, "r", encoding="utf-8", errors="ignore")) - 1
-            if rows < 100:
-                print(f"Only {rows} reviews collected so far. Gather more before running tests (need >= 100).")
-                return
-
-            if not out_dir:
-                # allow manual input
-                out_dir = _pick_collection_interactive()
-                if not out_dir:
-                    continue
-                session["out_dir"] = out_dir
-
-            # Build weekly from reviews-only
-            try:
-                weekly_reviews = build_weekly_master_from_reviews_only(out_dir)
-            except Exception as e:
-                print(f"Cannot build weekly reviews: {e}")
-                continue
-
-            print("\nSelect tests (comma separated): 1) Integrity  2) Volatility  3) Sentiment vs rating  4) Top drivers (needs sales)")
-            sel = input("> e.g., '1,2': ").strip()
-
-            if "1" in sel:
-                run_distortion_test(weekly_reviews, out_dir)
-            if "2" in sel:
-                run_volatility_profile(weekly_reviews, sales_df=None, out_dir_ts=out_dir)
-            if "3" in sel:
-                run_sentiment_vs_rating_drift(out_dir, marketplaces=SUPPORTED_MARKETPLACES)
-            if "4" in sel:
-                run_top_drivers(weekly_reviews, sales_df=None, out_dir_ts=out_dir)
-
-        elif choice == "6":
-            out_dir = _pick_collection_interactive()
-            if out_dir:
-                session["out_dir"] = out_dir
-                session["collection_id"] = out_dir.name
-                try:
-                    df_asin = _load_latest_asins(out_dir)
-                    session["asin_df"] = df_asin
-                    print(f"[INFO] Loaded collection into session: {out_dir.name}")
-                except Exception as e:
-                    print(f"Failed to load ASINs: {e}")
-
-        elif choice == "7":
-            if "asin_df" not in session or session["asin_df"] is None:
-                out_dir = _pick_collection_interactive()
-                if not out_dir:
-                    print("No ASINs in session. Please collect or load a collection first.")
-                    continue
-                session["out_dir"] = out_dir
-                try:
-                    session["asin_df"] = _load_latest_asins(out_dir)
-                except Exception as e:
-                    print(f"Failed to load ASINs: {e}")
-                    continue
-
-            run_daily_screening(
-                session["asin_df"],
-                marketplace=session.get("marketplace", "US"),
-                out_dir_ts=session["out_dir"],
-            )
-
-        elif choice == "8":
-            out_dir = session.get("out_dir") or _pick_collection_interactive()
-            if not out_dir:
-                continue
-            if not has_30_days_of_snapshots(out_dir):
-                print("Need at least 30 daily snapshots to unlock Reputation - Sales correlation tests.")
-                continue
-
-            weekly_reviews = build_weekly_master_from_reviews_only(out_dir)
-            weekly_merged = merge_daily_into_weekly(out_dir, weekly_reviews)
-            run_review_sales_impact(weekly_merged, sales_df=None, out_dir_ts=out_dir)
-
-        elif choice == "0":
-            print("Bye.")
-            sys.exit(0)
+            action_list_saved_collections()
         else:
-            print("Invalid choice.")
+            print("Unknown choice.")
 
 
 if __name__ == "__main__":
-    main_menu()
+    try:
+        main_menu()
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
