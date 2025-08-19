@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -11,7 +10,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -42,6 +41,7 @@ TEST_PAGE_LIMIT = int(os.getenv("AMZ_MAX_REVIEW_PAGES_TEST", "2"))  # 0 = unlimi
 
 HTML_ROOT = Path("Out") / "_raw_review_pages"
 
+# Keep the current login/profile arrangement as-is:
 PERSIST_PROFILE = os.getenv("AMZ_PERSIST_PROFILE", "0").lower() in {"1", "true", "yes"}
 PERSIST_DIR = (Path(".chrome-profile-clean").resolve() if PERSIST_PROFILE else None)
 
@@ -57,7 +57,7 @@ def _temp_profile_dir():
 
 def _chrome_options_for_profile(profile_dir: str, lang: str) -> ChromeOptions:
     opts = ChromeOptions()
-    # Headed is safer for Amazon challenges:
+    # Headed mode is safer for Amazon challenges:
     # opts.add_argument("--headless=new")
     opts.add_argument(f"--user-data-dir={profile_dir}")
     opts.add_argument("--profile-directory=Default")
@@ -213,12 +213,17 @@ def _require_manual_login(driver, base_url: str) -> None:
             break
     _ensure_on_market_home(driver, base_url)
 
-# ============================== URL builders & parse utils ===================
+# ============================== URL builders & parsing ======================
 
 def _reviews_url(asin: str, marketplace: str, page: int = 1) -> str:
+    """
+    Build ARP URL without language filter. We keep it minimal:
+    - all reviews
+    - most recent
+    - pageNumber=page
+    """
     base = _base(marketplace)
-    lang = "en_GB" if (marketplace or "US").upper() == "UK" else "en_US"
-    return f"{base}/product-reviews/{asin}/?reviewerType=all_reviews&sortBy=recent&filterByLanguage={lang}&pageNumber={page}"
+    return f"{base}/product-reviews/{asin}/?reviewerType=all_reviews&sortBy=recent&pageNumber={page}"
 
 def _parse_star(text: str) -> Optional[float]:
     m = re.search(r"([0-5](?:\.\d)?) out of 5", text or "")
@@ -241,10 +246,10 @@ def _parse_helpful(text: str) -> Optional[int]:
             return None
     return None
 
-# ============================== Reviews UI preparation ======================
+# ============================== ARP preparation (minimal) ===================
 
 def _choose_all_reviewers_if_possible(driver) -> None:
-    """Switch from 'Top reviews from …' to 'All reviewers' if dropdown exists."""
+    """Switch from 'Top reviews from …' to 'All reviewers' (minimal UI)."""
     # Modern dropdown
     try:
         trigger = driver.find_element(By.CSS_SELECTOR, '#reviews-filter-info-segment-dropdown')
@@ -274,7 +279,7 @@ def _choose_all_reviewers_if_possible(driver) -> None:
         pass
 
 def _set_sort_most_recent(driver) -> None:
-    """Force 'Most recent' sorting."""
+    """Force 'Most recent' sorting (minimal UI)."""
     try:
         sel = driver.find_element(By.CSS_SELECTOR, 'select#sort-order-dropdown')
         sel.click()
@@ -300,15 +305,35 @@ def _set_sort_most_recent(driver) -> None:
     except Exception:
         pass
 
+def _wait_container_and_cards(driver, timeout=25) -> bool:
+    """Wait for container and cards (strict and minimal)."""
+    try:
+        WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.ID, "cm_cr-review_list"))
+        )
+    except TimeoutException:
+        return False
+    # Now wait for cards
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        cards = driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="review"]')
+        if cards:
+            return True
+        cards = driver.find_elements(By.CSS_SELECTOR, 'div[data-hook="cmps-review"]')
+        if cards:
+            return True
+        time.sleep(0.4)
+    return False
+
 def _scroll_to_reviews_list(driver) -> None:
     try:
         container = driver.find_element(By.CSS_SELECTOR, "#cm_cr-review_list")
         driver.execute_script("arguments[0].scrollIntoView({block:'start'});", container)
-        time.sleep(0.7)
+        time.sleep(0.6)
     except Exception:
         pass
 
-# ============================== Parsing reviews from HTML ===================
+# ============================== HTML parsing ================================
 
 def _parse_reviews_from_html(html: str, asin: str, marketplace: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html or "", "html.parser")
@@ -367,13 +392,67 @@ def _click_next_reviews_page(driver: webdriver.Chrome) -> bool:
     except (NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException):
         return False
 
+def _wait_page_changed(driver, prev_page_idx: int, timeout: float = 10.0) -> bool:
+    """
+    Wait for either:
+      - active pagination li ('a-selected') to show a different number, or
+      - pageNumber in URL to differ from prev_page_idx.
+    """
+    t0 = time.time()
+    prev_str = str(prev_page_idx)
+    while time.time() - t0 < timeout:
+        # active page in paginator
+        try:
+            active = driver.find_elements(By.CSS_SELECTOR, "ul.a-pagination li.a-selected")
+            if active:
+                txt = (active[0].text or "").strip()
+                if txt and txt != prev_str:
+                    return True
+        except Exception:
+            pass
+        # URL pageNumber
+        try:
+            cu = driver.current_url or ""
+            m = re.search(r"[?&]pageNumber=(\d+)", cu)
+            if m and m.group(1) != prev_str:
+                return True
+        except Exception:
+            pass
+        time.sleep(0.3)
+    return False
+
+# ============================== Entry via PDP ===============================
+
+def _resolve_reviews_entrypoint(driver, asin: str, marketplace: str) -> str:
+    """
+    Open PDP and click 'See all reviews' to land on the correct ARP.
+    If link points to /product-reviews/<PARENT_ASIN>, return that ASIN.
+    """
+    base = _base(marketplace)
+    pdp = f"{base}/dp/{asin}"
+    try:
+        driver.get(pdp)
+        _accept_consent_if_any(driver)
+        time.sleep(1.0)
+        links = driver.find_elements(
+            By.CSS_SELECTOR,
+            "a[data-hook='see-all-reviews-link-foot'], a[href*='/product-reviews/']"
+        )
+        if links:
+            href = links[0].get_attribute("href") or ""
+            m = re.search(r"/product-reviews/([A-Z0-9]{10})", href)
+            if m:
+                parent = m.group(1)
+                driver.get(href)
+                return parent
+    except Exception:
+        pass
+    return asin
+
 # ============================== Freshness gate ==============================
 
 def _has_new_vs_checkpoint(page_rows: List[Dict[str, Any]], chk: Optional[Dict[str, Any]]) -> bool:
-    """
-    Return True if current page likely contains something newer than checkpoint.
-    Check by 'review_id' presence not seen before; fall back to True if checkpoint absent.
-    """
+    """Return True if current page likely contains something newer than checkpoint."""
     if not chk:
         return True
     last_ids = set(map(str, (chk.get("ids") or [])))
@@ -395,13 +474,13 @@ def collect_reviews(
     per_page_sink: Optional[callable] = None,                  # callback(asin, page_idx, page_df)
 ) -> pd.DataFrame:
     """
-    Selenium collector:
-      - manual login pause,
-      - forces All reviewers + Most recent + English,
-      - saves each page HTML,
-      - parses with BS4,
-      - calls per_page_sink(asin, page_idx, page_df) right after parsing each page,
-      - uses last_seen checkpoint to skip pagination when no new content on p1.
+    Selenium collector with the agreed minimal logic:
+      - enter via PDP → 'See all reviews' (accept parent ASIN),
+      - on ARP do only: All reviewers → Most recent,
+      - wait for container then for cards, scroll to list,
+      - pagination by clicking 'Next', wait active page/URL changed,
+      - after saving each HTML page: parse and immediately call per_page_sink (CSV),
+      - keep freshness-gate behavior as-is when a checkpoint is provided.
     """
     market_key = (marketplace or "US").upper()
     base = _base(market_key)
@@ -412,67 +491,78 @@ def collect_reviews(
 
     try:
         # Manual login gate
-        _require_manual_login(driver, base)
+        print("\n[LOGIN] Opening Amazon and navigating to Sign in…")
+        _go_to_signin_via_header(driver, base)
+        _accept_consent_if_any(driver)
+
+        while True:
+            ans = input("[LOGIN] Finished signing in? 'y' to continue, 'h' to re-open via header, 's' to skip: ").strip().lower()
+            if ans == "h":
+                _go_to_signin_via_header(driver, base)
+                continue
+            if ans == "s":
+                print("[LOGIN] Skipping login. Proceeding unauthenticated.")
+                break
+            if ans == "y":
+                time.sleep(2.0)
+                break
+        _ensure_on_market_home(driver, base)
 
         for idx, raw_asin in enumerate(asins, start=1):
             asin = str(raw_asin).strip()
             if not asin:
                 continue
 
-            print(f"[{idx}/{len(asins)}] ASIN={asin} — opening p1 (Most recent, English)…")
+            print(f"[{idx}/{len(asins)}] ASIN={asin} — resolving ARP via PDP…")
             asin_dir = HTML_ROOT / market_key / asin
             _ensure_dir(asin_dir)
 
-            # open p1
-            url = _reviews_url(asin, market_key, page=1)
+            # (1) PDP → see-all-reviews (accept parent ASIN if necessary)
+            resolved = _resolve_reviews_entrypoint(driver, asin, market_key)
+            if resolved != asin:
+                print(f"  [INFO] reviews are attached to parent ASIN={resolved}")
+                asin = resolved
+
+            # (2) Ensure we are on ARP p1 (no language filter; most recent set later)
             try:
-                driver.get(url)
+                # If PDP did not move us to ARP (no link), open p1 explicitly:
+                cu = driver.current_url or ""
+                if "/product-reviews/" not in cu:
+                    driver.get(_reviews_url(asin, market_key, page=1))
             except WebDriverException as e:
                 print(f"  [WARN] cannot open reviews URL for {asin}: {e}")
                 continue
 
-            _accept_consent_if_any(driver)
-            # prepare UI
-            try:
-                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "cm_cr-review_list")))
-            except TimeoutException:
-                # try scroll to trigger lazy render
-                driver.execute_script("window.scrollTo(0, 600);")
+            # (3) Minimal ARP prep: wait container -> All reviewers -> Most recent -> wait cards -> scroll
+            ok_container = _wait_container_and_cards(driver, timeout=15)  # wait container first
+            if not ok_container:
+                # Try once more after short delay
                 time.sleep(1.0)
-                try:
-                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "cm_cr-review_list")))
-                except TimeoutException:
-                    # save for debug and continue to next ASIN
+                ok_container = _wait_container_and_cards(driver, timeout=10)
+                if not ok_container:
                     _save_html(asin_dir / f"{asin}_p1.html", driver.page_source or "")
-                    print(f"  [WARN] reviews container not found on p1 → saved for debug.")
+                    print(f"  [WARN] container/cards not found on p1 → saved for debug.")
                     continue
 
             _choose_all_reviewers_if_possible(driver)
             _set_sort_most_recent(driver)
-            _scroll_to_reviews_list(driver)
 
-            # Ensure first cards visible
-            try:
-                WebDriverWait(driver, 25).until(
-                    EC.any_of(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="review"]')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-hook="cmps-review"]')),
-                    )
-                )
-            except TimeoutException:
-                # still save p1 for diagnostics
+            if not _wait_container_and_cards(driver, timeout=15):
                 _save_html(asin_dir / f"{asin}_p1.html", driver.page_source or "")
                 print(f"  [WARN] no review cards detected on p1 → saved for debug.")
                 continue
 
+            _scroll_to_reviews_list(driver)
+            time.sleep(PAGE_DELAY_SEC)
+
             collected = 0
             page_idx = 1
-            # ---- page 1 ----
-            time.sleep(PAGE_DELAY_SEC)
+
+            # ---- page 1: SAVE → PARSE → CSV
             _save_html(asin_dir / f"{asin}_p{page_idx}.html", driver.page_source or "")
             page_rows = _parse_reviews_from_html(driver.page_source or "", asin, market_key)
 
-            # freshness against checkpoint
+            # freshness against checkpoint (keep as-is)
             chk = (last_seen or {}).get(asin)
             if not _has_new_vs_checkpoint(page_rows, chk):
                 print(f"  [SKIP] no new reviews vs checkpoint on p1.")
@@ -487,27 +577,27 @@ def collect_reviews(
             all_rows.extend(page_rows)
             collected += len(page_rows)
 
-            # paginate further
+            # ---- pagination loop
             while collected < max_reviews_per_asin:
                 if TEST_PAGE_LIMIT > 0 and page_idx >= TEST_PAGE_LIMIT:
                     print(f"  [TEST] page limit reached ({TEST_PAGE_LIMIT}).")
                     break
 
+                prev_page = page_idx
                 moved = _click_next_reviews_page(driver)
                 if not moved:
                     print(f"  [INFO] no Next page after p{page_idx}.")
                     break
 
-                # Wait for content refresh
-                try:
-                    WebDriverWait(driver, 20).until(
-                        EC.presence_of_element_located((By.ID, "cm_cr-review_list"))
-                    )
-                except TimeoutException:
-                    pass
+                if not _wait_page_changed(driver, prev_page_idx=prev_page, timeout=10.0):
+                    # If page number didn't change, we consider pagination ended.
+                    print(f"  [INFO] page did not change after Next from p{page_idx}.")
+                    break
 
                 page_idx += 1
                 time.sleep(PAGE_DELAY_SEC)
+
+                # SAVE → PARSE → CSV (immediately)
                 _save_html(asin_dir / f"{asin}_p{page_idx}.html", driver.page_source or "")
                 rows = _parse_reviews_from_html(driver.page_source or "", asin, market_key)
                 if per_page_sink:
@@ -541,7 +631,7 @@ def collect_reviews(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Amazon reviews collector (Most recent, English)")
+    parser = argparse.ArgumentParser(description="Amazon reviews collector (minimal, PDP→ARP→Most recent)")
     parser.add_argument("asins", nargs="+", help="List of ASINs")
     parser.add_argument("--mk", default="US", help="Marketplace: US or UK")
     parser.add_argument("--max", type=int, default=200, help="Max reviews per ASIN")
