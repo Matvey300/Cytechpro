@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional
 from bs4 import BeautifulSoup
 
-from core.session_state import get_chrome_driver_with_profile
+from core.auth_amazon import get_chrome_driver_with_profile
 from api.env_check import get_env_or_raise
 from datetime import datetime
 
