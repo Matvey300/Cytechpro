@@ -39,7 +39,7 @@ def main_menu():
             else:
                 print("[!] Please load a collection first.")
         elif choice == "3":
-            run_asin_search()
+            run_asin_search(session)
         elif choice == "4":
             if session.df_asin is not None:
                 run_daily_screening(session)
