@@ -2,6 +2,7 @@
 
 from core.env_check import validate_environment
 from core.session_state import SessionState
+from core.collection_io import select_collection
 from Pyton_main.Pyton_Data_Analytic_project.actions.collections_io import select_collection
 from actions.reviews import run_review_collection
 from actions.snapshots import run_daily_screening
