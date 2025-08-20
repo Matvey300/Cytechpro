@@ -10,7 +10,7 @@ COLLECTIONS_DIR.mkdir(exist_ok=True)
 def list_collections() -> list[str]:
     return sorted([f.stem for f in COLLECTIONS_DIR.glob("*.csv")])
 
-def create_collection(session: SessionState) -> None:
+def create_collection(session: SessionState) -> SessionState:
     name = input("Enter a name for the new ASIN collection: ").strip()
     if not name:
         print("[WARN] Collection name cannot be empty.")
@@ -25,21 +25,23 @@ def create_collection(session: SessionState) -> None:
     df.to_csv(path, index=False)
     print(f"[✅] Created new collection: {name}")
 
-    session.df_asin = df
-    session.collection_name = name
+    session.collection_id = name
     session.collection_path = path
+    session.df_asin = df
+    return session
 
-def load_collection(name: str, session: SessionState) -> None:
+def load_collection(name: str, session: SessionState) -> SessionState:
     path = COLLECTIONS_DIR / f"{name}.csv"
     if not path.exists():
         raise FileNotFoundError(f"No such collection: {name}")
 
     df = pd.read_csv(path)
-    session.df_asin = df
-    session.collection_name = name
+    session.collection_id = name
     session.collection_path = path
+    session.df_asin = df
+    return session
 
-def select_collection(session: SessionState) -> None:
+def select_collection(session: SessionState) -> SessionState:
     collections = list_collections()
     if collections:
         print("Available collections:")
