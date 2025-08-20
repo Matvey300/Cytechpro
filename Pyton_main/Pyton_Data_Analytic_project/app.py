@@ -1,7 +1,7 @@
 # app.py
 
 from core.env_check import validate_environment
-from actions.menu_main import run_main_menu
+from actions.menu_main import main_menu
 from core.session_state import SESSION
 
 def main():
@@ -26,4 +26,4 @@ def main():
         print("\n[Interrupted by user]")
 
 if __name__ == "__main__":
-    main()
+   main_menu()
