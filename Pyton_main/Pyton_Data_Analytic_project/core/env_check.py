@@ -6,7 +6,7 @@ REQUIRED_ENV_VARS = [
     "SERPAPI_KEY"
 ]
 
-def check_required_env_vars() -> None:
+def validate_environment(): -> None:
     missing = []
     for var in REQUIRED_ENV_VARS:
         if not os.getenv(var):
