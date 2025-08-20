@@ -1,64 +1,75 @@
-# actions/menu_main.py
+# menu_main.py
+# Main CLI menu interface for Amazon Intelligence Tool
 
-from typing import Dict, Any
-from actions.reviews import collect_reviews
-from actions.snapshots import snapshot_daily_metrics
-from actions.plotting import plot_dynamics
-from actions.correlation import run_correlation_tests
-from actions.collections import list_saved_collections
-from session_state import session
-from utils.console import ask, info, warn
+from actions.reviews import run_review_collection
+from actions.snapshots import run_daily_screening
+from actions.plots import run_plotting
+from actions.correlations import run_correlation_analysis
+from core.session_state import SessionState
+from actions.collections import select_collection
+from core.env_check import ensure_env_ready
 
+def main_menu():
+    """Display the main menu and route user actions."""
+    ensure_env_ready()
 
-def get_menu_options(session: Dict[str, Any]) -> Dict[str, str]:
-    """Returns available menu options based on current session state."""
-    has_collection = session.get("df_asin") is not None
-    has_reviews = has_collection and (session.get("review_count", 0) > 0)
-    has_snapshots = session.get("snapshot_count", 0) >= 3
+    session = SessionState()
+    session.load_last_or_prompt()
 
-    options = {
-        "1": "Collect reviews (up to 500 per ASIN)"
-    }
-
-    if has_reviews:
-        options["2"] = "Take snapshot: rating, price, review count"
-        options["3"] = "Plot review, rating, and sentiment dynamics"
-    if has_snapshots:
-        options["4"] = "Run correlation tests (requires ≥3 snapshots)"
-    if has_collection:
-        options["5"] = "List saved ASIN collections"
-
-    options["0"] = "Exit"
-    return options
-
-
-def run_main_menu(session: Dict[str, Any]) -> None:
-    """
-    Entry point for main CLI menu.
-    Adjusts visible options based on current session state.
-    """
     while True:
-        collection_id = session.get("collection_id") or "None"
-        print(f"\n--- Amazon Review Monitor | Active Collection: {collection_id} ---")
+        print("\n=== Amazon Intelligence Tool ===")
 
-        menu = get_menu_options(session)
-        for key, label in menu.items():
-            print(f"{key}) {label}")
+        has_asins = session.has_asins()
+        has_reviews = session.has_reviews()
+        has_snapshots = session.has_snapshots(min_required=3)
 
-        choice = ask("> Enter your choice: ").strip()
+        options = {}
 
-        if choice == "1":
-            collect_reviews(session)
-        elif choice == "2":
-            snapshot_daily_metrics(session)
-        elif choice == "3":
-            plot_dynamics(session)
-        elif choice == "4":
-            run_correlation_tests(session)
-        elif choice == "5":
-            list_saved_collections(session)
-        elif choice == "0":
-            info("Goodbye!")
-            return
+        # Menu depends on current session state
+        if not has_asins:
+            print("No ASIN collection loaded.")
+            print("1) Load or create ASIN collection")
+            print("0) Exit")
         else:
-            warn("Invalid or unavailable option. Please try again.")
+            print(f"[Active collection: {session.collection_id}]")
+            print("1) Load or create another ASIN collection")
+            options["1"] = "Load or create ASIN collection"
+
+            options["2"] = "Collect reviews (max 500 per ASIN)"
+            print("2) Collect reviews (max 500 per ASIN)")
+
+            if has_reviews:
+                options["3"] = "Take snapshot: rating, price, review count"
+                print("3) Take snapshot: rating, price, review count")
+
+                options["4"] = "Plot review, rating, and sentiment dynamics"
+                print("4) Plot review, rating, and sentiment dynamics")
+
+            if has_snapshots:
+                options["5"] = "Run correlation analysis"
+                print("5) Run correlation analysis")
+
+            options["6"] = "List saved collections"
+            print("6) List saved collections")
+
+            print("0) Exit")
+
+        choice = input("> Enter choice: ").strip()
+
+        if choice == "0":
+            print("Goodbye!")
+            break
+        elif choice == "1":
+            session = select_collection()
+        elif choice == "2" and has_asins:
+            run_review_collection(session)
+        elif choice == "3" and has_reviews:
+            run_daily_screening(session)
+        elif choice == "4" and has_reviews:
+            run_plotting(session)
+        elif choice == "5" and has_snapshots:
+            run_correlation_analysis(session)
+        elif choice == "6":
+            session.list_saved_collections()
+        else:
+            print("Invalid choice or unavailable option.")
