@@ -1,120 +1,98 @@
 # api/serpapi.py
+# SerpApi integration for Amazon keyword → category extraction
 
 import os
 import requests
 from typing import List, Optional
 
-MARKETPLACES = {
-    "US": "amazon.com",
-    "UK": "amazon.co.uk"
-}
+from core.marketplaces import MARKETPLACES
+from core.synonyms import SYNONYMS
 
-SYNONYMS = {
-    "headphones": ["headphones", "earbuds", "earbud", "earphone", "earphones", "headset"]
-}
 
 def get_serpapi_key() -> Optional[str]:
-    """
-    Retrieve the SerpApi key from environment variables.
-    Returns None if not set.
-    """
-    return os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
+    """Retrieve SerpApi key from environment."""
+    key = os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
+    return key.strip() if key else None
 
 
-def check_serpapi_quota() -> Optional[int]:
-    """
-    Check remaining request quota for SerpApi account.
+def get_amazon_domain(marketplace: str) -> str:
+    """Return Amazon domain for the given marketplace, defaulting to amazon.com."""
+    return MARKETPLACES.get(marketplace.upper(), "amazon.com")
 
-    Returns:
-        Remaining request count or None if failed.
+
+def check_serpapi_quota(api_key: str) -> dict:
     """
-    key = get_serpapi_key()
-    if not key:
-        print("[WARN] SerpApi key not found.")
-        return None
+    Returns quota information from SerpApi:
+    {'account_email': ..., 'total_requests': ..., 'request_searches_left': ...}
+    """
     try:
-        r = requests.get("https://serpapi.com/account", params={"api_key": key}, timeout=10)
-        if r.status_code == 200:
-            data = r.json()
-            return data.get("request_remaining")
-        else:
-            print(f"[WARN] Failed to check quota. Status {r.status_code}")
-            return None
+        url = "https://serpapi.com/account-api"
+        r = requests.get(url, params={"api_key": api_key}, timeout=10)
+        return r.json()
     except Exception as e:
-        print(f"[ERROR] Quota check failed: {e}")
-        return None
+        return {"error": f"Quota check failed: {e}"}
 
 
-def fetch_amazon_categories(keyword: str, marketplace: str = "US") -> List[str]:
+def search_amazon_categories(keyword: str, marketplace: str) -> List[str]:
     """
-    Fetch category suggestions from Amazon via SerpApi using a keyword.
-
-    Args:
-        keyword: Search keyword (e.g., 'headphones')
-        marketplace: Marketplace code ('US', 'UK', ...)
-
-    Returns:
-        A list of category names/paths containing the keyword or its synonyms.
+    Call SerpApi (Amazon engine) and extract relevant category paths
+    that match the keyword or its synonyms.
     """
-    serpapi_key = get_serpapi_key()
-    if not serpapi_key:
-        print("[WARN] SerpApi key not found in environment.")
+    api_key = get_serpapi_key()
+    if not api_key:
         return []
-
-    amazon_domain = MARKETPLACES.get(marketplace.upper(), "amazon.com")
 
     url = "https://serpapi.com/search.json"
     params = {
         "engine": "amazon",
-        "amazon_domain": amazon_domain,
-        "keyword": keyword,
-        "api_key": serpapi_key,
+        "amazon_domain": get_amazon_domain(marketplace),
+        "api_key": api_key,
+        "k": keyword,
         "page": 1
     }
 
     try:
-        response = requests.get(url, params=params, timeout=15)
-        if response.status_code != 200:
-            print(f"[WARN] SerpApi response code {response.status_code}")
-            print(f"[DEBUG] URL: {response.url}")
-            print(f"[DEBUG] Response body: {response.text[:500]}")
+        r = requests.get(url, params=params, timeout=15)
+        if r.status_code != 200:
             return []
-        data = response.json()
-    except Exception as e:
-        print(f"[ERROR] SerpApi request failed: {e}")
+        data = r.json()
+    except Exception:
         return []
 
+    # Token set based on keyword + synonyms
     kw = keyword.strip().lower()
     tokens = set([kw] + SYNONYMS.get(kw, []))
 
-    def match(text: str) -> bool:
-        norm = (text or "").lower()
-        return any(t in norm for t in tokens)
+    def _match(text: str) -> bool:
+        s = (text or "").lower()
+        return any(tok in s for tok in tokens)
 
-    candidates = []
+    candidates: List[str] = []
 
-    for section in ("categories", "category_results", "category_information"):
-        for item in data.get(section, []):
-            name = item.get("name") or item.get("title") or item.get("category")
-            if name and match(name):
-                candidates.append(name.strip())
+    # 1. Category-like result blocks
+    for block in ("category_results", "categories", "category_information"):
+        for item in data.get(block, []):
+            name = (item.get("name") or item.get("title") or item.get("category") or "").strip()
+            if name and _match(name):
+                candidates.append(name)
 
-    for result in data.get("organic_results", []):
-        breadcrumbs = result.get("breadcrumbs") or result.get("category_browse_nodes")
-        if isinstance(breadcrumbs, list):
-            path = " > ".join(str(b).strip() for b in breadcrumbs)
-            if path and match(path):
-                candidates.append(path)
+    # 2. Breadcrumb trails from organic results
+    for res in data.get("organic_results", []):
+        crumbs = res.get("breadcrumbs") or res.get("category_browse_nodes")
+        if isinstance(crumbs, list) and crumbs:
+            trail = " > ".join(str(c).strip() for c in crumbs if str(c).strip())
+            if trail and _match(trail):
+                candidates.append(trail)
 
-    # Deduplicate while preserving order
+    # Deduplicate, preserving order
     seen = set()
-    output = []
-    for cat in candidates:
-        if cat not in seen:
-            seen.add(cat)
-            output.append(cat)
+    out: List[str] = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
 
-    if not output:
-        print("[WARN] No matching categories found in SerpApi response.")
+    if not out:
+        print(f"[WARN] No matching categories found for keyword '{keyword}' on {marketplace}")
 
-    return output
+    return out
