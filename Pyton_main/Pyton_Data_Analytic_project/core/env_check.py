@@ -31,9 +31,9 @@ def validate_environment() -> None:
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing)}"
         )
-def get_env_or_raise(key: str) -> str:
-"""Get environment variable or raise error if missing."""
-value = os.getenv(key)
-if not value:
-    raise RuntimeError(f"Missing environment variable: {key}")
-return value
+def get_env_or_raise(var_name: str) -> str:
+    """Get environment variable or raise error if missing."""
+    value = os.getenv(var_name)
+    if not value:
+        raise RuntimeError(f"[❌] Missing required env variable: {var_name}")
+    return value
