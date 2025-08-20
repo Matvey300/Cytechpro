@@ -34,7 +34,8 @@ def load_collection(name: str) -> SessionState:
     df = pd.read_csv(path)
     return SessionState(df_asin=df, collection_name=name, collection_path=path)
 
-def select_collection() -> SessionState:
+
+def select_collection(session: SessionState) -> None:
     collections = list_collections()
     if collections:
         print("Available collections:")
@@ -42,19 +43,19 @@ def select_collection() -> SessionState:
             print(f"{i}) {name}")
     else:
         print("No collections found.")
-    
+
     print("0) Create new collection")
     choice = input("Select collection by number: ").strip()
 
     if choice == "0":
-        return create_collection()
+        return create_collection(session)
     
     try:
         idx = int(choice) - 1
         if 0 <= idx < len(collections):
-            return load_collection(collections[idx])
+            return load_collection(session, collections[idx])
     except Exception:
         pass
 
     print("Invalid selection.")
-    return select_collection()
+    return select_collection(session)
