@@ -1,122 +1,95 @@
-# reviews_pipeline.py
-
 import os
 import time
 import json
-import requests
 import pandas as pd
-from typing import Tuple
+import requests
+from pathlib import Path
+from typing import List, Tuple
 
-SCRAPINGDOG_API_URL = "https://api.scrapingdog.com/amazon/reviews"
+from core.env_check import check_required_env_vars
+check_required_env_vars()
 
-class ScrapingdogReviewError(Exception):
-    pass
+HEADERS = {
+    "Accept": "application/json"
+}
 
-def get_reviews_for_asin(asin: str, region: str, max_reviews: int = 500, max_pages: int = 20) -> pd.DataFrame:
-    """
-    Collect reviews for a single ASIN using Scrapingdog Amazon Reviews API.
-    Returns a pandas DataFrame with raw review data.
-    """
-    api_key = os.getenv("SCRAPINGDOG_API_KEY")
-    if not api_key:
-        raise ScrapingdogReviewError("Missing SCRAPINGDOG_API_KEY in environment.")
-
-    all_reviews = []
-    seen_ids = set()
-
-    for page in range(1, max_pages + 1):
-        params = {
-            "api_key": api_key,
-            "type": "review",
-            "asin": asin,
-            "region": region.lower(),
-            "page": page,
-        }
-
-        try:
-            response = requests.get(SCRAPINGDOG_API_URL, params=params, headers={"Accept": "application/json"}, timeout=15)
-
-            if response.status_code == 429:
-                raise ScrapingdogReviewError("Rate limit exceeded. Check your API quota.")
-            elif response.status_code != 200:
-                raise ScrapingdogReviewError(f"Failed to fetch reviews (status code {response.status_code}).")
-
-            data = response.json()
-            reviews = data.get("reviews") or []
-            if not reviews:
-                break
-
-            new_rows = []
-            for r in reviews:
-                rid = r.get("review_id")
-                if rid and rid not in seen_ids:
-                    seen_ids.add(rid)
-                    r["asin"] = asin  # attach ASIN to each review
-                    new_rows.append(r)
-
-            all_reviews.extend(new_rows)
-
-            if len(all_reviews) >= max_reviews:
-                break
-
-            time.sleep(1)  # avoid hammering API
-
-        except Exception as e:
-            raise ScrapingdogReviewError(f"Error fetching reviews for {asin} (page={page}): {e}")
-
-    df = pd.DataFrame(all_reviews)
-    return df
-
+BASE_URL = "https://api.scrapingdog.com/amazon/reviews"
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
+    max_reviews_per_asin: int,
     marketplace: str,
-    out_dir,
-    collection_id: str,
-    max_reviews_per_asin: int = 500,
+    out_dir: Path,
+    collection_id: str
 ) -> Tuple[pd.DataFrame, dict]:
-    """
-    Loop over ASINs in the provided DataFrame, collect reviews using Scrapingdog.
-    Append results to CSV file incrementally and return combined DataFrame.
-    """
-    all_rows = []
-    counts_per_asin = {}
 
-    out_file = os.path.join(out_dir, "reviews.csv")
-    seen_asins = set()
+    api_key = os.getenv("SCRAPINGDOG_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing SCRAPINGDOG_API_KEY")
 
-    if os.path.exists(out_file):
-        try:
-            existing = pd.read_csv(out_file)
-            seen_asins = set(existing["asin"].unique())
-            print(f"[INFO] Resuming review collection. Found existing reviews for {len(seen_asins)} ASINs.")
-        except Exception:
-            print(f"[WARN] Failed to read existing reviews file. Starting fresh.")
+    all_reviews: List[dict] = []
+    per_cat_counts = {}
 
-    for _, row in df_asin.iterrows():
-        asin = str(row.get("asin")).strip()
-        if not asin or asin in seen_asins:
-            continue
+    for i, row in df_asin.iterrows():
+        asin = row["asin"]
+        cat = row.get("category_path", "unknown")
+        print(f"[{i+1}/{len(df_asin)}] Fetching reviews for ASIN: {asin}")
 
-        print(f"[INFO] Collecting reviews for ASIN {asin}…")
-        try:
-            df_reviews = get_reviews_for_asin(
-                asin=asin,
-                region=marketplace.lower(),
-                max_reviews=max_reviews_per_asin,
-            )
-            if not df_reviews.empty:
-                df_reviews.to_csv(out_file, mode="a", header=not os.path.exists(out_file), index=False)
-                all_rows.append(df_reviews)
-                counts_per_asin[asin] = len(df_reviews)
-                print(f"[OK] {len(df_reviews)} reviews collected for {asin}.")
-            else:
-                print(f"[WARN] No reviews found for {asin}.")
+        reviews = []
+        page = 1
+        fetched = 0
+        seen_ids = set()
 
-        except ScrapingdogReviewError as e:
-            print(f"[ERROR] {e}")
-        except Exception as e:
-            print(f"[ERROR] Unexpected error for {asin}: {e}")
+        while fetched < max_reviews_per_asin:
+            params = {
+                "api_key": api_key,
+                "type": "review",
+                "amazon_domain": f"amazon.{marketplace.lower()}",
+                "asin": asin,
+                "page": page
+            }
 
-    combined = pd.concat(all_rows, ignore_index=True) if all_rows else pd.DataFrame()
-    return combined, counts_per_asin
+            try:
+                r = requests.get(BASE_URL, headers=HEADERS, params=params, timeout=20)
+                if r.status_code != 200:
+                    print(f"[WARN] Status {r.status_code} for ASIN {asin}")
+                    break
+
+                data = r.json()
+                new_reviews = data.get("reviews", [])
+
+                # Stop if no new reviews found
+                new_valid = [r for r in new_reviews if r.get("id") not in seen_ids]
+                if not new_valid:
+                    break
+
+                for r in new_valid:
+                    r["asin"] = asin
+                    r["category_path"] = cat
+                    seen_ids.add(r.get("id"))
+                    reviews.append(r)
+
+                fetched += len(new_valid)
+                page += 1
+                time.sleep(1.5)
+
+            except Exception as e:
+                print(f"[ERROR] Failed to fetch page {page} for ASIN {asin}: {e}")
+                break
+
+        print(f"[✓] Collected {len(reviews)} reviews for ASIN: {asin}")
+        all_reviews.extend(reviews)
+
+        if cat not in per_cat_counts:
+            per_cat_counts[cat] = 0
+        per_cat_counts[cat] += len(reviews)
+
+    df_reviews = pd.DataFrame(all_reviews)
+    out_path = out_dir / "reviews.csv"
+
+    if out_path.exists():
+        existing = pd.read_csv(out_path)
+        df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
+
+    df_reviews.to_csv(out_path, index=False)
+    return df_reviews, per_cat_counts
