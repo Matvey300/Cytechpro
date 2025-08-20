@@ -37,3 +37,10 @@ def get_env_or_raise(var_name: str) -> str:
     if not value:
         raise RuntimeError(f"[❌] Missing required env variable: {var_name}")
     return value
+
+def ensure_env_ready() -> None:
+    """
+    Wrapper to validate environment before app runs.
+    """
+    print("[🔍] Checking environment variables...")
+    check_required_env_vars()
