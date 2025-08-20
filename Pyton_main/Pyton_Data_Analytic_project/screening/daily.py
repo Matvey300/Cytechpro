@@ -1,80 +1,110 @@
-# screening/daily.py
+# analytics/daily.py
 
 import os
 import time
 import json
-import re
 import pandas as pd
 from pathlib import Path
-from datetime import datetime
+from typing import List, Optional
 from bs4 import BeautifulSoup
 
-from core.auth_amazon import get_chrome_driver_with_profile
-from api.scrapingdog import fetch_amazon_product_page
+from core.session_state import get_chrome_driver_with_profile
+from api.env_check import get_env_or_raise
+from datetime import datetime
 
-def parse_snapshot_fields(html: str) -> dict:
-    """Extract price, rating, and review count from HTML using BeautifulSoup."""
+
+def extract_amazon_metrics(html: str) -> dict:
+    """
+    Extract rating, price, review count, and BSR from a product page.
+    """
     soup = BeautifulSoup(html, "html.parser")
 
-    def extract_price():
-        for selector in ["#priceblock_ourprice", "#priceblock_dealprice", "span.a-price > span.a-offscreen"]:
-            tag = soup.select_one(selector)
-            if tag:
-                return tag.get_text(strip=True)
-        return None
+    def extract_text(selector: str) -> Optional[str]:
+        el = soup.select_one(selector)
+        return el.get_text(strip=True) if el else None
 
-    def extract_rating():
-        tag = soup.select_one("#acrPopover") or soup.select_one("span[data-asin-review-stars-count]")
-        if tag:
-            return tag.get("title") or tag.get_text(strip=True)
-        return None
+    def parse_number(s: Optional[str]) -> Optional[float]:
+        try:
+            return float(s.replace(",", "").strip()) if s else None
+        except Exception:
+            return None
 
-    def extract_review_count():
-        tag = soup.select_one("#acrCustomerReviewText") or soup.find("span", {"data-asin-review-count": True})
-        if tag:
-            return tag.get_text(strip=True)
-        return None
+    # Extract values using typical selectors
+    rating_text = extract_text("span.a-icon-alt")
+    review_count_text = extract_text("#acrCustomerReviewText")
+    price_text = extract_text(".a-price .a-offscreen")
+
+    # Attempt to extract BSR (Best Sellers Rank)
+    bsr_text = None
+    details_div = soup.find(id="productDetails_detailBullets_sections1")
+    if details_div:
+        bsr_entry = details_div.find(string=lambda t: "Best Sellers Rank" in t)
+        if bsr_entry:
+            parent = bsr_entry.find_parent("tr")
+            if parent:
+                bsr_text = parent.get_text(strip=True)
+
+    # Extract numeric parts
+    rating = parse_number(rating_text.split()[0] if rating_text else None)
+    review_count = parse_number(review_count_text.split()[0] if review_count_text else None)
+    price = parse_number(price_text.replace("$", "") if price_text else None)
+
+    # BSR can look like "#3,214 in Electronics (See Top 100)"
+    bsr_rank = None
+    if bsr_text:
+        import re
+        match = re.search(r"#([\d,]+)", bsr_text)
+        if match:
+            bsr_rank = parse_number(match.group(1))
 
     return {
-        "price": extract_price(),
-        "rating": extract_rating(),
-        "review_count": extract_review_count()
+        "rating": rating,
+        "review_count": review_count,
+        "price": price,
+        "bsr_rank": bsr_rank,
     }
 
+
 def run_daily_screening(df_asin: pd.DataFrame, out_dir: Path):
-    """Run screening over all ASINs and store results in daily_snapshots.csv."""
-    snapshot = []
-    ts = int(time.time())
-    date_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    """
+    For each ASIN in df_asin, scrape current rating / price / review count / BSR
+    and store results in daily_snapshots.csv inside collection folder.
+    """
+    user_data_dir = get_env_or_raise("CHROME_USER_DATA_DIR")
+    profile_dir = os.getenv("CHROME_PROFILE", "Profile 2")
+    driver = get_chrome_driver_with_profile(user_data_dir, profile_dir)
 
-    for _, row in df_asin.iterrows():
-        asin = str(row["asin"]).strip()
+    snapshot_rows = []
+    utc_now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    for asin in df_asin["asin"]:
+        url = f"https://www.amazon.com/dp/{asin}"
         try:
-            html = fetch_amazon_product_page(asin=asin, marketplace="US")
-            fields = parse_snapshot_fields(html)
-            snapshot.append({
-                "timestamp": ts,
-                "datetime": date_str,
-                "asin": asin,
-                "price": fields["price"],
-                "rating": fields["rating"],
-                "review_count": fields["review_count"]
-            })
-            print(f"[✓] {asin}: P={fields['price']} | R={fields['rating']} | C={fields['review_count']}")
-        except Exception as e:
-            print(f"[!] Failed for {asin}: {e}")
+            driver.get(url)
+            time.sleep(3)  # give time to load
 
-    if not snapshot:
-        print("[!] No data collected, skipping CSV save.")
+            metrics = extract_amazon_metrics(driver.page_source)
+            row = {
+                "asin": asin,
+                "timestamp_utc": utc_now,
+                **metrics
+            }
+            snapshot_rows.append(row)
+            print(f"[✓] {asin} → {metrics}")
+        except Exception as e:
+            print(f"[!] Failed to extract metrics for {asin}: {e}")
+
+    driver.quit()
+
+    if not snapshot_rows:
+        print("[WARN] No snapshots collected.")
         return
 
-    df_new = pd.DataFrame(snapshot)
+    snap_df = pd.DataFrame(snapshot_rows)
     out_path = out_dir / "daily_snapshots.csv"
     if out_path.exists():
-        df_old = pd.read_csv(out_path)
-        df_combined = pd.concat([df_old, df_new], ignore_index=True)
-    else:
-        df_combined = df_new
+        existing = pd.read_csv(out_path)
+        snap_df = pd.concat([existing, snap_df], ignore_index=True)
 
-    df_combined.to_csv(out_path, index=False)
-    print(f"[✓] Snapshot saved: {out_path}")
+    snap_df.to_csv(out_path, index=False)
+    print(f"[INFO] Daily snapshot saved to {out_path}")
