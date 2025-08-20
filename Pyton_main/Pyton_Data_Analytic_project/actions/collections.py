@@ -41,7 +41,7 @@ def create_collection() -> SessionState:
     SESSION["df_asin"] = df
     return SessionState()
 
-def select_collection() -> SessionState:
+def select_collection(session: SessionState = None) -> SessionState:
     collections = list_collections()
     if collections:
         print("Available collections:")
@@ -51,17 +51,19 @@ def select_collection() -> SessionState:
         print("No collections found.")
 
     print("0) Create new collection")
-
     choice = input("Select collection by number: ").strip()
+
     if choice == "0":
-        return create_collection()
+        new_session = create_collection()
+        return new_session
     else:
         try:
             idx = int(choice) - 1
             if 0 <= idx < len(collections):
-                return load_collection(collections[idx])
+                selected = load_collection(collections[idx])
+                return selected
         except Exception:
             pass
 
-        print("Invalid selection.")
-        return select_collection()
+    print("Invalid selection.")
+    return select_collection(session)
