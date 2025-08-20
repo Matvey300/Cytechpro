@@ -2,7 +2,7 @@
 # Keyword-based ASIN search using SerpApi
 
 from core.session_state import SessionState
-from asin_search import fetch_amazon_categories, fetch_asins_in_category
+from core.asin_search import fetch_amazon_categories, fetch_asins_in_category
 import pandas as pd
 
 def run_asin_search(session: SessionState):
