@@ -1,25 +1,29 @@
 import os
 import requests
 import pandas as pd
+import json
+from pathlib import Path
 
 def fetch_amazon_categories(keyword):
     """
-    Fetch Amazon categories related to a keyword using ScrapingDog API.
+    Load category tree from local JSON and return full paths where the keyword appears.
     """
-    api_key = os.getenv("SCRAPINGDOG_API_KEY")
-    if not api_key:
-        raise RuntimeError("SCRAPINGDOG_API_KEY environment variable not set.")
+    json_path = Path(__file__).parent.parent / "core" / "amazon_categories_us.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        tree = json.load(f)
 
-    url = f"https://api.scrapingdog.com/scrape?api_key={api_key}&url=https://www.amazon.com/s?k={keyword}"
-    response = requests.get(url)
-    if response.status_code != 200:
-        print(f"[!] Failed to fetch categories: {response.status_code}")
-        return []
+    matches = []
 
-    # Parse categories from response content (this is a placeholder, actual parsing logic needed)
-    # For demonstration, we simulate category extraction
-    categories = ["Electronics", "Books", "Clothing", "Home & Kitchen"]  # Example categories
-    return categories
+    def recurse(subtree, path):
+        for k, v in subtree.items():
+            new_path = path + [k]
+            if keyword.lower() in k.lower():
+                matches.append(" > ".join(new_path))
+            if isinstance(v, dict):
+                recurse(v, new_path)
+
+    recurse(tree, [])
+    return matches
 
 def fetch_asins_in_category(category, keyword, domain="com"):
     """
@@ -80,7 +84,8 @@ def run_asin_search(session):
 
     all_asins = []
     for cat in selected_categories:
-        results = fetch_asins_in_category(cat, keyword, "com")
+        category_leaf = cat.split(" > ")[-1]
+        results = fetch_asins_in_category(category_leaf, keyword, "com")
         all_asins.extend(results)
 
     if not all_asins:
