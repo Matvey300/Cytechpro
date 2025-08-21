@@ -6,6 +6,7 @@ import requests
 import pandas as pd
 from typing import List, Dict
 from pathlib import Path
+import json
 
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 SCRAPINGDOG_API_KEY = os.getenv("SCRAPINGDOG_API_KEY")
@@ -31,6 +32,10 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         return []
 
     data = r.json()
+    if "error" in data:
+        print(f"[ERROR] SerpAPI returned error: {data['error']}")
+        return []
+    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
     categories = []
 
     for block in data.get("category_results", []):
