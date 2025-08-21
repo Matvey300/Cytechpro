@@ -16,9 +16,6 @@ SCRAPINGDOG_SEARCH_URL = "https://api.scrapingdog.com/amazon/search"
 
 def fetch_amazon_categories(keyword: str) -> list[str]:
     api_key = os.getenv("SERPAPI_API_KEY")
-
-    print(f"🕵️  [DEBUG] Python видит следующий API ключ: '{api_key}'")
-
     if not api_key:
         raise RuntimeError("Missing SERPAPI_API_KEY")
 
@@ -29,24 +26,40 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         "api_key": api_key
     }
 
-    r = requests.get(SERPAPI_CATEGORY_URL, params=params)
-    if r.status_code != 200:
-        print(f"[WARN] SerpAPI status: {r.status_code}")
-        return []
+    print("📤 Отправка запроса в SerpApi...")
+    try:
+        # --- НАЧАЛО ДИАГНОСТИЧЕСКОГО БЛОКА ---
+        
+        # Устанавливаем таймаут и отправляем запрос
+        r = requests.get(SERPAPI_CATEGORY_URL, params=params, timeout=20)
 
-    data = r.json()
-    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+        # Печатаем ключевую информацию об ответе
+        print(f"✅ Статус-код ответа: {r.status_code}")
+        print("--- Начало полного ответа от сервера ---")
+        print(r.text)  # Печатаем ВЕСЬ текст ответа, даже если это не JSON
+        print("--- Конец полного ответа от сервера ---")
+        
+        # --- КОНЕЦ ДИАГНОСТИЧЕСКОГО БЛОКА ---
 
-    if "error" in data:
-        print(f"[ERROR] SerpAPI returned error: {data['error']}")
+        if r.status_code != 200:
+            print(f"[WARN] SerpAPI вернул статус, отличный от 200.")
+            return []
+
+        data = r.json()
+        print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+        
+        # ... остальной код функции ...
+
+    except requests.exceptions.RequestException as e:
+        # Этот блок отловит ошибки соединения, SSL, таймауты и т.д.
+        print(f"❌ Произошла ошибка сетевого запроса: {e}")
         return []
-    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+    
+    # ... остальной код функции ...
     categories = []
-
     for block in data.get("category_results", []):
         if isinstance(block, dict) and "title" in block:
             categories.append(block["title"])
-
     return categories
 
 def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
