@@ -25,7 +25,7 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         "api_key": api_key
     }
 
-    r = requests.get("https://serpapi.com/search", params=params)
+    r = requests.get(SERPAPI_CATEGORY_URL, params=params)
     if r.status_code != 200:
         print(f"[WARN] SerpAPI status: {r.status_code}")
         return []
