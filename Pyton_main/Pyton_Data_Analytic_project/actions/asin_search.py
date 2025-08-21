@@ -55,7 +55,14 @@ def fetch_asins_in_category(category, keyword, domain="com"):
         print(f"[!] Failed to fetch ASINs for category '{category}': {response.status_code}")
         return []
 
-    products = data.get("products") or data.get("organic_results") or []
+    products = []
+    if "products" in data:
+        products = data["products"]
+    elif "organic_results" in data:
+        products = data["organic_results"]
+    else:
+        print("[DEBUG] No 'products' or 'organic_results' found in SerpAPI response.")
+
     results = []
     for product in products:
         asin = product.get("asin")
@@ -68,6 +75,7 @@ def fetch_asins_in_category(category, keyword, domain="com"):
                 "price": price,
                 "category": category
             })
+    print(f"[DEBUG] Parsed {len(results)} ASINs from category '{category}'")
     return results
 
 def run_asin_search(session):
