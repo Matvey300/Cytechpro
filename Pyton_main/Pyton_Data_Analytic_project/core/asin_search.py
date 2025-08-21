@@ -16,7 +16,6 @@ SCRAPINGDOG_SEARCH_URL = "https://api.scrapingdog.com/amazon/search"
 
 def fetch_amazon_categories(keyword: str) -> list[str]:
     api_key = os.getenv("SERPAPI_API_KEY")
-
     print(f"🕵️  [DEBUG] Python видит следующий API ключ: '{api_key}'")
 
     if not api_key:
@@ -41,20 +40,35 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         print(f"[ERROR] SerpAPI returned error: {data['error']}")
         return []
 
-    categories = []
+    results = []
 
-    if "categories" in data:
+    # Try to extract subcategories from 'filters' or 'category_links'
+    filters = data.get("filters", [])
+    for f in filters:
+        if f.get("id") == "departments":
+            for cat in f.get("values", []):
+                path = cat.get("name")
+                if path and keyword.lower() in path.lower():
+                    results.append(path)
+
+    category_links = data.get("category_links", [])
+    for cat in category_links:
+        path = cat.get("title")
+        if path and keyword.lower() in path.lower() and path not in results:
+            results.append(path)
+
+    # Fallback to top-level categories
+    if not results and "categories" in data:
         for category in data["categories"]:
             name = category.get("name")
-            if name:
-                categories.append(name)
-        print(f"[DEBUG] Extracted categories: {categories}")
-    else:
-        print("[WARN] No 'categories' field found in SerpAPI response.")
+            if name and keyword.lower() in name.lower():
+                results.append(name)
 
-    if not categories:
+    if not results:
         print("[WARN] No categories extracted from SerpAPI response.")
-    return categories
+    else:
+        print(f"[DEBUG] Extracted category paths: {results}")
+    return results
 
 def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
     if not SCRAPINGDOG_API_KEY:
