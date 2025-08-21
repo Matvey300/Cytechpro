@@ -17,7 +17,7 @@ def run_review_collection(session: SessionState):
         print("⚠️ ASIN list is empty.")
         return
 
-    out_dir = Path(session.collection_dir)
+    out_dir = Path(session.get_collection_dir())
     marketplace = session.get_marketplace()
     collection_id = session.collection_id
 
