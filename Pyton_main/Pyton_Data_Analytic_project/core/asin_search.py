@@ -44,6 +44,15 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
 
     # Try to extract subcategories from 'filters' or 'category_links'
     filters = data.get("filters", [])
+    if filters:
+        print("\n[🧪 DEBUG] Dump of `filters` from SerpAPI:")
+        try:
+            print(json.dumps(filters, indent=2, ensure_ascii=False))
+        except Exception as e:
+            print(f"[ERROR] Failed to dump filters: {e}")
+    else:
+        print("[🧪 DEBUG] filters is empty or not found in response")
+
     for f in filters:
         if isinstance(f, dict) and f.get("id") == "departments":
             for cat in f.get("values", []):
