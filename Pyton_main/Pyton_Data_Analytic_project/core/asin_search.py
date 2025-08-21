@@ -16,6 +16,9 @@ SCRAPINGDOG_SEARCH_URL = "https://api.scrapingdog.com/amazon/search"
 
 def fetch_amazon_categories(keyword: str) -> list[str]:
     api_key = os.getenv("SERPAPI_API_KEY")
+
+    print(f"🕵️  [DEBUG] Python видит следующий API ключ: '{api_key}'")
+
     if not api_key:
         raise RuntimeError("Missing SERPAPI_API_KEY")
 
