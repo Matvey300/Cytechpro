@@ -40,6 +40,25 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         print(f"[ERROR] SerpAPI returned error: {data['error']}")
         return []
 
+    # === DEBUG DUMPS of all potential category fields ===
+    print("\n[🧪 DEBUG] Full 'filters' dump (if any):")
+    try:
+        print(json.dumps(data.get("filters", {}), indent=2, ensure_ascii=False))
+    except Exception as e:
+        print(f"[ERROR] Failed to dump filters: {e}")
+
+    print("\n[🧪 DEBUG] Full 'categories' dump (if any):")
+    try:
+        print(json.dumps(data.get("categories", {}), indent=2, ensure_ascii=False))
+    except Exception as e:
+        print(f"[ERROR] Failed to dump categories: {e}")
+
+    print("\n[🧪 DEBUG] Full 'category_links' dump (if any):")
+    try:
+        print(json.dumps(data.get("category_links", {}), indent=2, ensure_ascii=False))
+    except Exception as e:
+        print(f"[ERROR] Failed to dump category_links: {e}")
+
     results = []
 
     # Try to extract subcategories from 'filters' or 'category_links'
