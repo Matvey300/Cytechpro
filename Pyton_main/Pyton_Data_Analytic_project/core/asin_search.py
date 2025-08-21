@@ -35,19 +35,29 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         return []
 
     data = r.json()
-    print(f"[DEBUG] Raw text response: {r.text}")
-    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+    print(f"[DEBUG] Raw response keys: {list(data.keys())}")
 
     if "error" in data:
         print(f"[ERROR] SerpAPI returned error: {data['error']}")
         return []
-    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+
     categories = []
 
-    for block in data.get("category_results", []):
-        if isinstance(block, dict) and "title" in block:
-            categories.append(block["title"])
+    if "inline_browse_nodes" in data:
+        for node in data["inline_browse_nodes"]:
+            path = node.get("path")
+            name = node.get("name")
+            if path:
+                categories.append(path)
+            elif name:
+                categories.append(name)
+    elif "category_results" in data:
+        for block in data["category_results"]:
+            if isinstance(block, dict) and "title" in block:
+                categories.append(block["title"])
 
+    if not categories:
+        print("[WARN] No categories extracted from SerpAPI response.")
     return categories
 
 def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
