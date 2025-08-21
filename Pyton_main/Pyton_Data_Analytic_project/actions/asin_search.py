@@ -37,8 +37,7 @@ def fetch_asins_in_category(category, keyword, domain="com"):
         "engine": "amazon",
         "amazon_domain": f"amazon.{domain}",
         "type": "search",
-        "search_term": keyword,
-        "category": category,
+        "q": f"{keyword} {category}",
         "api_key": api_key
     }
 
