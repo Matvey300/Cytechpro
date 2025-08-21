@@ -17,11 +17,11 @@ def run_review_collection(session: SessionState):
         print("⚠️ ASIN list is empty.")
         return
 
-    if session.collection_path is None:
+    out_dir = session.collection_path
+    if out_dir is None:
         print("❌ collection_path is not set in SessionState.")
         return
 
-    out_dir = session.collection_path
     marketplace = session.get_marketplace()
     collection_id = session.collection_id
 
