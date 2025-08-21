@@ -12,18 +12,27 @@ def run_review_collection(session: SessionState):
         print("⚠️ No ASIN collection loaded.")
         return
 
-    df_asins = session.df_asin
-    if df_asins.empty:
-        print("⚠️ ASIN list is empty.")
+    if session.df_asin is None or session.df_asin.empty:
+        print("⚠️ ASIN list is empty or not loaded.")
         return
 
-    out_dir = Path(session.get_collection_dir())
+    collection_dir = session.get_collection_dir()
+    if collection_dir is None:
+        print("⚠️ Collection directory not set.")
+        return
+
+    out_dir = Path(collection_dir)
     marketplace = session.get_marketplace()
     collection_id = session.collection_id
 
-    print(f"📦 Starting review collection for {len(df_asins)} ASINs via Scrapingdog...")
+    print(f"[DEBUG] Output directory: {out_dir}")
+    print(f"📦 Starting review collection for {len(session.df_asin)} ASINs via Scrapingdog...")
+
+    # Optional debug: save df_asin to disk
+    # session.df_asin.to_csv("DEBUG_collected_asins.csv", index=False)
+
     df_reviews, stats = collect_reviews_for_asins(
-        df_asin=df_asins,
+        df_asin=session.df_asin,
         max_reviews_per_asin=500,
         marketplace=marketplace,
         out_dir=out_dir,
