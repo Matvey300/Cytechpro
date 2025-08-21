@@ -43,18 +43,14 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
 
     categories = []
 
-    if "inline_browse_nodes" in data:
-        for node in data["inline_browse_nodes"]:
-            path = node.get("path")
-            name = node.get("name")
-            if path:
-                categories.append(path)
-            elif name:
+    if "categories" in data:
+        for category in data["categories"]:
+            name = category.get("name")
+            if name:
                 categories.append(name)
-    elif "category_results" in data:
-        for block in data["category_results"]:
-            if isinstance(block, dict) and "title" in block:
-                categories.append(block["title"])
+        print(f"[DEBUG] Extracted categories: {categories}")
+    else:
+        print("[WARN] No 'categories' field found in SerpAPI response.")
 
     if not categories:
         print("[WARN] No categories extracted from SerpAPI response.")
