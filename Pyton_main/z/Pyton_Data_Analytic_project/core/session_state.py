@@ -12,6 +12,7 @@ SESSION = {
     "df_asin": None,             # type: Optional[pd.DataFrame]
 }
 
+
 def reset_session():
     """Reset all session values to None (used during reinitialization or cleanup)."""
     for key in SESSION:
@@ -28,14 +29,14 @@ class SessionState:
         # Placeholder: logic to load last session or create new one
         print("⚠️  [Stub] load_last_or_prompt not yet implemented")
 
-    def has_asins(self):
+    def has_asins(self) -> bool:
         return self._state["df_asin"] is not None
 
-    def has_reviews(self):
+    def has_reviews(self) -> bool:
         path = self._state["collection_path"]
         return path and (path / "reviews.csv").exists()
 
-    def has_snapshots(self, min_required=3):
+    def has_snapshots(self, min_required: int = 3) -> bool:
         path = self._state["collection_path"]
         if not path or not (path / "daily_snapshots.csv").exists():
             return False
@@ -49,17 +50,25 @@ class SessionState:
         print("⚠️  [Stub] list_saved_collections not yet implemented")
 
     @property
-    def collection_id(self):
+    def collection_id(self) -> Optional[str]:
         return self._state["collection_id"]
 
-    @property
-    def collection_path(self):
-        return self._state["collection_path"]
+    @collection_id.setter
+    def collection_id(self, value: str):
+        self._state["collection_id"] = value
 
     @property
-    def df_asin(self):
+    def collection_path(self) -> Optional[Path]:
+        return self._state["collection_path"]
+
+    @collection_path.setter
+    def collection_path(self, value: Path):
+        self._state["collection_path"] = value
+
+    @property
+    def df_asin(self) -> Optional[pd.DataFrame]:
         return self._state["df_asin"]
 
     @df_asin.setter
-    def df_asin(self, value):
+    def df_asin(self, value: pd.DataFrame):
         self._state["df_asin"] = value

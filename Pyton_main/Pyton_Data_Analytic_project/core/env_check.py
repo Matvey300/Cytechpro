@@ -1,46 +1,15 @@
 # core/env_check.py
 
 import os
-import sys
 
-REQUIRED_ENV_VARS = [
-    "SCRAPINGDOG_API_KEY",
-    "SERPAPI_KEY"
-]
+REQUIRED_ENV_VARS = ["SCRAPINGDOG_API_KEY", "SERPAPI_API_KEY"]
 
-def check_required_env_vars() -> None:
-    """Print warnings and stop execution if env vars are missing (used in modules)."""
-    missing = []
-    for var in REQUIRED_ENV_VARS:
-        if not os.getenv(var):
-            print(f"[❌] Missing environment variable: {var}")
-            missing.append(var)
-
-    if missing:
-        print("\n[⚠️] Set the missing environment variables before continuing.")
-        print("You can define them via terminal export, or in a .env file.")
-        sys.exit(1)  # Stop the app immediately
-    else:
-        print("[✅] All required environment variables are set.")
-
-
-def validate_environment() -> None:
-    """Raise exception if env vars are missing (used in app startup)."""
+def validate_environment():
     missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
     if missing:
-        raise RuntimeError(
-            f"Missing required environment variables: {', '.join(missing)}"
-        )
-def get_env_or_raise(var_name: str) -> str:
-    """Get environment variable or raise error if missing."""
-    value = os.getenv(var_name)
-    if not value:
-        raise RuntimeError(f"[❌] Missing required env variable: {var_name}")
-    return value
-
-def ensure_env_ready() -> None:
-    """
-    Wrapper to validate environment before app runs.
-    """
-    print("[🔍] Checking environment variables...")
-    check_required_env_vars()
+        print("[❌] Missing required environment variables:")
+        for var in missing:
+            print(f" - {var}")
+        raise RuntimeError("Please set all required API keys as environment variables.")
+    else:
+        print("[✅] All required environment variables are set.")
