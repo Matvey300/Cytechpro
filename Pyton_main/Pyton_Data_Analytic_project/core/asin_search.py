@@ -13,33 +13,31 @@ SCRAPINGDOG_API_KEY = os.getenv("SCRAPINGDOG_API_KEY")
 SERPAPI_CATEGORY_URL = "https://serpapi.com/search.json"
 SCRAPINGDOG_SEARCH_URL = "https://api.scrapingdog.com/amazon/search"
 
-
-def fetch_amazon_categories(keyword: str, marketplace: str = "com") -> List[str]:
-    if not SERP_API_KEY:
+def fetch_amazon_categories(keyword: str) -> list[str]:
+    api_key = os.getenv("SERPAPI_API_KEY")
+    if not api_key:
         raise RuntimeError("Missing SERPAPI_API_KEY")
 
     params = {
         "engine": "amazon",
-        "api_key": SERP_API_KEY,
-        "amazon_domain": f"amazon.{marketplace}",
-        "type": "search",
-        "q": keyword
+        "amazon_domain": "amazon.com",
+        "q": keyword,
+        "api_key": api_key
     }
 
-    try:
-        resp = requests.get(SERPAPI_CATEGORY_URL, params=params, timeout=20)
-        data = resp.json()
-        categories = data.get("categories", [])
-
-        if not categories:
-            print("[WARN] No categories found. You may enter manually.")
-            return []
-
-        return [cat.get("name") for cat in categories if cat.get("name")]
-    except Exception as e:
-        print(f"[ERROR] Failed to fetch categories: {e}")
+    r = requests.get("https://serpapi.com/search", params=params)
+    if r.status_code != 200:
+        print(f"[WARN] SerpAPI status: {r.status_code}")
         return []
 
+    data = r.json()
+    categories = []
+
+    for block in data.get("category_results", []):
+        if isinstance(block, dict) and "title" in block:
+            categories.append(block["title"])
+
+    return categories
 
 def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
     if not SCRAPINGDOG_API_KEY:
