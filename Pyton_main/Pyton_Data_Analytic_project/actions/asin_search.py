@@ -43,11 +43,19 @@ def fetch_asins_in_category(category, keyword, domain="com"):
     }
 
     response = requests.get("https://serpapi.com/search", params=params)
+    print(f"[DEBUG] Request URL: {response.url}")
+    try:
+        data = response.json()
+        print("[DEBUG] Raw response:")
+        print(json.dumps(data, indent=2))
+    except Exception as e:
+        print(f"[ERROR] Failed to parse JSON: {e}")
+        return []
+
     if response.status_code != 200:
         print(f"[!] Failed to fetch ASINs for category '{category}': {response.status_code}")
         return []
 
-    data = response.json()
     products = data.get("products", [])
     results = []
     for product in products:
