@@ -1,4 +1,3 @@
-import os
 import requests
 import pandas as pd
 import json
@@ -37,6 +36,7 @@ def fetch_asins_in_category(category, keyword, domain="com"):
     """
     Fetch ASINs using Scrapingdog API by keyword and category name.
     """
+    
     import time
     api_key = os.getenv("SCRAPINGDOG_API_KEY")
     if not api_key:
@@ -114,15 +114,3 @@ def run_asin_search(session):
     df = pd.DataFrame(all_asins)
     session.df_asin = df
     print(f"[✅] Fetched {len(df)} ASINs and added to current session.")
-    
-def validate_environment():
-    required_vars = ["SCRAPINGDOG_API_KEY", "SERPAPI_API_KEY"]
-    missing = [var for var in required_vars if not os.getenv(var)]
-
-    if missing:
-        print("[❌] Missing required environment variables:")
-        for var in missing:
-            print(f" - {var}")
-        raise RuntimeError("Please set all required API keys as environment variables.")
-    else:
-        print("[✅] All required environment variables are set.")
