@@ -72,5 +72,3 @@ class SessionState:
     @df_asin.setter
     def df_asin(self, value: pd.DataFrame):
         self._state["df_asin"] = value
-    def get_collection_dir(self) -> Optional[Path]:
-        return self._state["collection_path"]
