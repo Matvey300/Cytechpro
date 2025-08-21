@@ -45,7 +45,7 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
     # Try to extract subcategories from 'filters' or 'category_links'
     filters = data.get("filters", [])
     for f in filters:
-        if f.get("id") == "departments":
+        if isinstance(f, dict) and f.get("id") == "departments":
             for cat in f.get("values", []):
                 path = cat.get("name")
                 if path and keyword.lower() in path.lower():
