@@ -121,3 +121,28 @@ def validate_environment():
         raise RuntimeError("Please set all required API keys as environment variables.")
     else:
         print("[✅] All required environment variables are set.")
+
+
+        import requests
+
+url = "https://api.scrapingdog.com/amazon/search"
+params = {
+    "api_key": "6888b22c09c987d9f10c066e",
+    "query": "headphones Wireless Headphones",
+    "domain": "com",
+    "page": 1
+}
+
+response = requests.get(url, params=params)
+data = response.json()
+
+# Проверь наличие результатов
+print("✅ success:", data.get("success", True))
+print("🔑 keys:", list(data.keys()))
+print("🔍 sample ASINs:")
+for r in data.get("results", []):
+    if "url" in r:
+        parts = r["url"].split("/dp/")
+        if len(parts) > 1:
+            asin = parts[1].split("/")[0]
+            print(" -", asin)
