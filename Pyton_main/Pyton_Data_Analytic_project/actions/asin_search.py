@@ -25,58 +25,57 @@ def fetch_amazon_categories(keyword):
     recurse(tree, [])
     return matches
 
+def extract_asin_from_url(url):
+    try:
+        parts = url.split("/dp/")
+        if len(parts) > 1:
+            return parts[1].split("/")[0]
+    except:
+        return None
+
 def fetch_asins_in_category(category, keyword, domain="com"):
     """
-    Fetch ASINs in a given category and keyword using SerpAPI.
+    Fetch ASINs using Scrapingdog API by keyword and category name.
     """
-    api_key = os.getenv("SERPAPI_API_KEY")
+    import time
+    api_key = os.getenv("SCRAPINGDOG_API_KEY")
     if not api_key:
-        raise RuntimeError("SERPAPI_API_KEY environment variable not set.")
+        raise RuntimeError("SCRAPINGDOG_API_KEY environment variable not set.")
 
-    params = {
-        "engine": "amazon",
-        "amazon_domain": f"amazon.{domain}",
-        "type": "search",
-        "k": f"{keyword} {category}",
-        "api_key": api_key
-    }
+    query = f"{keyword} {category}".replace(" ", "+")
+    url = f"https://api.scrapingdog.com/amazon/search?api_key={api_key}&query={query}&domain={domain}&page=1"
 
-    response = requests.get("https://serpapi.com/search", params=params)
-    print(f"[DEBUG] Request URL: {response.url}")
+    print(f"[DEBUG] Request URL: {url}")
     try:
-        data = response.json()
-        print("[DEBUG] Raw response:")
-        print(json.dumps(data, indent=2))
+        response = requests.get(url, timeout=15)
+        print(f"[DEBUG] Raw response: {response.text}")
+        if response.status_code != 200:
+            print(f"[!] Failed to fetch ASINs for category '{category}': {response.status_code}")
+            return []
+
+        data = response.json().get("results", [])
+        results = []
+
+        for product in data:
+            if product.get("type") != "search_product":
+                continue
+            asin = extract_asin_from_url(product.get("url", ""))
+            if asin:
+                results.append({
+                    "asin": asin,
+                    "title": product.get("title"),
+                    "price": product.get("price"),
+                    "rating": product.get("stars"),
+                    "review_count": product.get("total_reviews"),
+                    "category": category
+                })
+
+        print(f"[DEBUG] Parsed {len(results)} ASINs from category '{category}'")
+        return results
+
     except Exception as e:
-        print(f"[ERROR] Failed to parse JSON: {e}")
+        print(f"[ERROR] Exception during fetch: {e}")
         return []
-
-    if response.status_code != 200:
-        print(f"[!] Failed to fetch ASINs for category '{category}': {response.status_code}")
-        return []
-
-    products = []
-    if "products" in data:
-        products = data["products"]
-    elif "organic_results" in data:
-        products = data["organic_results"]
-    else:
-        print("[DEBUG] No 'products' or 'organic_results' found in SerpAPI response.")
-
-    results = []
-    for product in products:
-        asin = product.get("asin")
-        title = product.get("title")
-        price = product.get("price")
-        if asin:
-            results.append({
-                "asin": asin,
-                "title": title,
-                "price": price,
-                "category": category
-            })
-    print(f"[DEBUG] Parsed {len(results)} ASINs from category '{category}'")
-    return results
 
 def run_asin_search(session):
     keyword = input("Enter keyword to search categories (e.g., 'headphones'): ").strip()
