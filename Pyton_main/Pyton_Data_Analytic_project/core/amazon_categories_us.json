@@ -1,0 +1,107 @@
+{
+  "Electronics": {
+    "Headphones": {
+      "Over-Ear Headphones": {},
+      "On-Ear Headphones": {},
+      "Earbuds": {},
+      "Noise-Cancelling Headphones": {},
+      "Wireless Headphones": {}
+    },
+    "Speakers": {
+      "Bluetooth Speakers": {},
+      "Smart Speakers": {},
+      "Portable Speakers": {}
+    },
+    "TV & Video": {
+      "Televisions": {},
+      "Streaming Devices": {},
+      "Projectors": {}
+    },
+    "Camera & Photo": {
+      "Digital Cameras": {},
+      "Lenses": {},
+      "Tripods": {}
+    }
+  },
+  "Computers": {
+    "Laptops": {
+      "Gaming Laptops": {},
+      "Ultrabooks": {},
+      "2-in-1 Laptops": {}
+    },
+    "Desktops": {
+      "All-in-One": {},
+      "Towers": {},
+      "Mini PCs": {}
+    },
+    "Monitors": {
+      "4K Monitors": {},
+      "Gaming Monitors": {},
+      "Portable Monitors": {}
+    },
+    "Computer Accessories": {
+      "Keyboards": {},
+      "Mice": {},
+      "Webcams": {}
+    }
+  },
+  "Home & Kitchen": {
+    "Furniture": {
+      "Living Room Furniture": {},
+      "Bedroom Furniture": {},
+      "Office Furniture": {}
+    },
+    "Appliances": {
+      "Small Appliances": {
+        "Microwaves": {},
+        "Coffee Makers": {},
+        "Blenders": {}
+      },
+      "Large Appliances": {
+        "Refrigerators": {},
+        "Washing Machines": {},
+        "Dishwashers": {}
+      }
+    },
+    "Home Decor": {
+      "Wall Art": {},
+      "Mirrors": {},
+      "Clocks": {}
+    }
+  },
+  "Sports & Outdoors": {
+    "Exercise & Fitness": {
+      "Cardio Training": {},
+      "Strength Training": {},
+      "Yoga": {}
+    },
+    "Outdoor Recreation": {
+      "Camping": {},
+      "Hiking": {},
+      "Cycling": {}
+    }
+  },
+  "Toys & Games": {
+    "Board Games": {},
+    "Action Figures": {},
+    "Building Toys": {},
+    "Dolls": {}
+  },
+  "Beauty & Personal Care": {
+    "Makeup": {
+      "Face": {},
+      "Eyes": {},
+      "Lips": {}
+    },
+    "Hair Care": {
+      "Shampoo": {},
+      "Conditioner": {},
+      "Hair Styling Tools": {}
+    },
+    "Skin Care": {
+      "Moisturizers": {},
+      "Cleansers": {},
+      "Treatments": {}
+    }
+  }
+}
