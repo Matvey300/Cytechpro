@@ -27,3 +27,7 @@ def search_categories(keyword, tree=None, path=None):
             matches.extend(search_categories(keyword, subtree, current_path))
 
     return matches
+
+
+def fetch_amazon_categories(keyword: str):
+    return search_categories(keyword)
