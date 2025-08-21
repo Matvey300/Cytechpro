@@ -12,7 +12,7 @@ def run_review_collection(session: SessionState):
         print("⚠️ No ASIN collection loaded.")
         return
 
-    df_asins = session.load_asins()
+    df_asins = session.df_asin
     if df_asins.empty:
         print("⚠️ ASIN list is empty.")
         return
