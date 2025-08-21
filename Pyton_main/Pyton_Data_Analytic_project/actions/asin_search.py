@@ -55,7 +55,7 @@ def fetch_asins_in_category(category, keyword, domain="com"):
         print(f"[!] Failed to fetch ASINs for category '{category}': {response.status_code}")
         return []
 
-    products = data.get("products", [])
+    products = data.get("products") or data.get("organic_results") or []
     results = []
     for product in products:
         asin = product.get("asin")
