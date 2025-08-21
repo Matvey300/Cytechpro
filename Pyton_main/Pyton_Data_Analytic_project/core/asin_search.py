@@ -2,17 +2,11 @@
 
 import os
 import time
-import re
 import requests
 import pandas as pd
-from typing import List, Dict, Optional
+from typing import List, Dict
 from pathlib import Path
 import json
-import logging
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 SCRAPINGDOG_API_KEY = os.getenv("SCRAPINGDOG_API_KEY")
@@ -20,52 +14,47 @@ SCRAPINGDOG_API_KEY = os.getenv("SCRAPINGDOG_API_KEY")
 SERPAPI_CATEGORY_URL = "https://serpapi.com/search.json"
 SCRAPINGDOG_SEARCH_URL = "https://api.scrapingdog.com/amazon/search"
 
-def fetch_amazon_categories(keyword: str) -> List[str]:
-    """Fetch Amazon categories for a given keyword using SerpAPI."""
-    if not SERP_API_KEY:
-        logger.error("Missing SERPAPI_API_KEY environment variable")
+def fetch_amazon_categories(keyword: str) -> list[str]:
+    api_key = os.getenv("SERPAPI_API_KEY")
+
+    print(f"🕵️  [DEBUG] Python видит следующий API ключ: '{api_key}'")
+
+    if not api_key:
         raise RuntimeError("Missing SERPAPI_API_KEY")
 
     params = {
         "engine": "amazon",
         "amazon_domain": "amazon.com",
-        "q": keyword,
-        "api_key": SERP_API_KEY
+        "k": keyword,
+        "api_key": api_key
     }
 
-    try:
-        response = requests.get(SERPAPI_CATEGORY_URL, params=params, timeout=30)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        if "error" in data:
-            logger.error(f"SerpAPI returned error: {data['error']}")
-            return []
-        
-        categories = []
-        for block in data.get("category_results", []):
-            if isinstance(block, dict) and "title" in block:
-                categories.append(block["title"])
-        
-        logger.info(f"Found {len(categories)} categories for keyword: {keyword}")
-        return categories
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request failed: {e}")
-        return []
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON response: {e}")
+    r = requests.get(SERPAPI_CATEGORY_URL, params=params)
+    if r.status_code != 200:
+        print(f"[WARN] SerpAPI status: {r.status_code}")
         return []
 
+    data = r.json()
+    print(f"[DEBUG] Raw text response: {r.text}")
+    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+
+    if "error" in data:
+        print(f"[ERROR] SerpAPI returned error: {data['error']}")
+        return []
+    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+    categories = []
+
+    for block in data.get("category_results", []):
+        if isinstance(block, dict) and "title" in block:
+            categories.append(block["title"])
+
+    return categories
+
 def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
-    """Fetch ASINs in a given category using ScrapingDog API."""
     if not SCRAPINGDOG_API_KEY:
-        logger.error("Missing SCRAPINGDOG_API_KEY environment variable")
         raise RuntimeError("Missing SCRAPINGDOG_API_KEY")
 
     results = []
-    
     for page in range(1, max_pages + 1):
         params = {
             "api_key": SCRAPINGDOG_API_KEY,
@@ -77,13 +66,10 @@ def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, 
         }
 
         try:
-            response = requests.get(SCRAPINGDOG_SEARCH_URL, params=params, timeout=30)
-            response.raise_for_status()
-            
-            data = response.json()
-            items = data.get("results", [])
-            
-            for item in items:
+            resp = requests.get(SCRAPINGDOG_SEARCH_URL, params=params, timeout=20)
+            data = resp.json().get("results", [])
+
+            for item in data:
                 if item.get("type") != "search_product":
                     continue
 
@@ -91,78 +77,34 @@ def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, 
                 if asin:
                     results.append({
                         "asin": asin,
-                        "title": item.get("title", ""),
-                        "rating": item.get("stars", 0),
-                        "review_count": item.get("total_reviews", "0"),
+                        "title": item.get("title"),
+                        "rating": item.get("stars"),
+                        "review_count": item.get("total_reviews"),
                         "category_path": category_path,
-                        "country": marketplace,
-                        "url": item.get("url", "")
+                        "country": marketplace
                     })
-            
-            logger.info(f"Processed page {page} for category {category_path}, found {len(items)} items")
-            
-            # Be respectful to the API with a delay
+
             time.sleep(1.5)
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request failed for {category_path} page {page}: {e}")
-            break
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON response for {category_path} page {page}: {e}")
-            break
         except Exception as e:
-            logger.error(f"Unexpected error for {category_path} page {page}: {e}")
+            print(f"[ERROR] {category_path} page {page}: {e}")
             break
 
     return results
 
-def extract_asin_from_url(url: str) -> Optional[str]:
-    """Extract ASIN from Amazon product URL."""
-    if not url:
+
+def extract_asin_from_url(url: str) -> str:
+    try:
+        parts = url.split("/dp/")
+        if len(parts) > 1:
+            return parts[1].split("/")[0]
+    except:
         return None
-    
-    # Try multiple patterns to extract ASIN
-    patterns = [
-        r"/dp/([A-Z0-9]{10})",  # Standard pattern
-        r"/gp/product/([A-Z0-9]{10})",  # Alternative pattern
-        r"ASIN=([A-Z0-9]{10})"  # ASIN parameter pattern
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-    
-    return None
+
 
 def save_asins(df: pd.DataFrame, out_dir: Path):
-    """Save ASINs to CSV file."""
-    if df.empty:
-        logger.warning("No ASINs to save")
-        return
-    
-    # Clean and process data
-    df_clean = df.drop_duplicates(subset="asin").copy()
-    
-    # Clean review_count column
-    df_clean["review_count"] = (
-        df_clean["review_count"]
-        .astype(str)
-        .str.replace(",", "")
-        .str.extract(r"(\d+)", expand=False)
-        .fillna("0")
-        .astype(int)
-    )
-    
-    # Sort by review count (descending)
-    df_sorted = df_clean.sort_values(by="review_count", ascending=False)
-    
-    # Save all results and top 100
     out_path = out_dir / "search_results.csv"
-    top_100_path = out_dir / "top_100_asins.csv"
-    
-    df_sorted.to_csv(out_path, index=False)
-    df_sorted.head(100).to_csv(top_100_path, index=False)
-    
-    logger.info(f"Saved {len(df_sorted)} ASINs to {out_path}")
-    logger.info(f"Saved top {min(len(df_sorted), 100)} ASINs to {top_100_path}")
+    df = df.drop_duplicates(subset="asin")
+    df["review_count"] = pd.to_numeric(df["review_count"].str.replace(",", ""), errors="coerce")
+    df = df.sort_values(by="review_count", ascending=False)
+    df.head(100).to_csv(out_path, index=False)
+    print(f"[✅] Saved top {min(len(df), 100)} ASINs to {out_path}")
