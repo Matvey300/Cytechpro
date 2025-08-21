@@ -32,6 +32,8 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
         return []
 
     data = r.json()
+    print("[DEBUG] SerpAPI raw response:", json.dumps(data, indent=2))
+
     if "error" in data:
         print(f"[ERROR] SerpAPI returned error: {data['error']}")
         return []
