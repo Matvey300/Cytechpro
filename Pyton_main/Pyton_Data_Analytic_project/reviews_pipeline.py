@@ -6,8 +6,8 @@ import requests
 from pathlib import Path
 from typing import List, Tuple
 
-from core.env_check import check_required_env_vars
-check_required_env_vars()
+from core.env_check import validate_environment
+
 
 HEADERS = {
     "Accept": "application/json"
