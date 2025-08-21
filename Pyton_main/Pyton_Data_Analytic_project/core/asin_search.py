@@ -53,9 +53,10 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
 
     category_links = data.get("category_links", [])
     for cat in category_links:
-        path = cat.get("title")
-        if path and keyword.lower() in path.lower() and path not in results:
-            results.append(path)
+        if isinstance(cat, dict):
+            path = cat.get("title")
+            if path and keyword.lower() in path.lower() and path not in results:
+                results.append(path)
 
     # Fallback to top-level categories
     if not results and "categories" in data:
