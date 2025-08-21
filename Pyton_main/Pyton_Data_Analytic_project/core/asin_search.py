@@ -25,7 +25,7 @@ def fetch_amazon_categories(keyword: str) -> list[str]:
     params = {
         "engine": "amazon",
         "amazon_domain": "amazon.com",
-        "k": keyword,
+        "q": keyword,
         "api_key": api_key
     }
 
