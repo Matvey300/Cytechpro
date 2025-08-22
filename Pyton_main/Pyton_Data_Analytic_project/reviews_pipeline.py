@@ -12,6 +12,9 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from core.auth_amazon import get_chrome_driver_with_profile, is_logged_in
 
 
@@ -58,7 +61,13 @@ def collect_reviews_for_asins(
             url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/"
             try:
                 driver.get(url)
-                time.sleep(2)
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook='review']"))
+                    )
+                except TimeoutException:
+                    print(f"[WARN] No review block found after 10s for ASIN {asin}")
+                    break
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
                 print("[DEBUG] Page snippet:", driver.page_source[:1000])
