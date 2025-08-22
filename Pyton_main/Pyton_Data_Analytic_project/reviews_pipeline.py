@@ -46,7 +46,7 @@ def collect_reviews_for_asins(
         print("This usually happens if Chrome is already running with that profile.")
         print("Please close all Chrome windows or choose another profile.")
         choice = input("Do you want to try with a temporary profile instead? (y/n): ").strip().lower()
-        if choice == "y":
+        if choice == "y" or choice == "":
             temp_options = Options()
             temp_options.add_argument("--no-sandbox")
             temp_options.add_argument("--disable-dev-shm-usage")
@@ -76,11 +76,14 @@ def collect_reviews_for_asins(
         seen_ids = set()
 
         # Count previous reviews for this ASIN from the output file, if any
-        out_path = out_dir / f"{collection_id}_reviews.csv"
+        html_dir = out_dir / collection_id / "RawData"
+        reviews_path = out_dir / collection_id / "reviews.csv"
+        (out_dir / collection_id).mkdir(parents=True, exist_ok=True)
+        html_dir.mkdir(parents=True, exist_ok=True)
         previous_reviews_count = 0
-        if out_path.exists() and out_path.stat().st_size > 0:
+        if reviews_path.exists() and reviews_path.stat().st_size > 0:
             try:
-                existing = pd.read_csv(out_path)
+                existing = pd.read_csv(reviews_path)
                 previous_reviews_count = existing[existing["asin"] == asin].shape[0]
             except Exception:
                 previous_reviews_count = 0
@@ -98,7 +101,7 @@ def collect_reviews_for_asins(
                 except TimeoutException:
                     print(f"[WARN] No review block found after 10s for ASIN {asin}")
                     break
-                html_path = out_dir / f"{collection_id}__{asin}_p{page}.html"
+                html_path = html_dir / f"{collection_id}__{asin}_p{page}.html"
                 with open(html_path, "w", encoding="utf-8") as f:
                     f.write(driver.page_source)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -159,18 +162,17 @@ def collect_reviews_for_asins(
     if out_dir.suffix == ".csv":
         out_dir = out_dir.parent
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{collection_id}_reviews.csv"
 
-    if out_path.exists() and out_path.stat().st_size > 0:
+    if reviews_path.exists() and reviews_path.stat().st_size > 0:
         try:
-            existing = pd.read_csv(out_path)
+            existing = pd.read_csv(reviews_path)
             df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
         except pd.errors.EmptyDataError:
-            print(f"[WARN] Existing file {out_path} is unreadable or empty. Overwriting.")
+            print(f"[WARN] Existing file {reviews_path} is unreadable or empty. Overwriting.")
 
-    df_reviews.to_csv(out_path, index=False)
+    df_reviews.to_csv(reviews_path, index=False)
     if df_reviews.shape[0] > 0:
         for asin in df_asin["asin"]:
-            for html_file in out_dir.glob(f"{collection_id}__{asin}_p*.html"):
+            for html_file in html_dir.glob(f"{collection_id}__{asin}_p*.html"):
                 html_file.unlink(missing_ok=True)
     return df_reviews, per_cat_counts
