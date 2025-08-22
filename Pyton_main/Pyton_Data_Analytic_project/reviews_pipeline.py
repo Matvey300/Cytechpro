@@ -76,6 +76,8 @@ def collect_reviews_for_asins(
     driver.get(f"https://www.amazon.{marketplace}/product-reviews/{df_asin.iloc[0]['asin']}?sortBy=recent")
     input("Press [Enter] when you have completed login...")  
 
+    print(f"[INFO] Starting review collection for {len(df_asin)} ASINs...")
+
     all_reviews = []
     per_cat_counts = {}
 
@@ -93,7 +95,7 @@ def collect_reviews_for_asins(
             raise RuntimeError(f"[ERROR] Path '{base_dir}' exists as a file, not directory. Please remove it manually.")
         base_dir.mkdir(parents=True, exist_ok=True)
         html_dir.mkdir(parents=True, exist_ok=True)
-        reviews_path = base_dir / "reviews.csv"
+        reviews_path = base_dir / f"reviews_{collection_id}.csv"
         previous_reviews_count = 0
         if reviews_path.exists() and reviews_path.stat().st_size > 0:
             try:
@@ -105,9 +107,22 @@ def collect_reviews_for_asins(
         max_pages = int(((max_reviews_per_asin - previous_reviews_count) / 10) + 2)
 
         while page <= max_pages:
-            url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent"
+            print(f"[DEBUG] Loading page {page} for ASIN {asin} (max {max_pages})")
+            input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
+            if page == 1:
+                driver.get(f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent")
+            else:
+                try:
+                    next_button = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
+                    driver.execute_script("arguments[0].click();", next_button)
+                    print(f"[DEBUG] Clicked 'Next' for ASIN {asin}, moving to page {page}")
+                except Exception:
+                    print(f"[WARN] 'Next' button not found or not clickable for ASIN {asin}")
+                    break
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "a-section"))
+            )
             try:
-                driver.get(url)
                 try:
                     WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.CLASS_NAME, "a-section"))
@@ -122,12 +137,10 @@ def collect_reviews_for_asins(
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
                 print("[DEBUG] Page snippet:", driver.page_source[:1000])
                 review_blocks = soup.find_all("div", class_="a-section review aok-relative")
-                print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
-                input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
-
                 if not review_blocks:
-                    print(f"[WARN] No reviews found on page {page} for ASIN {asin}")
+                    print(f"[STOP] No review blocks found. Stopping pagination for ASIN {asin}")
                     break
+                print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
 
                 new_valid = []
                 for block in review_blocks:
@@ -149,25 +162,14 @@ def collect_reviews_for_asins(
 
                 if not new_valid:
                     print(f"[INFO] No new unique reviews found on page {page}. Stopping pagination.")
+                    print(f"[STOP] Stopping pagination: no new content or end of pages.")
                     break
 
                 reviews.extend(new_valid)
                 fetched = len(reviews)
                 time.sleep(1.5)
 
-                try:
-                    next_button = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
-                    driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
-                    next_button.click()
-                    time.sleep(2)
-                    new_url = driver.current_url
-                    if new_url == url:
-                        print("[WARN] Page did not change after clicking 'Next'. Stopping pagination.")
-                        break
-                    page += 1
-                except Exception as e:
-                    print(f"[INFO] No next page or failed to click 'Next': {e}")
-                    break
+                page += 1
 
             except Exception as e:
                 print(f"[ERROR] Failed to fetch page {page} for ASIN {asin}: {e}")
