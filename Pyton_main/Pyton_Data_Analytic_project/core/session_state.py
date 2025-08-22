@@ -52,3 +52,8 @@ class SessionState:
                     print(f"{idx}) {name}")
 
 SESSION = SessionState()
+    def get_marketplace(self):
+        if self.df_asin is not None and "country" in self.df_asin.columns:
+            return self.df_asin["country"].iloc[0]
+        else:
+            return "com"
