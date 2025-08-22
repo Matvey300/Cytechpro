@@ -202,6 +202,24 @@ class ReviewsPipeline:
             except NoSuchElementException:
                 total_reviews = ""
 
+            reviews_preview = self._get_reviews_from_page(asin, category)
+            if reviews_preview:
+                avg_rating = round(sum([r['rating'] for r in reviews_preview if r['rating'] is not None]) / len(reviews_preview), 2)
+            else:
+                avg_rating = None
+
+            self._save_snapshot_record({
+                "asin": asin,
+                "snapshot_date": datetime.datetime.now().date().isoformat(),
+                "price": price_text,
+                "bsr": bsr_text,
+                "review_count": total_reviews,
+                "avg_rating": avg_rating,
+                "category_path": category or "unknown",
+                "marketplace": "amazon.com",
+                "collection_id": self.collection_dir.name
+            })
+
             print(f"[META] BSR: {bsr_text}, Price: {price_text}, Total reviews: {total_reviews}")
 
             # Check if page contains reviews or "no reviews" message
@@ -251,3 +269,18 @@ class ReviewsPipeline:
                 self.scrape_reviews_for_asin(asin, category, max_pages)
         finally:
             self._close_driver()
+
+    def _save_snapshot_record(self, snapshot):
+        snapshot_path = self.collection_dir / "snapshots.csv"
+        file_exists = snapshot_path.exists()
+        fieldnames = ["asin", "snapshot_date", "price", "bsr", "review_count",
+                      "avg_rating", "category_path", "marketplace", "collection_id"]
+        try:
+            with open(snapshot_path, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                if not file_exists:
+                    writer.writeheader()
+                # Проверка на дубли по (asin, snapshot_date) не реализована, можно добавить при необходимости
+                writer.writerow(snapshot)
+        except Exception as e:
+            print(f"[ERROR] Failed to write snapshot: {e}")
