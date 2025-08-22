@@ -37,7 +37,7 @@ class SessionState:
             self.collection_path.mkdir(parents=True, exist_ok=True)
 
     def list_available_collections(self):
-        data_dir = Path("DATA")
+        data_dir = Path("collections")
         if not data_dir.exists():
             print("[No collections found]")
         else:
