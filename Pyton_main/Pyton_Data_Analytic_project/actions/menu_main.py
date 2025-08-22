@@ -58,3 +58,8 @@ def run_main_menu(session):
             break
         else:
             print("[!] Invalid choice.")
+
+def main_menu():
+    from core.session_state import SESSION
+    validate_environment()
+    run_main_menu(SESSION)
