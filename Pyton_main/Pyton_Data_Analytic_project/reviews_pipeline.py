@@ -39,7 +39,26 @@ def collect_reviews_for_asins(
     chrome_options.add_argument('--disable-gpu')
 
     print("[🔐] Please log into Amazon in the opened Chrome window.")
-    driver = webdriver.Chrome(options=chrome_options)
+    try:
+        driver = webdriver.Chrome(options=chrome_options)
+    except Exception as e:
+        print("[❌] Failed to start Chrome with the selected user profile.")
+        print("This usually happens if Chrome is already running with that profile.")
+        print("Please close all Chrome windows or choose another profile.")
+        choice = input("Do you want to try with a temporary profile instead? (y/n): ").strip().lower()
+        if choice == "y":
+            temp_options = Options()
+            temp_options.add_argument("--no-sandbox")
+            temp_options.add_argument("--disable-dev-shm-usage")
+            temp_options.add_argument("--disable-gpu")
+            try:
+                driver = webdriver.Chrome(options=temp_options)
+                print("[🧪] Started Chrome with temporary profile. You will need to log in manually.")
+            except Exception as e2:
+                print("[❌] Failed to launch Chrome even with temporary profile.")
+                raise e2
+        else:
+            raise e
     driver.get(f"https://www.amazon.{marketplace}/")
     input("Press [Enter] when you have completed login...")  
 
