@@ -3,6 +3,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
+import os
 
 def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebDriver:
     """
@@ -16,6 +17,8 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
     Returns:
         Configured Selenium WebDriver instance.
     """
+    if not user_data_dir or not profile_dir:
+        raise ValueError("Both user_data_dir and profile_dir must be provided. Please check your environment variables.")
     options = Options()
     options.add_argument(f"--user-data-dir={user_data_dir}")
     options.add_argument(f"--profile-directory={profile_dir}")
@@ -41,6 +44,11 @@ def is_logged_in(driver: WebDriver) -> bool:
         driver.get("https://www.amazon.com/")
         driver.implicitly_wait(5)
         account_element = driver.find_element("id", "nav-link-accountList")
-        return "Sign in" not in account_element.text
+        if "Sign in" not in account_element.text:
+            print("[✅] Amazon session is active.")
+            return True
+        else:
+            print("[❌] Not logged into Amazon.")
+            return False
     except Exception:
         return False

@@ -8,12 +8,17 @@ from typing import List, Tuple
 
 from core.env_check import validate_environment
 
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from core.auth_amazon import get_chrome_driver_with_profile, is_logged_in
+
 
 HEADERS = {
     "Accept": "application/json"
 }
 
-BASE_URL = "https://api.scrapingdog.com/amazon/reviews"
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
@@ -23,11 +28,15 @@ def collect_reviews_for_asins(
     collection_id: str
 ) -> Tuple[pd.DataFrame, dict]:
 
-    api_key = os.getenv("SCRAPINGDOG_API_KEY")
-    if not api_key:
-        raise RuntimeError("Missing SCRAPINGDOG_API_KEY")
+    driver = get_chrome_driver_with_profile(
+        user_data_dir=os.getenv("CHROME_USER_DATA_DIR"),
+        profile_dir=os.getenv("CHROME_PROFILE_DIR")
+    )
 
-    all_reviews: List[dict] = []
+    if not is_logged_in(driver):
+        raise RuntimeError("Not logged in to Amazon in Chrome profile.")
+
+    all_reviews = []
     per_cat_counts = {}
 
     for i, row in df_asin.iterrows():
@@ -41,37 +50,49 @@ def collect_reviews_for_asins(
         seen_ids = set()
 
         while fetched < max_reviews_per_asin:
-            params = {
-                "api_key": api_key,
-                "type": "review",
-                "amazon_domain": f"amazon.{marketplace.lower()}",
-                "asin": asin,
-                "page": page
-            }
-
+            url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/"
             try:
-                r = requests.get(BASE_URL, headers=HEADERS, params=params, timeout=20)
-                if r.status_code != 200:
-                    print(f"[WARN] Status {r.status_code} for ASIN {asin}")
+                driver.get(url)
+                time.sleep(2)
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                review_blocks = soup.select("div[data-hook=review]")
+
+                if not review_blocks:
+                    print(f"[WARN] No reviews found on page {page} for ASIN {asin}")
                     break
 
-                data = r.json()
-                new_reviews = data.get("reviews", [])
+                new_valid = []
+                for block in review_blocks:
+                    rid = block.get("id")
+                    if rid and rid not in seen_ids:
+                        seen_ids.add(rid)
+                        review = {
+                            "id": rid,
+                            "asin": asin,
+                            "category_path": cat,
+                            "title": block.select_one("a[data-hook=review-title]").text.strip() if block.select_one("a[data-hook=review-title]") else "",
+                            "rating": block.select_one("i[data-hook=review-star-rating]").text.strip() if block.select_one("i[data-hook=review-star-rating]") else "",
+                            "text": block.select_one("span[data-hook=review-body]").text.strip() if block.select_one("span[data-hook=review-body]") else "",
+                            "date": block.select_one("span[data-hook=review-date]").text.strip() if block.select_one("span[data-hook=review-date]") else ""
+                        }
+                        new_valid.append(review)
 
-                # Stop if no new reviews found
-                new_valid = [r for r in new_reviews if r.get("id") not in seen_ids]
                 if not new_valid:
                     break
 
-                for r in new_valid:
-                    r["asin"] = asin
-                    r["category_path"] = cat
-                    seen_ids.add(r.get("id"))
-                    reviews.append(r)
-
+                reviews.extend(new_valid)
                 fetched += len(new_valid)
-                page += 1
                 time.sleep(1.5)
+
+                try:
+                    next_button = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
+                    driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
+                    next_button.click()
+                    time.sleep(2)
+                    page += 1
+                except Exception as e:
+                    print(f"[INFO] No next page or failed to click 'Next': {e}")
+                    break
 
             except Exception as e:
                 print(f"[ERROR] Failed to fetch page {page} for ASIN {asin}: {e}")
@@ -79,12 +100,11 @@ def collect_reviews_for_asins(
 
         print(f"[✓] Collected {len(reviews)} reviews for ASIN: {asin}")
         all_reviews.extend(reviews)
-
-        if cat not in per_cat_counts:
-            per_cat_counts[cat] = 0
-        per_cat_counts[cat] += len(reviews)
+        per_cat_counts[cat] = per_cat_counts.get(cat, 0) + len(reviews)
 
     df_reviews = pd.DataFrame(all_reviews)
+    if out_dir.suffix == ".csv":
+        out_dir = out_dir.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "reviews.csv"
 

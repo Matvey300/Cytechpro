@@ -1,31 +1,19 @@
-# actions/reviews.py
-
+import os
+import pandas as pd
 from pathlib import Path
-from core.session_state import SessionState
 from reviews_pipeline import collect_reviews_for_asins
 
-def run_review_collection(session: SessionState):
-    """
-    Collect up to 500 reviews per ASIN via Scrapingdog and save to reviews.csv
-    """
-    if not session.has_asins():
-        print("⚠️ No ASIN collection loaded.")
+def run_review_collection(session):
+    """Run the review collection process using Scrapingdog API."""
+    if session.df_asin is None or session.collection_path is None:
+        print("❌ No ASIN collection loaded or active session not initialized.")
         return
 
     df_asins = session.df_asin
-    if df_asins.empty:
-        print("⚠️ ASIN list is empty.")
-        return
-
-    out_dir = session.collection_path
-    if out_dir is None:
-        print("❌ collection_path is not set in SessionState.")
-        return
-
+    collection_id = session.collection_path.stem
     marketplace = session.get_marketplace()
-    collection_id = session.collection_id
+    out_dir = session.collection_path
 
-    print(f"📦 Starting review collection for {len(df_asins)} ASINs via Scrapingdog...")
     df_reviews, stats = collect_reviews_for_asins(
         df_asin=df_asins,
         max_reviews_per_asin=500,
@@ -34,7 +22,7 @@ def run_review_collection(session: SessionState):
         collection_id=collection_id
     )
 
-    print(f"\n[✓] Total reviews collected: {len(df_reviews)}")
-    print(f"[📊] Reviews per category:")
+    print(f"\n[✅] Review collection complete. Saved to: {out_dir/'reviews.csv'}")
+    print(f"[📊] Review count by category:")
     for cat, count in stats.items():
-        print(f"   - {cat}: {count}")
+        print(f" - {cat}: {count} reviews")
