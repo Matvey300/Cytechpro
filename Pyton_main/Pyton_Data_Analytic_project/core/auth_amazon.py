@@ -3,6 +3,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.common.exceptions import SessionNotCreatedException
 import os
 
 def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebDriver:
@@ -26,8 +27,14 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
     options.add_argument("--start-maximized")
     options.add_experimental_option("detach", True)  # Keeps the browser open
 
-    driver = webdriver.Chrome(options=options)
-    return driver
+    try:
+        driver = webdriver.Chrome(options=options)
+        return driver
+    except SessionNotCreatedException as e:
+        print("[❌] Failed to start Chrome with the selected user profile.")
+        print("This usually happens if Chrome is already running with that profile.")
+        print("Please close all Chrome windows or choose another profile.")
+        raise e
 
 
 def is_logged_in(driver: WebDriver) -> bool:
