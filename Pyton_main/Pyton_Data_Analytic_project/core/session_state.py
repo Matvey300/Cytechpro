@@ -41,8 +41,14 @@ class SessionState:
         if not data_dir.exists():
             print("[No collections found]")
         else:
-            collections = [d.name for d in data_dir.iterdir() if d.is_dir()]
-            for idx, name in enumerate(collections, 1):
-                print(f"{idx}) {name}")
+            collections = [
+                d.name for d in data_dir.iterdir()
+                if d.is_dir() and (d / "asins.csv").exists()
+            ]
+            if not collections:
+                print("[No valid collections found]")
+            else:
+                for idx, name in enumerate(collections, 1):
+                    print(f"{idx}) {name}")
 
 SESSION = SessionState()

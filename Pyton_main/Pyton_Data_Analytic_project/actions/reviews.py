@@ -11,6 +11,7 @@ def run_review_collection(session):
 
     df_asins = session.df_asin
     collection_id = session.collection_id
+    marketplace = session.get_marketplace()
     out_dir = Path("collections") / collection_id
 
     df_reviews, stats = collect_reviews_for_asins(
