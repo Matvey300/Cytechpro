@@ -55,7 +55,11 @@ def collect_reviews_for_asins(
                 driver.get(url)
                 time.sleep(2)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
+                print(f"[DEBUG] Loaded URL: {driver.current_url}")
+                print("[DEBUG] Page snippet:", driver.page_source[:1000])
                 review_blocks = soup.select("div[data-hook=review]")
+                print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
+                input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
 
                 if not review_blocks:
                     print(f"[WARN] No reviews found on page {page} for ASIN {asin}")
