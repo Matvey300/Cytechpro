@@ -1,7 +1,6 @@
 from pathlib import Path
 from core.env_check import validate_environment
 from core.session_state import SessionState
-from core.session_state import ensure_valid_session_directory
 from core.collection_io import select_collection
 from actions.reviews import run_review_collection
 from actions.snapshots import run_daily_screening
@@ -12,7 +11,6 @@ from actions.asin_search import run_asin_search
 def main_menu():
     validate_environment()
     session = SessionState()
-    ensure_valid_session_directory(session)
 
     while True:
         print("\n=== Amazon Intelligence Tool ===")
