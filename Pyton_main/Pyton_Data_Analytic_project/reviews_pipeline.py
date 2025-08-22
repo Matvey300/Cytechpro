@@ -120,8 +120,9 @@ def collect_reviews_for_asins(
                     break
 
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook=review]"))
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.a-section.review.aok-relative"))
             )
+            print(f"[DEBUG] Waiting complete: found review blocks for ASIN {asin} on page {page}")
 
             input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
 
