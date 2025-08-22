@@ -84,7 +84,7 @@ def collect_reviews_for_asins(
     for i, row in df_asin.iterrows():
         asin = row["asin"]
         cat = row.get("category_path", "unknown")
-        print(f"[{i+1}/{len(df_asin)}] Fetching reviews for ASIN: {asin}")
+        print(f"[INFO] [{i+1}/{len(df_asin)}] Fetching reviews for ASIN: {asin}")
 
         reviews = []
         page = 1
@@ -124,18 +124,15 @@ def collect_reviews_for_asins(
             )
             print(f"[DEBUG] Waiting complete: found review blocks for ASIN {asin} on page {page}")
 
-            input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
-
             try:
                 html_path = html_dir / f"{collection_id}__{asin}_p{page}.html"
                 with open(html_path, "w", encoding="utf-8") as f:
                     f.write(driver.page_source)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
-                print("[DEBUG] Page snippet:", driver.page_source[:1000])
                 review_blocks = soup.select("li[data-hook='review']")
                 if not review_blocks:
-                    print(f"[STOP] No review blocks found. Stopping pagination for ASIN {asin}")
+                    print(f"[INFO] No review blocks found. Stopping pagination for ASIN {asin}")
                     break
                 print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
 
@@ -151,7 +148,21 @@ def collect_reviews_for_asins(
                             "title": block.select_one("a[data-hook=review-title]").text.strip() if block.select_one("a[data-hook=review-title]") else "",
                             "rating": block.select_one("i[data-hook=review-star-rating]").text.strip() if block.select_one("i[data-hook=review-star-rating]") else "",
                             "text": block.select_one("span[data-hook=review-body]").text.strip() if block.select_one("span[data-hook=review-body]") else "",
-                            "date": block.select_one("span[data-hook=review-date]").text.strip() if block.select_one("span[data-hook=review-date]") else ""
+                            "author": block.select_one("span.a-profile-name").text.strip() if block.select_one("span.a-profile-name") else "",
+                            "verified_purchase": bool(block.select_one("span[data-hook=avp-badge]") and "Verified Purchase" in block.select_one("span[data-hook=avp-badge]").text),
+                            "helpful_votes": (
+                                1 if (hv := block.select_one("span[data-hook=helpful-vote-statement]")) and "One person found" in hv.text
+                                else int(hv.text.split()[0].replace(",", "")) if hv and "people found" in hv.text
+                                else 0
+                            ),
+                            "location": (
+                                block.select_one("span[data-hook=review-date]").text.strip().split(" in ")[-1].split(" on ")[0].strip()
+                                if block.select_one("span[data-hook=review-date]") and " in " in block.select_one("span[data-hook=review-date]").text else ""
+                            ),
+                            "date": (
+                                block.select_one("span[data-hook=review-date]").text.strip().split(" on ")[-1].strip()
+                                if block.select_one("span[data-hook=review-date]") and " on " in block.select_one("span[data-hook=review-date]").text else ""
+                            )
                         }
                         new_valid.append(review)
 
@@ -159,7 +170,7 @@ def collect_reviews_for_asins(
 
                 if not new_valid:
                     print(f"[INFO] No new unique reviews found on page {page}. Stopping pagination.")
-                    print(f"[STOP] Stopping pagination: no new content or end of pages.")
+                    print(f"[INFO] Stopping pagination: no new content or end of pages.")
                     break
 
                 reviews.extend(new_valid)
@@ -172,7 +183,7 @@ def collect_reviews_for_asins(
                 print(f"[ERROR] Failed to fetch page {page} for ASIN {asin}: {e}")
                 break
 
-        print(f"[✓] Collected {len(reviews)} reviews for ASIN: {asin}")
+        print(f"[INFO] Collected {len(reviews)} reviews for ASIN: {asin}")
         all_reviews.extend(reviews)
         per_cat_counts[cat] = per_cat_counts.get(cat, 0) + len(reviews)
 
@@ -193,5 +204,5 @@ def collect_reviews_for_asins(
         for asin in df_asin["asin"]:
             for html_file in html_dir.glob(f"{collection_id}__{asin}_p*.html"):
                 html_file.unlink(missing_ok=True)
-    print(f"\n[✅] Review collection complete. Saved to: {reviews_path}")
+    print(f"\n[INFO] Review collection complete. Saved to: {reviews_path}")
     return df_reviews, per_cat_counts
