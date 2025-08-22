@@ -41,6 +41,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         temp_options.add_experimental_option("detach", True)
         try:
             driver = webdriver.Chrome(options=temp_options)
+            driver.get("https://www.amazon.com/")
             print("[🔐] Please log into Amazon in the opened Chrome window.")
             print("Press [Enter] when you have completed login.")
             input()
