@@ -20,6 +20,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
     """
     if not user_data_dir or not profile_dir:
         raise ValueError("Both user_data_dir and profile_dir must be provided. Please check your environment variables.")
+        print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
     options = Options()
     options.add_argument(f"--user-data-dir={user_data_dir}")
     options.add_argument(f"--profile-directory={profile_dir}")
@@ -31,10 +32,19 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         driver = webdriver.Chrome(options=options)
         return driver
     except SessionNotCreatedException as e:
-        print("[❌] Failed to start Chrome with the selected user profile.")
-        print("This usually happens if Chrome is already running with that profile.")
-        print("Please close all Chrome windows or choose another profile.")
-        raise e
+        print("[⚠] Chrome profile is currently in use or unavailable.")
+        print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
+
+        temp_options = Options()
+        temp_options.add_argument("--disable-notifications")
+        temp_options.add_argument("--start-maximized")
+        temp_options.add_experimental_option("detach", True)
+        try:
+            driver = webdriver.Chrome(options=temp_options)
+            return driver
+        except Exception as temp_e:
+            print("[❌] Failed to start temporary session.")
+            raise temp_e
 
 
 def is_logged_in(driver: WebDriver) -> bool:
