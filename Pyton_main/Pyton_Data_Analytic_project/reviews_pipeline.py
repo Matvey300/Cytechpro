@@ -102,15 +102,20 @@ def collect_reviews_for_asins(
         all_reviews.extend(reviews)
         per_cat_counts[cat] = per_cat_counts.get(cat, 0) + len(reviews)
 
+    if not all_reviews:
+        print("[INFO] No reviews were collected for the selected ASINs. Check if login was successful or if reviews are available.")
     df_reviews = pd.DataFrame(all_reviews)
     if out_dir.suffix == ".csv":
         out_dir = out_dir.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "reviews.csv"
 
-    if out_path.exists():
-        existing = pd.read_csv(out_path)
-        df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
+    if out_path.exists() and out_path.stat().st_size > 0:
+        try:
+            existing = pd.read_csv(out_path)
+            df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
+        except pd.errors.EmptyDataError:
+            print(f"[WARN] Existing file {out_path} is unreadable or empty. Overwriting.")
 
     df_reviews.to_csv(out_path, index=False)
     return df_reviews, per_cat_counts

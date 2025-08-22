@@ -30,6 +30,18 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
 
     try:
         driver = webdriver.Chrome(options=options)
+        try:
+            driver.get("https://www.amazon.com/")
+        except Exception as e:
+            print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
+            decision = input("Do you want to restart the Chrome session? (y/n): ").strip().lower()
+            if decision == "y":
+                driver.quit()
+                return get_chrome_driver_with_profile(user_data_dir, profile_dir)
+            else:
+                print("[✋] Review collection aborted by user.")
+                driver.quit()
+                raise RuntimeError("User aborted due to closed Chrome.")
         return driver
     except SessionNotCreatedException as e:
         print("[⚠] Chrome profile is currently in use or unavailable.")
@@ -41,7 +53,18 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         temp_options.add_experimental_option("detach", True)
         try:
             driver = webdriver.Chrome(options=temp_options)
-            driver.get("https://www.amazon.com/")
+            try:
+                driver.get("https://www.amazon.com/")
+            except Exception as e:
+                print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
+                decision = input("Do you want to restart the Chrome session? (y/n): ").strip().lower()
+                if decision == "y":
+                    driver.quit()
+                    return get_chrome_driver_with_profile(user_data_dir, profile_dir)
+                else:
+                    print("[✋] Review collection aborted by user.")
+                    driver.quit()
+                    raise RuntimeError("User aborted due to closed Chrome.")
             print("[🔐] Please log into Amazon in the opened Chrome window.")
             print("Press [Enter] when you have completed login.")
             input()
