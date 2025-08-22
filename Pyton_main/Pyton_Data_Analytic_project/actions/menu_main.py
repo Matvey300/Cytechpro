@@ -1,5 +1,6 @@
 # actions/menu_main.py
 
+from pathlib import Path
 from core.env_check import validate_environment
 from core.session_state import SessionState
 from core.collection_io import select_collection
@@ -33,11 +34,13 @@ def main_menu():
 
         if choice == "1":
             select_collection(session)
+            if session.collection_path and session.collection_path.suffix == ".csv":
+                session.collection_path = session.collection_path.parent / session.collection_path.stem
         elif choice == "2":
-            if session.df_asin is not None:
+            if session.df_asin is not None and session.collection_path and session.collection_path.exists() and session.collection_path.is_dir():
                 run_review_collection(session)
             else:
-                print("[!] Please load a collection first.")
+                print("[!] Please load a valid collection first.")
         elif choice == "3":
             run_asin_search(session)
         elif choice == "4":

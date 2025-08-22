@@ -10,9 +10,9 @@ def run_review_collection(session):
         return
 
     df_asins = session.df_asin
-    collection_id = session.collection_path.stem
+    collection_id = session.collection_path.stem.replace("_reviews", "")
     marketplace = session.get_marketplace()
-    out_dir = session.collection_path
+    out_dir = session.collection_path.parent
 
     df_reviews, stats = collect_reviews_for_asins(
         df_asin=df_asins,
