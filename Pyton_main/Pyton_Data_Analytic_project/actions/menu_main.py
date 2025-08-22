@@ -37,13 +37,11 @@ def main_menu():
             if session.collection_path and session.collection_path.suffix == ".csv":
                 session.collection_path = session.collection_path.parent / session.collection_path.stem
         elif choice == "2":
-            if session.df_asin is not None and session.collection_path:
-                if session.collection_path.suffix == ".csv":
-                    session.collection_path = session.collection_path.parent / session.collection_path.stem
-                if session.collection_path.exists() and session.collection_path.is_dir():
-                    run_review_collection(session)
-                else:
-                    print("[!] Collection path is not a valid directory.")
+            if session.collection_path and session.collection_path.suffix == ".csv":
+                session.collection_path = session.collection_path.parent / session.collection_path.stem
+
+            if session.df_asin is not None and session.collection_path and session.collection_path.exists() and session.collection_path.is_dir():
+                run_review_collection(session)
             else:
                 print("[!] Please load a valid collection first.")
         elif choice == "3":
