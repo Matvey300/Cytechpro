@@ -1,5 +1,3 @@
-# actions/menu_main.py
-
 from pathlib import Path
 from core.env_check import validate_environment
 from core.session_state import SessionState
@@ -34,29 +32,29 @@ def main_menu():
 
         if choice == "1":
             select_collection(session)
-            if session.collection_path and session.collection_path.suffix == ".csv":
-                session.collection_path = session.collection_path.parent / session.collection_path.stem
+            session.ensure_collection_dir()
         elif choice == "2":
-            if session.collection_path and session.collection_path.suffix == ".csv":
-                session.collection_path = session.collection_path.parent / session.collection_path.stem
-
-            if session.df_asin is not None and session.collection_path and session.collection_path.exists() and session.collection_path.is_dir():
+            session.ensure_collection_dir()
+            if session.df_asin is not None:
                 run_review_collection(session)
             else:
                 print("[!] Please load a valid collection first.")
         elif choice == "3":
             run_asin_search(session)
         elif choice == "4":
+            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_daily_screening(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "5":
+            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_plotting(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "6":
+            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_correlation_analysis(session)
             else:
