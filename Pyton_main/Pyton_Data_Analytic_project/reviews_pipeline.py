@@ -60,6 +60,7 @@ def collect_reviews_for_asins(
         else:
             raise e
     driver.get(f"https://www.amazon.{marketplace}/")
+    driver.get(f"https://www.amazon.{marketplace}/product-reviews/{df_asin.iloc[0]['asin']}?sortBy=recent")
     input("Press [Enter] when you have completed login...")  
 
     all_reviews = []
@@ -76,16 +77,19 @@ def collect_reviews_for_asins(
         seen_ids = set()
 
         while fetched < max_reviews_per_asin:
-            url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/"
+            url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent"
             try:
                 driver.get(url)
                 try:
                     WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook='review']"))
+                        EC.presence_of_element_located((By.CLASS_NAME, "a-section"))
                     )
                 except TimeoutException:
                     print(f"[WARN] No review block found after 10s for ASIN {asin}")
                     break
+                html_path = out_dir / f"{collection_id}__{asin}_p{page}.html"
+                with open(html_path, "w", encoding="utf-8") as f:
+                    f.write(driver.page_source)
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
                 print("[DEBUG] Page snippet:", driver.page_source[:1000])
@@ -154,4 +158,7 @@ def collect_reviews_for_asins(
             print(f"[WARN] Existing file {out_path} is unreadable or empty. Overwriting.")
 
     df_reviews.to_csv(out_path, index=False)
+    if df_reviews.shape[0] > 0:
+        for html_file in out_dir.glob(f"{collection_id}__{asin}_p*.html"):
+            html_file.unlink(missing_ok=True)
     return df_reviews, per_cat_counts
