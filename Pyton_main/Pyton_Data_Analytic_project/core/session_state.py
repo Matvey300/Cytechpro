@@ -44,3 +44,5 @@ class SessionState:
             collections = [d.name for d in data_dir.iterdir() if d.is_dir()]
             for idx, name in enumerate(collections, 1):
                 print(f"{idx}) {name}")
+
+SESSION = SessionState()
