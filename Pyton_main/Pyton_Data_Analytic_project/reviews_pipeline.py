@@ -73,10 +73,21 @@ def collect_reviews_for_asins(
 
         reviews = []
         page = 1
-        fetched = 0
         seen_ids = set()
 
-        while fetched < max_reviews_per_asin:
+        # Count previous reviews for this ASIN from the output file, if any
+        out_path = out_dir / f"{collection_id}_reviews.csv"
+        previous_reviews_count = 0
+        if out_path.exists() and out_path.stat().st_size > 0:
+            try:
+                existing = pd.read_csv(out_path)
+                previous_reviews_count = existing[existing["asin"] == asin].shape[0]
+            except Exception:
+                previous_reviews_count = 0
+        fetched = 0
+        max_pages = int(((max_reviews_per_asin - previous_reviews_count) / 10) + 2)
+
+        while page <= max_pages:
             url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent"
             try:
                 driver.get(url)
@@ -121,7 +132,7 @@ def collect_reviews_for_asins(
                     break
 
                 reviews.extend(new_valid)
-                fetched += len(new_valid)
+                fetched = len(reviews)
                 time.sleep(1.5)
 
                 try:
@@ -159,6 +170,7 @@ def collect_reviews_for_asins(
 
     df_reviews.to_csv(out_path, index=False)
     if df_reviews.shape[0] > 0:
-        for html_file in out_dir.glob(f"{collection_id}__{asin}_p*.html"):
-            html_file.unlink(missing_ok=True)
+        for asin in df_asin["asin"]:
+            for html_file in out_dir.glob(f"{collection_id}__{asin}_p*.html"):
+                html_file.unlink(missing_ok=True)
     return df_reviews, per_cat_counts
