@@ -35,3 +35,12 @@ class SessionState:
             raise NotADirectoryError(f"[ERR] Path exists but is not a directory: {self.collection_path}")
         if self.collection_path and not self.collection_path.exists():
             self.collection_path.mkdir(parents=True, exist_ok=True)
+
+    def list_available_collections(self):
+        data_dir = Path("DATA")
+        if not data_dir.exists():
+            print("[No collections found]")
+        else:
+            collections = [d.name for d in data_dir.iterdir() if d.is_dir()]
+            for idx, name in enumerate(collections, 1):
+                print(f"{idx}) {name}")

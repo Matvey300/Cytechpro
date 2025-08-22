@@ -8,10 +8,7 @@ from actions.plots import run_plotting
 from actions.correlations import run_correlation_analysis
 from actions.asin_search import run_asin_search
 
-def main_menu():
-    validate_environment()
-    session = SessionState()
-
+def run_main_menu(session):
     while True:
         print("\n=== Amazon Intelligence Tool ===")
         if session.collection_id:
