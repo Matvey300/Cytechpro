@@ -31,7 +31,7 @@ def collect_reviews_for_asins(
     collection_id: str
 ) -> Tuple[pd.DataFrame, dict]:
 
-    base_dir = Path(str(out_dir) + "/" + collection_id.replace('.csv', ''))
+    base_dir = out_dir / collection_id
 
     chrome_options = Options()
     chrome_options.add_argument(f'--user-data-dir={os.getenv("CHROME_USER_DATA_DIR")}')
@@ -79,8 +79,11 @@ def collect_reviews_for_asins(
 
         # Count previous reviews for this ASIN from the output file, if any
         html_dir = base_dir / "RawData"
+        if base_dir.exists() and not base_dir.is_dir():
+            raise RuntimeError(f"[ERROR] Path '{base_dir}' exists as a file, not directory. Please remove it manually.")
+        base_dir.mkdir(parents=True, exist_ok=True)
+        html_dir.mkdir(parents=True, exist_ok=True)
         reviews_path = base_dir / "reviews.csv"
-        (base_dir / "RawData").mkdir(parents=True, exist_ok=True)
         previous_reviews_count = 0
         if reviews_path.exists() and reviews_path.stat().st_size > 0:
             try:
@@ -132,7 +135,10 @@ def collect_reviews_for_asins(
                         }
                         new_valid.append(review)
 
+                print(f"[DEBUG] Skipped {len(review_blocks) - len(new_valid)} duplicate reviews on page {page}")
+
                 if not new_valid:
+                    print(f"[INFO] No new unique reviews found on page {page}. Stopping pagination.")
                     break
 
                 reviews.extend(new_valid)
@@ -144,6 +150,10 @@ def collect_reviews_for_asins(
                     driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
                     next_button.click()
                     time.sleep(2)
+                    new_url = driver.current_url
+                    if new_url == url:
+                        print("[WARN] Page did not change after clicking 'Next'. Stopping pagination.")
+                        break
                     page += 1
                 except Exception as e:
                     print(f"[INFO] No next page or failed to click 'Next': {e}")
