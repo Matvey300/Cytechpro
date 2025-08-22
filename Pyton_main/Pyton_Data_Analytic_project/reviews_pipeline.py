@@ -85,6 +85,7 @@ def collect_reviews_for_asins(
         per_cat_counts[cat] += len(reviews)
 
     df_reviews = pd.DataFrame(all_reviews)
+    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "reviews.csv"
 
     if out_path.exists():
