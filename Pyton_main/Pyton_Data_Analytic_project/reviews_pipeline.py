@@ -78,8 +78,7 @@ def collect_reviews_for_asins(
         # Count previous reviews for this ASIN from the output file, if any
         html_dir = out_dir / collection_id / "RawData"
         reviews_path = out_dir / collection_id / "reviews.csv"
-        (out_dir / collection_id).mkdir(parents=True, exist_ok=True)
-        html_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / collection_id / "RawData").mkdir(parents=True, exist_ok=True)
         previous_reviews_count = 0
         if reviews_path.exists() and reviews_path.stat().st_size > 0:
             try:
@@ -159,9 +158,7 @@ def collect_reviews_for_asins(
     if not all_reviews:
         print("[INFO] No reviews were collected for the selected ASINs. Check if login was successful or if reviews are available.")
     df_reviews = pd.DataFrame(all_reviews)
-    if out_dir.suffix == ".csv":
-        out_dir = out_dir.parent
-    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / collection_id).mkdir(parents=True, exist_ok=True)
 
     if reviews_path.exists() and reviews_path.stat().st_size > 0:
         try:
