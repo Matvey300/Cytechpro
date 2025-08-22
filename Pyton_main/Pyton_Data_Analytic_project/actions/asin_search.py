@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 import json
+import os
 from pathlib import Path
 from datetime import datetime
 from core.collection_io import save_collection

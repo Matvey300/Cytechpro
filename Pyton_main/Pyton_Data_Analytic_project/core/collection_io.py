@@ -1,5 +1,3 @@
-# core/collection_io.py
-
 from pathlib import Path
 import pandas as pd
 from core.session_state import SessionState
