@@ -95,7 +95,7 @@ def collect_reviews_for_asins(
             raise RuntimeError(f"[ERROR] Path '{base_dir}' exists as a file, not directory. Please remove it manually.")
         base_dir.mkdir(parents=True, exist_ok=True)
         html_dir.mkdir(parents=True, exist_ok=True)
-        reviews_path = base_dir / f"reviews_{collection_id}.csv"
+        reviews_path = base_dir / f"{collection_id}__reviews.csv"
         previous_reviews_count = 0
         if reviews_path.exists() and reviews_path.stat().st_size > 0:
             try:
@@ -108,7 +108,6 @@ def collect_reviews_for_asins(
 
         while page <= max_pages:
             print(f"[DEBUG] Loading page {page} for ASIN {asin} (max {max_pages})")
-            input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
             if page == 1:
                 driver.get(f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent")
             else:
@@ -119,17 +118,14 @@ def collect_reviews_for_asins(
                 except Exception:
                     print(f"[WARN] 'Next' button not found or not clickable for ASIN {asin}")
                     break
+
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "a-section"))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook=review]"))
             )
+
+            input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
+
             try:
-                try:
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, "a-section"))
-                    )
-                except TimeoutException:
-                    print(f"[WARN] No review block found after 10s for ASIN {asin}")
-                    break
                 html_path = html_dir / f"{collection_id}__{asin}_p{page}.html"
                 with open(html_path, "w", encoding="utf-8") as f:
                     f.write(driver.page_source)
@@ -196,4 +192,5 @@ def collect_reviews_for_asins(
         for asin in df_asin["asin"]:
             for html_file in html_dir.glob(f"{collection_id}__{asin}_p*.html"):
                 html_file.unlink(missing_ok=True)
+    print(f"\n[✅] Review collection complete. Saved to: {reviews_path}")
     return df_reviews, per_cat_counts
