@@ -15,7 +15,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from core.auth_amazon import get_chrome_driver_with_profile, is_logged_in
+
 
 
 HEADERS = {
@@ -31,18 +31,17 @@ def collect_reviews_for_asins(
     collection_id: str
 ) -> Tuple[pd.DataFrame, dict]:
 
-    driver = get_chrome_driver_with_profile(
-        user_data_dir=os.getenv("CHROME_USER_DATA_DIR"),
-        profile_dir=os.getenv("CHROME_PROFILE_DIR")
-    )
+    chrome_options = Options()
+    chrome_options.add_argument(f'--user-data-dir={os.getenv("CHROME_USER_DATA_DIR")}')
+    chrome_options.add_argument(f'--profile-directory={os.getenv("CHROME_PROFILE_DIR")}')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-gpu')
 
-    if not is_logged_in(driver):
-        try:
-            driver.current_url  # Check if browser session is still alive
-        except Exception:
-            print("[❌] Chrome window was closed before login confirmation. Please try again.")
-            return pd.DataFrame(), {}
-        raise RuntimeError("Not logged in to Amazon in Chrome profile.")
+    print("[🔐] Please log into Amazon in the opened Chrome window.")
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.get(f"https://www.amazon.{marketplace}/")
+    input("Press [Enter] when you have completed login...")  
 
     all_reviews = []
     per_cat_counts = {}
@@ -71,7 +70,7 @@ def collect_reviews_for_asins(
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
                 print("[DEBUG] Page snippet:", driver.page_source[:1000])
-                review_blocks = soup.select("div[data-hook=review]")
+                review_blocks = soup.find_all("div", class_="a-section review aok-relative")
                 print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
                 input("[PAUSE] Please confirm the page loaded correctly in Chrome. Press Enter to continue...")
 
@@ -126,7 +125,7 @@ def collect_reviews_for_asins(
     if out_dir.suffix == ".csv":
         out_dir = out_dir.parent
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "reviews.csv"
+    out_path = out_dir / f"{collection_id}_reviews.csv"
 
     if out_path.exists() and out_path.stat().st_size > 0:
         try:
