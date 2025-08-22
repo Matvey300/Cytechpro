@@ -31,7 +31,11 @@ def collect_reviews_for_asins(
     collection_id: str
 ) -> Tuple[pd.DataFrame, dict]:
 
-    base_dir = out_dir / collection_id
+    if out_dir.exists() and not out_dir.is_dir():
+        raise RuntimeError(f"[ERROR] Path '{out_dir}' exists as a file, not directory. Please remove it manually.")
+
+    base_dir = out_dir
+    html_dir = base_dir / "RawData"
 
     chrome_options = Options()
     chrome_options.add_argument(f'--user-data-dir={os.getenv("CHROME_USER_DATA_DIR")}')
@@ -78,7 +82,6 @@ def collect_reviews_for_asins(
         seen_ids = set()
 
         # Count previous reviews for this ASIN from the output file, if any
-        html_dir = base_dir / "RawData"
         if base_dir.exists() and not base_dir.is_dir():
             raise RuntimeError(f"[ERROR] Path '{base_dir}' exists as a file, not directory. Please remove it manually.")
         base_dir.mkdir(parents=True, exist_ok=True)
@@ -170,7 +173,6 @@ def collect_reviews_for_asins(
     if not all_reviews:
         print("[INFO] No reviews were collected for the selected ASINs. Check if login was successful or if reviews are available.")
     df_reviews = pd.DataFrame(all_reviews)
-    base_dir.mkdir(parents=True, exist_ok=True)
 
     if reviews_path.exists() and reviews_path.stat().st_size > 0:
         try:

@@ -18,4 +18,8 @@ def validate_environment():
             print(f" - {var}")
         raise RuntimeError("Please set all required API keys as environment variables.")
     else:
+        optional = ["CHROME_USER_DATA_DIR", "CHROME_PROFILE_DIR"]
+        for var in optional:
+            if not os.getenv(var):
+                print(f"[⚠] Optional variable '{var}' is not set. Chrome login with profile may fail.")
         print("[✅] All required environment variables are set.")

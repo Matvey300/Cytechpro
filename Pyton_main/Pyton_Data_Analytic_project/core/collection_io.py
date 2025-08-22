@@ -6,7 +6,7 @@ COLLECTIONS_DIR = Path("collections")
 COLLECTIONS_DIR.mkdir(exist_ok=True)
 
 def list_collections() -> list[str]:
-    return sorted([f.stem for f in COLLECTIONS_DIR.glob("*.csv")])
+    return sorted([f.name for f in COLLECTIONS_DIR.iterdir() if f.is_dir() and (f / f"{f.name}.csv").exists()])
 
 def create_collection(session: SessionState) -> SessionState:
     name = input("Enter a name for the new ASIN collection: ").strip()
@@ -14,13 +14,14 @@ def create_collection(session: SessionState) -> SessionState:
         print("[WARN] Collection name cannot be empty.")
         return create_collection(session)
 
-    path = COLLECTIONS_DIR / f"{name}.csv"
+    path = COLLECTIONS_DIR / name
     if path.exists():
         print("[WARN] Collection already exists.")
         return create_collection(session)
 
+    path.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(columns=["asin", "title", "rating", "review_count", "country", "category_path"])
-    df.to_csv(path, index=False)
+    df.to_csv(path / f"{name}.csv", index=False)
     print(f"[✅] Created new collection: {name}")
 
     session.collection_id = name
@@ -29,11 +30,14 @@ def create_collection(session: SessionState) -> SessionState:
     return session
 
 def load_collection(name: str, session: SessionState) -> SessionState:
-    path = COLLECTIONS_DIR / f"{name}.csv"
-    if not path.exists():
+    path = COLLECTIONS_DIR / name
+    csv_file = path / f"{name}.csv"
+    if not path.is_dir():
+        raise NotADirectoryError(f"Expected a directory at {path}, but found a file.")
+    if not csv_file.exists():
         raise FileNotFoundError(f"No such collection: {name}")
 
-    df = pd.read_csv(path)
+    df = pd.read_csv(csv_file)
     session.collection_id = name
     session.collection_path = path
     session.df_asin = df
@@ -65,9 +69,11 @@ def select_collection(session: SessionState) -> SessionState:
     return select_collection(session)
 
 def save_collection(session: SessionState, collection_id: str, df: pd.DataFrame):
-    collection_path = COLLECTIONS_DIR / f"{collection_id}.csv"
-    collection_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-    df.to_csv(collection_path, index=False)
+    collection_path = COLLECTIONS_DIR / collection_id
+    if collection_path.exists() and not collection_path.is_dir():
+        collection_path.unlink()  # удалить файл, чтобы освободить путь для папки
+    collection_path.mkdir(parents=True, exist_ok=True)
+    df.to_csv(collection_path / f"{collection_id}.csv", index=False)
     session.collection_id = collection_id
     session.collection_path = collection_path
     session.df_asin = df

@@ -1,78 +1,37 @@
-# core/session_state.py
-# Global session state shared between CLI actions
-
-from typing import Optional
 from pathlib import Path
 import pandas as pd
 
-# Shared in-memory session state
-SESSION = {
-    "collection_id": None,       # type: Optional[str]
-    "collection_path": None,     # type: Optional[Path]
-    "df_asin": None,             # type: Optional[pd.DataFrame]
-}
-
-
-def reset_session():
-    """Reset all session values to None (used during reinitialization or cleanup)."""
-    for key in SESSION:
-        SESSION[key] = None
-
-
 class SessionState:
-    """Wrapper around the global SESSION dict with helper methods."""
-
     def __init__(self):
-        self._state = SESSION
+        self.df_asin = None
+        self.collection_id = None
+        self.collection_path = None
 
-    def load_last_or_prompt(self):
-        # Placeholder: logic to load last session or create new one
-        print("⚠️  [Stub] load_last_or_prompt not yet implemented")
+    def load_collection(self, collection_id: str):
+        collection_id = collection_id.replace(".csv", "")
+        path = Path("collections") / collection_id
+        if path.exists() and not path.is_dir():
+            path.unlink()
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+        asin_file = path / "asins.csv"
+        if asin_file.exists():
+            self.df_asin = pd.read_csv(asin_file)
+            self.collection_id = collection_id
+            self.collection_path = path
+        else:
+            print(f"[!] ASIN file not found for collection: {collection_id}")
 
-    def has_asins(self) -> bool:
-        return self._state["df_asin"] is not None
+    def is_collection_loaded(self):
+        return (
+            self.df_asin is not None and
+            self.collection_path is not None and
+            self.collection_path.exists() and
+            self.collection_path.is_dir()
+        )
 
-    def has_reviews(self) -> bool:
-        path = self._state["collection_path"]
-        return path and (path / "reviews.csv").exists()
-
-    def has_snapshots(self, min_required: int = 3) -> bool:
-        path = self._state["collection_path"]
-        if not path or not (path / "daily_snapshots.csv").exists():
-            return False
-        try:
-            df = pd.read_csv(path / "daily_snapshots.csv")
-            return df["asin"].nunique() > 0 and df["date"].nunique() >= min_required
-        except Exception:
-            return False
-
-    def list_saved_collections(self):
-        print("⚠️  [Stub] list_saved_collections not yet implemented")
-
-    @property
-    def collection_id(self) -> Optional[str]:
-        return self._state["collection_id"]
-
-    @collection_id.setter
-    def collection_id(self, value: str):
-        self._state["collection_id"] = value
-
-    @property
-    def collection_path(self) -> Optional[Path]:
-        return self._state["collection_path"]
-
-    @collection_path.setter
-    def collection_path(self, value: Path):
-        self._state["collection_path"] = value
-
-    @property
-    def df_asin(self) -> Optional[pd.DataFrame]:
-        return self._state["df_asin"]
-
-    @df_asin.setter
-    def df_asin(self, value: pd.DataFrame):
-        self._state["df_asin"] = value
-
-    def get_marketplace(self) -> str:
-        """Temporary default marketplace getter. Returns 'com' for Amazon US."""
-        return "com"
+    def ensure_collection_dir(self):
+        if self.collection_path and self.collection_path.exists() and not self.collection_path.is_dir():
+            raise NotADirectoryError(f"[ERR] Path exists but is not a directory: {self.collection_path}")
+        if self.collection_path and not self.collection_path.exists():
+            self.collection_path.mkdir(parents=True, exist_ok=True)

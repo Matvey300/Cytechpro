@@ -10,9 +10,8 @@ def run_review_collection(session):
         return
 
     df_asins = session.df_asin
-    collection_id = session.collection_path.stem.replace("_reviews", "")
-    marketplace = session.get_marketplace()
-    out_dir = session.collection_path.parent
+    collection_id = session.collection_id
+    out_dir = Path("collections") / collection_id
 
     df_reviews, stats = collect_reviews_for_asins(
         df_asin=df_asins,
@@ -22,7 +21,7 @@ def run_review_collection(session):
         collection_id=collection_id
     )
 
-    print(f"\n[✅] Review collection complete. Saved to: {out_dir/'reviews.csv'}")
+    print(f"\n[✅] Review collection complete. Saved to: {(out_dir / 'reviews.csv')}")
     print(f"[📊] Review count by category:")
     for cat, count in stats.items():
         print(f" - {cat}: {count} reviews")

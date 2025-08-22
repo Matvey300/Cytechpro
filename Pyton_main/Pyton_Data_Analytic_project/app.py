@@ -21,9 +21,9 @@ def main():
         return
 
     try:
-        run_main_menu(SESSION)
+        main_menu()
     except KeyboardInterrupt:
         print("\n[Interrupted by user]")
 
 if __name__ == "__main__":
-   main_menu()
+    main()

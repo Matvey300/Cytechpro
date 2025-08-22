@@ -1,6 +1,7 @@
 from pathlib import Path
 from core.env_check import validate_environment
 from core.session_state import SessionState
+from core.session_state import ensure_valid_session_directory
 from core.collection_io import select_collection
 from actions.reviews import run_review_collection
 from actions.snapshots import run_daily_screening
@@ -11,6 +12,7 @@ from actions.asin_search import run_asin_search
 def main_menu():
     validate_environment()
     session = SessionState()
+    ensure_valid_session_directory(session)
 
     while True:
         print("\n=== Amazon Intelligence Tool ===")
@@ -33,36 +35,29 @@ def main_menu():
         if choice == "1":
             select_collection(session)
         elif choice == "2":
-            if session.df_asin is not None:
+            if session.is_collection_loaded():
                 run_review_collection(session)
             else:
                 print("[!] Please load a valid collection first.")
         elif choice == "3":
             run_asin_search(session)
         elif choice == "4":
-            if session.df_asin is not None:
+            if session.is_collection_loaded():
                 run_daily_screening(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "5":
-            if session.df_asin is not None:
+            if session.is_collection_loaded():
                 run_plotting(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "6":
-            if session.df_asin is not None:
+            if session.is_collection_loaded():
                 run_correlation_analysis(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "7":
-            print("Available collections:")
-            data_dir = Path("DATA")
-            if not data_dir.exists():
-                print("[No collections found]")
-            else:
-                collections = [d.name for d in data_dir.iterdir() if d.is_dir()]
-                for idx, name in enumerate(collections, 1):
-                    print(f"{idx}) {name}")
+            session.list_available_collections()
         elif choice == "0":
             print("Exiting...")
             break
