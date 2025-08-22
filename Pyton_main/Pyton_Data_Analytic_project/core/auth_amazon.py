@@ -33,7 +33,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         return driver
     except SessionNotCreatedException as e:
         print("[⚠] Chrome profile is currently in use or unavailable.")
-        print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
+        # print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
 
         temp_options = Options()
         temp_options.add_argument("--disable-notifications")
@@ -41,6 +41,18 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         temp_options.add_experimental_option("detach", True)
         try:
             driver = webdriver.Chrome(options=temp_options)
+            print("[🔐] Please log into Amazon in the opened Chrome window.")
+            print("Press [Enter] when you have completed login.")
+            input()
+
+            if is_logged_in(driver):
+                print("[✅] Login confirmed. Proceeding with review collection.")
+            else:
+                proceed = input("[⚠] Login not detected. Continue with limited access? (y/n): ").strip().lower()
+                if proceed != "y":
+                    print("[✋] Aborting session as requested by user.")
+                    driver.quit()
+                    raise RuntimeError("User aborted due to missing login.")
             return driver
         except Exception as temp_e:
             print("[❌] Failed to start temporary session.")
