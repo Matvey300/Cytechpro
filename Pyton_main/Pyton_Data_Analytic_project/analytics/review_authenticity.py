@@ -1,104 +1,164 @@
-# analytics/review_authenticity.py
+# menu_main.py
 
 import pandas as pd
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
+from core.collection_io import load_collection
 
-def analyze_review_authenticity(collection_id: str, data_dir: str = "Out"):
+def main_menu():
+    print("1. Option One")
+    print("2. Option Two")
+    print("3. Option Three")
+    print("4. Option Four")
+    print("5. Option Five")
+    print("6. Option Six")
+    print("7. Analyze Review Authenticity (Trustworthiness)")
+    print("8. View flagged reviews (authcheck)")
+
+def main():
+    while True:
+        main_menu()
+        choice = input("Enter your choice: ").strip()
+
+        if choice == "1":
+            # handle option 1
+            pass
+        elif choice == "2":
+            # handle option 2
+            pass
+        elif choice == "3":
+            # handle option 3
+            pass
+        elif choice == "4":
+            # handle option 4
+            pass
+        elif choice == "5":
+            # handle option 5
+            pass
+        elif choice == "6":
+            # handle option 6
+            pass
+        elif choice == "7":
+            from analytics.review_authenticity import analyze_review_authenticity
+            from core.collection_io import list_collections
+            print("\nAvailable collections:")
+            collections = list_collections()
+            for i, name in enumerate(collections, 1):
+                print(f"{i}) {name}")
+            selected = input("Select collection number: ").strip()
+            try:
+                index = int(selected) - 1
+                if 0 <= index < len(collections):
+                    collection_id = collections[index]
+                    analyze_review_authenticity(collection_id)
+                else:
+                    print("[!] Invalid selection.")
+            except ValueError:
+                print("[!] Invalid input.")
+        elif choice == "8":
+            from core.collection_io import list_collections, load_collection
+            print("\nAvailable flagged collections:")
+            collections = [c for c in list_collections() if c.startswith("authcheck__")]
+            if not collections:
+                print("[!] No flagged collections found.")
+                continue
+            for i, name in enumerate(collections, 1):
+                print(f"{i}) {name}")
+            selected = input("Select collection number: ").strip()
+            try:
+                index = int(selected) - 1
+                if 0 <= index < len(collections):
+                    collection_id = collections[index]
+                    explore_flagged_reviews(collection_id)
+                else:
+                    print("[!] Invalid selection.")
+            except ValueError:
+                print("[!] Invalid input.")
+        elif choice.lower() in ("q", "quit", "exit"):
+            print("Exiting.")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+
+# --- Authenticity analysis function ---
+def analyze_review_authenticity(collection_id):
     """
-    Flags suspicious ASINs based on review behavior patterns such as:
-    - Abnormal text length distribution
-    - High frequency of identical length reviews
-    - Timing anomalies (burst patterns)
-    - Imbalance of verified/unverified purchases
-    - Sentiment-rating mismatch
-
-    Outputs:
-        - trustworthiness_scores.csv
-        - trustworthiness_curve.png
+    Unified Review Authenticity Test based on 3 heuristics:
+    1. Suspicious review length (too short or too long).
+    2. High frequency of reviews per ASIN per day.
+    3. Duplicate review content across the dataset.
     """
-    base_path = os.path.join(data_dir, collection_id)
-    reviews_file = os.path.join(base_path, "reviews.csv")
-    sentiments_file = os.path.join(base_path, "review_sentiments.csv")
-    output_path = os.path.join(base_path, "plots")
-    os.makedirs(output_path, exist_ok=True)
+    from collections import defaultdict
+    from core.collection_io import load_collection, save_collection
 
-    try:
-        df = pd.read_csv(reviews_file)
-    except FileNotFoundError:
-        print(f"[ERROR] Reviews file not found: {reviews_file}")
+    df = load_collection(collection_id)
+    if "asin" not in df.columns or "review_text" not in df.columns or "review_date" not in df.columns:
+        print("[!] Missing required columns in dataset.")
         return
 
-    try:
-        sentiment_df = pd.read_csv(sentiments_file)
-        has_sentiment = True
-    except FileNotFoundError:
-        has_sentiment = False
+    print(f"\n[🔍] Authenticity analysis for collection: {collection_id}")
 
-    results = []
+    # Step 1: Length-based heuristics
+    df["text_length"] = df["review_text"].astype(str).apply(len)
+    too_short = df["text_length"] < 20
+    too_long = df["text_length"] > 1000
 
-    for asin in df['asin'].unique():
-        df_asin = df[df['asin'] == asin]
-        if len(df_asin) < 10:
-            continue
+    # Step 2: High review frequency per ASIN per day
+    df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+    freq_counts = df.groupby(["asin", "review_date"]).size()
+    high_volume_pairs = freq_counts[freq_counts > 10].index
 
-        score = 0
+    # Step 3: Duplicate review texts
+    duplicates = df["review_text"].duplicated(keep=False)
 
-        # Rule 1: Abnormally high % of short reviews
-        short_ratio = (df_asin['review_text'].fillna('').str.len() < 20).mean()
-        if short_ratio > 0.4:
-            score += 1
+    # Flagging logic
+    flags = defaultdict(list)
+    for i, row in df.iterrows():
+        if too_short[i]:
+            flags[i].append("short")
+        if too_long[i]:
+            flags[i].append("long")
+        if (row["asin"], row["review_date"]) in high_volume_pairs:
+            flags[i].append("high_volume")
+        if duplicates[i]:
+            flags[i].append("duplicate")
 
-        # Rule 2: High % of reviews with same length (possible duplication)
-        lengths = df_asin['review_text'].fillna('').str.len()
-        mode_len = lengths.mode().iloc[0]
-        same_len_ratio = (lengths == mode_len).mean()
-        if same_len_ratio > 0.3:
-            score += 1
+    df["auth_flag"] = df.index.map(lambda i: ",".join(flags[i]) if flags[i] else "")
 
-        # Rule 3: Timing bursts (many reviews in few days)
-        df_asin['date'] = pd.to_datetime(df_asin['date'], errors='coerce')
-        date_counts = df_asin['date'].value_counts()
-        if date_counts.max() > len(df_asin) * 0.25:
-            score += 1
+    print(f" - Reviews too short: {too_short.sum()}")
+    print(f" - Reviews too long: {too_long.sum()}")
+    print(f" - High-volume days: {len(high_volume_pairs)}")
+    print(f" - Duplicated reviews: {duplicates.sum()}")
+    print(f"\n[ℹ️] Total flagged reviews: {(df['auth_flag'] != '').sum()}")
 
-        # Rule 4: Abnormally low % of verified purchases
-        if 'verified' in df_asin.columns:
-            verified_ratio = df_asin['verified'].astype(str).str.lower().eq("true").mean()
-            if verified_ratio < 0.5:
-                score += 1
+    save_collection(None, f"authcheck__{collection_id}", df)
+    print(f"[💾] Saved flagged data as: authcheck__{collection_id}.csv")
+    print("\n[✅] Authenticity check completed.")
 
-        # Rule 5: Sentiment mismatch (if sentiment available)
-        if has_sentiment:
-            df_sent = sentiment_df[sentiment_df["asin"] == asin]
-            merged = df_sent.merge(df_asin[["review_id", "rating"]], on="review_id", how="inner")
-            if not merged.empty:
-                merged['diff'] = abs(merged['sentiment_score'] - merged['rating'])
-                mismatch_ratio = (merged['diff'] > 2).mean()
-                if mismatch_ratio > 0.3:
-                    score += 1
+def explore_flagged_reviews(collection_id):
+    """
+    Позволяет пользователю просмотреть отзывы с флагами и отфильтровать их по типу.
+    """
+    df = load_collection(collection_id)
+    if "auth_flag" not in df.columns:
+        print("[!] No 'auth_flag' column found in dataset.")
+        return
 
-        results.append({
-            "asin": asin,
-            "suspicion_score": score
-        })
+    print(f"\n[📂] Reviewing flagged collection: {collection_id}")
+    all_flags = df["auth_flag"].str.split(",", expand=True).stack().value_counts()
+    print("Available flags and counts:")
+    for flag, count in all_flags.items():
+        print(f" - {flag}: {count}")
 
-    df_score = pd.DataFrame(results)
-    df_score.to_csv(os.path.join(base_path, "trustworthiness_scores.csv"), index=False)
+    flag_filter = input("Enter flag to filter by (or press Enter to view all): ").strip()
+    if flag_filter:
+        filtered = df[df["auth_flag"].str.contains(flag_filter)]
+        print(f"\nShowing {len(filtered)} reviews with flag '{flag_filter}':")
+    else:
+        filtered = df[df["auth_flag"] != ""]
+        print(f"\nShowing all {len(filtered)} flagged reviews:")
 
-    # Visualize
-    plt.figure(figsize=(10, 6))
-    sns.barplot(data=df_score.sort_values("suspicion_score", ascending=False),
-                x="asin", y="suspicion_score", palette="Reds_d")
-    plt.title("Review Authenticity Risk Score (0 = High Trust, 5 = Highly Suspicious)")
-    plt.ylabel("Suspicion Score")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-
-    out_path = os.path.join(output_path, "trustworthiness_curve.png")
-    plt.savefig(out_path)
-    plt.close()
-
-    print(f"[INFO] Trustworthiness analysis completed. Plot saved to: {out_path}")
+    for i, row in filtered.iterrows():
+        print(f"\nASIN: {row.get('asin', '')}")
+        print(f"Date: {row.get('review_date', '')}")
+        print(f"Flags: {row['auth_flag']}")
+        print(f"Review: {row.get('review_text', '')[:300]}...")

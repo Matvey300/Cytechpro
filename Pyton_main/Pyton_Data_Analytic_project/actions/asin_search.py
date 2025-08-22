@@ -2,6 +2,8 @@ import requests
 import pandas as pd
 import json
 from pathlib import Path
+from datetime import datetime
+from core.collection_io import save_collection
 
 def fetch_amazon_categories(keyword):
     """
@@ -114,3 +116,11 @@ def run_asin_search(session):
     df = pd.DataFrame(all_asins)
     session.df_asin = df
     print(f"[✅] Fetched {len(df)} ASINs and added to current session.")
+    
+    # Auto-generated collection name
+    timestamp = datetime.now().strftime("%y%m%d_%H%M")
+    first_category = selected_categories[0].split(" > ")[-1]
+    collection_name = f"{timestamp}__{first_category}"
+
+    save_collection(session, collection_name, df)
+    print(f"[💾] Collection saved as: {collection_name}.csv")

@@ -65,3 +65,11 @@ def select_collection(session: SessionState) -> SessionState:
 
     print("Invalid selection.")
     return select_collection(session)
+
+def save_collection(session: SessionState, collection_id: str, df: pd.DataFrame):
+    collection_path = COLLECTIONS_DIR / f"{collection_id}.csv"
+    collection_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+    df.to_csv(collection_path, index=False)
+    session.collection_id = collection_id
+    session.collection_path = collection_path
+    session.df_asin = df

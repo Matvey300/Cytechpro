@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
+# -*- coding: utf-8 -*-
 def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
     """
     Plots dynamics of rating, review count, price, and sentiment for a given ASIN collection.
@@ -13,7 +14,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         collection_id (str): ID of the ASIN collection
         data_dir (str): Base directory for data (default = "Out")
 
-    Outputs:
+    Output:
         Saves line plots to Out/<collection_id>/plots/
     """
     base_path = os.path.join(data_dir, collection_id)
@@ -34,7 +35,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
 
     asin_list = df_snapshots['asin'].unique()
 
-    # Load sentiment data if available
+    # Attempt to load sentiment data if available
     try:
         df_sentiments = pd.read_csv(sentiment_file, parse_dates=["date"])
         has_sentiment = True
@@ -43,6 +44,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         has_sentiment = False
 
     for asin in asin_list:
+        # Skip ASINs with insufficient data
         df_asin = df_snapshots[df_snapshots['asin'] == asin].sort_values("date")
 
         if len(df_asin) < 2:
@@ -54,6 +56,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         if "price" in df_asin.columns:
             plt.plot(df_asin["date"], df_asin["price"], marker="^", label="Price")
 
+        # Check if sentiment data is available
         if has_sentiment:
             df_sent_asin = df_sentiments[df_sentiments["asin"] == asin].sort_values("date")
             if not df_sent_asin.empty:
