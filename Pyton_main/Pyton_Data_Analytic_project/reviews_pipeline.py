@@ -17,6 +17,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+"""
+This module handles the automated collection of Amazon product reviews via Selenium,
+including login handling, HTML capture, local parsing via BeautifulSoup, deduplication,
+and structured output to CSV.
+"""
 
 HEADERS = {
     "Accept": "application/json"
@@ -45,6 +50,7 @@ def collect_reviews_for_asins(
     chrome_options.add_argument('--disable-gpu')
 
     print("[🔐] Please log into Amazon in the opened Chrome window.")
+    # Attempt login with existing profile, fallback to temporary if unavailable
     try:
         driver = webdriver.Chrome(options=chrome_options)
     except Exception as e:
@@ -66,6 +72,7 @@ def collect_reviews_for_asins(
         else:
             raise e
     driver.get(f"https://www.amazon.{marketplace}/")
+    # Always sort by 'recent' to capture latest reviews and avoid duplicates
     driver.get(f"https://www.amazon.{marketplace}/product-reviews/{df_asin.iloc[0]['asin']}?sortBy=recent")
     input("Press [Enter] when you have completed login...")  
 
@@ -182,6 +189,7 @@ def collect_reviews_for_asins(
             print(f"[WARN] Existing file {reviews_path} is unreadable or empty. Overwriting.")
 
     df_reviews.to_csv(reviews_path, index=False)
+    # After saving to CSV, cleanup all downloaded HTML files for space efficiency
     if df_reviews.shape[0] > 0:
         for asin in df_asin["asin"]:
             for html_file in html_dir.glob(f"{collection_id}__{asin}_p*.html"):
