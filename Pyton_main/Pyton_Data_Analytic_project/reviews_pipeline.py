@@ -120,7 +120,7 @@ def collect_reviews_for_asins(
                     break
 
             WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.a-section.review.aok-relative"))
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "li[data-hook='review']"))
             )
             print(f"[DEBUG] Waiting complete: found review blocks for ASIN {asin} on page {page}")
 
@@ -133,7 +133,7 @@ def collect_reviews_for_asins(
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 print(f"[DEBUG] Loaded URL: {driver.current_url}")
                 print("[DEBUG] Page snippet:", driver.page_source[:1000])
-                review_blocks = soup.find_all("div", class_="a-section review aok-relative")
+                review_blocks = soup.select("li[data-hook='review']")
                 if not review_blocks:
                     print(f"[STOP] No review blocks found. Stopping pagination for ASIN {asin}")
                     break
