@@ -34,6 +34,11 @@ def collect_reviews_for_asins(
     )
 
     if not is_logged_in(driver):
+        try:
+            driver.current_url  # Check if browser session is still alive
+        except Exception:
+            print("[❌] Chrome window was closed before login confirmation. Please try again.")
+            return pd.DataFrame(), {}
         raise RuntimeError("Not logged in to Amazon in Chrome profile.")
 
     all_reviews = []
