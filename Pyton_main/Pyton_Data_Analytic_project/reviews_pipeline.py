@@ -1,208 +1,253 @@
 import os
+import csv
 import time
-import json
-import pandas as pd
-import requests
+import datetime
 from pathlib import Path
-from typing import List, Tuple
-
-from core.env_check import validate_environment
-
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    WebDriverException,
+)
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-"""
-This module handles the automated collection of Amazon product reviews via Selenium,
-including login handling, HTML capture, local parsing via BeautifulSoup, deduplication,
-and structured output to CSV.
-"""
+class ReviewsPipeline:
+    def __init__(self, collection_dir, chrome_profile_dir=None, headless=True, timeout=15):
+        self.collection_dir = Path(collection_dir)
+        self.rawdata_dir = self.collection_dir / "RawData"
+        self.rawdata_dir.mkdir(parents=True, exist_ok=True)
+        self.chrome_profile_dir = chrome_profile_dir
+        self.headless = headless
+        self.timeout = timeout
+        self.driver = None
 
-HEADERS = {
-    "Accept": "application/json"
-}
+    def _init_driver(self):
+        options = Options()
+        if self.headless:
+            options.add_argument("--headless=new")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        if self.chrome_profile_dir:
+            options.add_argument(f"user-data-dir={self.chrome_profile_dir}")
+        try:
+            self.driver = webdriver.Chrome(options=options)
+            self.driver.set_page_load_timeout(self.timeout)
+        except WebDriverException as e:
+            print(f"Error initializing Chrome driver: {e}")
+            raise
 
-
-def collect_reviews_for_asins(
-    df_asin: pd.DataFrame,
-    max_reviews_per_asin: int,
-    marketplace: str,
-    out_dir: Path,
-    collection_id: str
-) -> Tuple[pd.DataFrame, dict]:
-
-    if out_dir.exists() and not out_dir.is_dir():
-        raise RuntimeError(f"[ERROR] Path '{out_dir}' exists as a file, not directory. Please remove it manually.")
-
-    base_dir = out_dir
-    html_dir = base_dir / "RawData"
-
-    chrome_options = Options()
-    chrome_options.add_argument(f'--user-data-dir={os.getenv("CHROME_USER_DATA_DIR")}')
-    chrome_options.add_argument(f'--profile-directory={os.getenv("CHROME_PROFILE_DIR")}')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-
-    print("[🔐] Please log into Amazon in the opened Chrome window.")
-    # Attempt login with existing profile, fallback to temporary if unavailable
-    try:
-        driver = webdriver.Chrome(options=chrome_options)
-    except Exception as e:
-        print("[❌] Failed to start Chrome with the selected user profile.")
-        print("This usually happens if Chrome is already running with that profile.")
-        print("Please close all Chrome windows or choose another profile.")
-        choice = input("Do you want to try with a temporary profile instead? (y/n): ").strip().lower()
-        if choice == "y" or choice == "":
-            temp_options = Options()
-            temp_options.add_argument("--no-sandbox")
-            temp_options.add_argument("--disable-dev-shm-usage")
-            temp_options.add_argument("--disable-gpu")
+    def _close_driver(self):
+        if self.driver:
             try:
-                driver = webdriver.Chrome(options=temp_options)
-                print("[🧪] Started Chrome with temporary profile. You will need to log in manually.")
-            except Exception as e2:
-                print("[❌] Failed to launch Chrome even with temporary profile.")
-                raise e2
-        else:
-            raise e
-    driver.get(f"https://www.amazon.{marketplace}/")
-    # Always sort by 'recent' to capture latest reviews and avoid duplicates
-    driver.get(f"https://www.amazon.{marketplace}/product-reviews/{df_asin.iloc[0]['asin']}?sortBy=recent")
-    input("Press [Enter] when you have completed login...")  
-
-    print(f"[INFO] Starting review collection for {len(df_asin)} ASINs...")
-
-    all_reviews = []
-    per_cat_counts = {}
-
-    for i, row in df_asin.iterrows():
-        asin = row["asin"]
-        cat = row.get("category_path", "unknown")
-        print(f"[INFO] [{i+1}/{len(df_asin)}] Fetching reviews for ASIN: {asin}")
-
-        reviews = []
-        page = 1
-        seen_ids = set()
-
-        # Count previous reviews for this ASIN from the output file, if any
-        if base_dir.exists() and not base_dir.is_dir():
-            raise RuntimeError(f"[ERROR] Path '{base_dir}' exists as a file, not directory. Please remove it manually.")
-        base_dir.mkdir(parents=True, exist_ok=True)
-        html_dir.mkdir(parents=True, exist_ok=True)
-        reviews_path = base_dir / f"{collection_id}__reviews.csv"
-        previous_reviews_count = 0
-        if reviews_path.exists() and reviews_path.stat().st_size > 0:
-            try:
-                existing = pd.read_csv(reviews_path)
-                previous_reviews_count = existing[existing["asin"] == asin].shape[0]
+                self.driver.quit()
             except Exception:
-                previous_reviews_count = 0
-        fetched = 0
-        max_pages = int(((max_reviews_per_asin - previous_reviews_count) / 10) + 2)
+                pass
+            self.driver = None
 
-        while page <= max_pages:
-            print(f"[DEBUG] Loading page {page} for ASIN {asin} (max {max_pages})")
-            if page == 1:
-                driver.get(f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent")
-            else:
-                try:
-                    next_button = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
-                    driver.execute_script("arguments[0].click();", next_button)
-                    print(f"[DEBUG] Clicked 'Next' for ASIN {asin}, moving to page {page}")
-                except Exception:
-                    print(f"[WARN] 'Next' button not found or not clickable for ASIN {asin}")
-                    break
-
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "li[data-hook='review']"))
+    def _wait_for_element(self, by, identifier):
+        try:
+            element = WebDriverWait(self.driver, self.timeout).until(
+                EC.presence_of_element_located((by, identifier))
             )
-            print(f"[DEBUG] Waiting complete: found review blocks for ASIN {asin} on page {page}")
+            return element
+        except TimeoutException:
+            return None
+
+    def _get_reviews_from_page(self, asin, category):
+        reviews = []
+        review_blocks = self.driver.find_elements(By.CSS_SELECTOR, "div[data-hook='review']")
+        for block in review_blocks:
+            try:
+                author = block.find_element(By.CSS_SELECTOR, "span.a-profile-name").text.strip()
+            except NoSuchElementException:
+                author = ""
 
             try:
-                html_path = html_dir / f"{collection_id}__{asin}_p{page}.html"
-                with open(html_path, "w", encoding="utf-8") as f:
-                    f.write(driver.page_source)
-                soup = BeautifulSoup(driver.page_source, "html.parser")
-                print(f"[DEBUG] Loaded URL: {driver.current_url}")
-                review_blocks = soup.select("li[data-hook='review']")
-                if not review_blocks:
-                    print(f"[INFO] No review blocks found. Stopping pagination for ASIN {asin}")
-                    break
-                print(f"[DEBUG] Found {len(review_blocks)} review blocks on page {page}")
+                location = block.find_element(By.CSS_SELECTOR, "span.review-date").text.strip()
+                # location is usually embedded in review-date text, e.g. "Reviewed in the United States on June 1, 2023"
+                # We'll try to extract location and date separately
+                # Example format: "Reviewed in the United States on June 1, 2023"
+                # or "Reviewed in Canada 🇨🇦 on June 1, 2023"
+                # We'll split by 'on' to separate location and date
+                if "on" in location:
+                    parts = location.split("on")
+                    location = parts[0].replace("Reviewed in", "").strip()
+                    date_str = parts[1].strip()
+                else:
+                    location = ""
+                    date_str = location
+            except NoSuchElementException:
+                location = ""
+                date_str = ""
 
-                new_valid = []
-                for block in review_blocks:
-                    rid = block.get("id")
-                    if rid and rid not in seen_ids:
-                        seen_ids.add(rid)
-                        review = {
-                            "id": rid,
-                            "asin": asin,
-                            "category_path": cat,
-                            "title": block.select_one("a[data-hook=review-title]").text.strip() if block.select_one("a[data-hook=review-title]") else "",
-                            "rating": block.select_one("i[data-hook=review-star-rating]").text.strip() if block.select_one("i[data-hook=review-star-rating]") else "",
-                            "text": block.select_one("span[data-hook=review-body]").text.strip() if block.select_one("span[data-hook=review-body]") else "",
-                            "author": block.select_one("span.a-profile-name").text.strip() if block.select_one("span.a-profile-name") else "",
-                            "verified_purchase": bool(block.select_one("span[data-hook=avp-badge]") and "Verified Purchase" in block.select_one("span[data-hook=avp-badge]").text),
-                            "helpful_votes": (
-                                1 if (hv := block.select_one("span[data-hook=helpful-vote-statement]")) and "One person found" in hv.text
-                                else int(hv.text.split()[0].replace(",", "")) if hv and "people found" in hv.text
-                                else 0
-                            ),
-                            "location": (
-                                block.select_one("span[data-hook=review-date]").text.strip().split(" in ")[-1].split(" on ")[0].strip()
-                                if block.select_one("span[data-hook=review-date]") and " in " in block.select_one("span[data-hook=review-date]").text else ""
-                            ),
-                            "date": (
-                                block.select_one("span[data-hook=review-date]").text.strip().split(" on ")[-1].strip()
-                                if block.select_one("span[data-hook=review-date]") and " on " in block.select_one("span[data-hook=review-date]").text else ""
-                            )
-                        }
-                        new_valid.append(review)
+            # Parse date to ISO format
+            date_iso = ""
+            if date_str:
+                try:
+                    date_obj = datetime.datetime.strptime(date_str, "%B %d, %Y")
+                    date_iso = date_obj.date().isoformat()
+                except ValueError:
+                    # try alternative date format
+                    try:
+                        date_obj = datetime.datetime.strptime(date_str, "%b %d, %Y")
+                        date_iso = date_obj.date().isoformat()
+                    except ValueError:
+                        date_iso = ""
 
-                print(f"[DEBUG] Skipped {len(review_blocks) - len(new_valid)} duplicate reviews on page {page}")
+            try:
+                rating_str = block.find_element(By.CSS_SELECTOR, "i[data-hook='review-star-rating'] span").text.strip()
+                # rating_str like "5.0 out of 5 stars"
+                rating = float(rating_str.split()[0])
+            except (NoSuchElementException, ValueError):
+                rating = None
 
-                if not new_valid:
-                    print(f"[INFO] No new unique reviews found on page {page}. Stopping pagination.")
-                    print(f"[INFO] Stopping pagination: no new content or end of pages.")
-                    break
+            try:
+                title = block.find_element(By.CSS_SELECTOR, "a[data-hook='review-title'] span").text.strip()
+            except NoSuchElementException:
+                title = ""
 
-                reviews.extend(new_valid)
-                fetched = len(reviews)
-                time.sleep(1.5)
+            try:
+                body = block.find_element(By.CSS_SELECTOR, "span[data-hook='review-body'] span").text.strip()
+            except NoSuchElementException:
+                body = ""
 
-                page += 1
+            try:
+                vp_text = block.find_element(By.CSS_SELECTOR, "span[data-hook='avp-badge']").text.strip()
+                verified_purchase = vp_text.lower() == "verified purchase"
+            except NoSuchElementException:
+                verified_purchase = False
 
-            except Exception as e:
-                print(f"[ERROR] Failed to fetch page {page} for ASIN {asin}: {e}")
+            try:
+                helpful_votes_text = block.find_element(By.CSS_SELECTOR, "span[data-hook='helpful-vote-statement']").text.strip()
+                # Examples: "1 person found this helpful", "2 people found this helpful"
+                helpful_votes = 0
+                if helpful_votes_text:
+                    helpful_votes = int(helpful_votes_text.split()[0].replace(",", ""))
+            except (NoSuchElementException, ValueError):
+                helpful_votes = 0
+
+            reviews.append({
+                "asin": asin,
+                "author": author,
+                "location": location,
+                "date": date_iso,
+                "rating": rating,
+                "title": title,
+                "body": body,
+                "verified_purchase": verified_purchase,
+                "helpful_votes": helpful_votes,
+                "category": category,
+            })
+        return reviews
+
+    def _save_html(self, asin, page_num, html):
+        filename = self.rawdata_dir / f"{asin}_page_{page_num}.html"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(html)
+
+    def _save_reviews_csv(self, reviews):
+        today_str = datetime.datetime.now().strftime("%Y%m%d")
+        csv_path = self.collection_dir / f"reviews_{today_str}.csv"
+        file_exists = csv_path.exists()
+        with open(csv_path, "a", newline="", encoding="utf-8") as csvfile:
+            fieldnames = ["asin", "author", "location", "date", "rating", "title", "body",
+                          "verified_purchase", "helpful_votes", "category"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            for r in reviews:
+                writer.writerow(r)
+
+    def scrape_reviews_for_asin(self, asin, category=None, max_pages=100):
+        if not self.driver:
+            self._init_driver()
+        base_url = f"https://www.amazon.com/product-reviews/{asin}/?pageNumber="
+        page_num = 1
+        total_reviews_collected = 0
+        print(f"Starting scraping for ASIN: {asin}")
+        while page_num <= max_pages:
+            url = base_url + str(page_num)
+            try:
+                self.driver.get(url)
+            except TimeoutException:
+                print(f"Timeout loading page {page_num} for ASIN {asin}, retrying...")
+                continue
+            except WebDriverException as e:
+                print(f"WebDriverException on page {page_num} for ASIN {asin}: {e}")
                 break
 
-        print(f"[INFO] Collected {len(reviews)} reviews for ASIN: {asin}")
-        all_reviews.extend(reviews)
-        per_cat_counts[cat] = per_cat_counts.get(cat, 0) + len(reviews)
+            time.sleep(2)  # Wait for page to load some content
 
-    if not all_reviews:
-        print("[INFO] No reviews were collected for the selected ASINs. Check if login was successful or if reviews are available.")
-    df_reviews = pd.DataFrame(all_reviews)
+            try:
+                bsr_element = self.driver.find_element(By.CSS_SELECTOR, "#cm_cr-product_info .a-row.a-spacing-mini span.a-size-base")
+                bsr_text = bsr_element.text.strip()
+            except NoSuchElementException:
+                bsr_text = ""
 
-    if reviews_path.exists() and reviews_path.stat().st_size > 0:
+            try:
+                price_element = self.driver.find_element(By.CSS_SELECTOR, "#cm_cr-product_info .a-size-base.a-color-price")
+                price_text = price_element.text.strip()
+            except NoSuchElementException:
+                price_text = ""
+
+            try:
+                total_reviews_element = self.driver.find_element(By.CSS_SELECTOR, "#cm_cr-product_info .a-size-base.cr-vote-text")
+                total_reviews = total_reviews_element.text.strip()
+            except NoSuchElementException:
+                total_reviews = ""
+
+            print(f"[META] BSR: {bsr_text}, Price: {price_text}, Total reviews: {total_reviews}")
+
+            # Check if page contains reviews or "no reviews" message
+            no_reviews = self.driver.find_elements(By.CSS_SELECTOR, "div.a-row.a-spacing-base.a-color-secondary")
+            if no_reviews:
+                text = no_reviews[0].text.lower()
+                if "no reviews" in text or "did not match any reviews" in text:
+                    print(f"No more reviews found at page {page_num} for ASIN {asin}. Stopping.")
+                    break
+
+            html = self.driver.page_source
+            self._save_html(asin, page_num, html)
+
+            reviews = self._get_reviews_from_page(asin, category)
+            if not reviews:
+                print(f"No reviews parsed on page {page_num} for ASIN {asin}. Stopping.")
+                break
+
+            self._save_reviews_csv(reviews)
+            total_reviews_collected += len(reviews)
+
+            print(f"ASIN {asin} - Page {page_num} scraped, {len(reviews)} reviews collected.")
+
+            # Check if there is a next page
+            try:
+                next_li = self.driver.find_element(By.CSS_SELECTOR, "li.a-last")
+                if "a-disabled" in next_li.get_attribute("class"):
+                    print(f"No next page after page {page_num} for ASIN {asin}.")
+                    break
+                try:
+                    next_li.find_element(By.TAG_NAME, "a").click()
+                except NoSuchElementException:
+                    print(f"No clickable link in next page button on page {page_num} for ASIN {asin}.")
+                    break
+            except NoSuchElementException:
+                print(f"No next page button found on page {page_num} for ASIN {asin}.")
+                break
+
+            page_num += 1
+
+        print(f"Finished scraping ASIN {asin}. Total reviews collected: {total_reviews_collected}")
+
+    def scrape_multiple_asins(self, asin_list, category=None, max_pages=100):
         try:
-            existing = pd.read_csv(reviews_path)
-            df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
-        except pd.errors.EmptyDataError:
-            print(f"[WARN] Existing file {reviews_path} is unreadable or empty. Overwriting.")
-
-    df_reviews.to_csv(reviews_path, index=False)
-    # After saving to CSV, cleanup all downloaded HTML files for space efficiency
-    if df_reviews.shape[0] > 0:
-        for asin in df_asin["asin"]:
-            for html_file in html_dir.glob(f"{collection_id}__{asin}_p*.html"):
-                html_file.unlink(missing_ok=True)
-    print(f"\n[INFO] Review collection complete. Saved to: {reviews_path}")
-    return df_reviews, per_cat_counts
+            self._init_driver()
+            for asin in asin_list:
+                self.scrape_reviews_for_asin(asin, category, max_pages)
+        finally:
+            self._close_driver()
