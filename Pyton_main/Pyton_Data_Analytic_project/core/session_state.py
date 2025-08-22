@@ -72,3 +72,7 @@ class SessionState:
     @df_asin.setter
     def df_asin(self, value: pd.DataFrame):
         self._state["df_asin"] = value
+
+    def get_marketplace(self) -> str:
+        """Temporary default marketplace getter. Returns 'com' for Amazon US."""
+        return "com"
