@@ -32,9 +32,7 @@ def main_menu():
 
         if choice == "1":
             select_collection(session)
-            session.ensure_collection_dir()
         elif choice == "2":
-            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_review_collection(session)
             else:
@@ -42,19 +40,16 @@ def main_menu():
         elif choice == "3":
             run_asin_search(session)
         elif choice == "4":
-            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_daily_screening(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "5":
-            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_plotting(session)
             else:
                 print("[!] Please load a collection first.")
         elif choice == "6":
-            session.ensure_collection_dir()
             if session.df_asin is not None:
                 run_correlation_analysis(session)
             else:
