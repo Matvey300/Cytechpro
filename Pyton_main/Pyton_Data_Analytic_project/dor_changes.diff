@@ -1,0 +1,30 @@
+diff --git a/actions/asin_search.py b/actions/asin_search.py
+index e69de29..d8a1d1e 100644
+--- a/actions/asin_search.py
++++ b/actions/asin_search.py
+@@ -1,6 +1,8 @@
+ import requests
+ import pandas as pd
+ import json
+ from pathlib import Path
++from datetime import datetime
++from core.collection_io import save_collection
+
+ def fetch_amazon_categories(keyword):
+     """
+@@ def run_asin_search(session):
+     if not all_asins:
+         print("[!] No ASINs found.")
+         return
+
+     df = pd.DataFrame(all_asins)
+     session.df_asin = df
+     print(f"[✅] Fetched {len(df)} ASINs and added to current session.")
++
++    # Автоматическое имя для коллекции
++    timestamp = datetime.now().strftime("%y%m%d_%H%M")
++    first_category = selected_categories[0].split(" > ")[-1]
++    collection_name = f"{timestamp}__{first_category}"
++
++    save_collection(session, collection_name, df)
++    print(f"[💾] Collection saved as: {collection_name}.csv")
