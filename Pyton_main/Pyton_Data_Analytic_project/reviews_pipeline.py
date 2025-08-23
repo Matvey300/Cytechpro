@@ -171,7 +171,8 @@ def collect_reviews_for_asins(
                             date_tag = div.select_one('span[data-hook="review-date"]')
                             if date_tag:
                                 date_text = date_tag.text.strip()
-                                review['review_date'] = dateparser.parse(date_text).date()
+                                date_clean = re.sub(r'^Reviewed in .* on ', '', date_text)
+                                review['review_date'] = dateparser.parse(date_clean).date()
                                 if " in " in date_text:
                                     review['review_location'] = date_text.split(" in ")[-1].split(" on ")[0].strip()
                                 else:
