@@ -80,7 +80,7 @@ def main():
 
 
 # --- Authenticity analysis function ---
-def analyze_review_authenticity(collection_id):
+def analyze_review_authenticity(session):
     """
     Unified Review Authenticity Test based on 3 heuristics:
     1. Suspicious review length (too short or too long).
@@ -88,13 +88,14 @@ def analyze_review_authenticity(collection_id):
     3. Duplicate review content across the dataset.
     """
     from collections import defaultdict
-    from core.collection_io import load_collection, save_collection
+    from core.collection_io import save_collection
 
-    df = load_collection(collection_id)
-    if "asin" not in df.columns or "review_text" not in df.columns or "review_date" not in df.columns:
-        print("[!] Missing required columns in dataset.")
+    df = session.df_reviews
+    if df is None or df.empty:
+        print("[!] No review data found in session.")
         return
 
+    collection_id = session.collection_id
     print(f"\n[🔍] Authenticity analysis for collection: {collection_id}")
 
     # Step 1: Length-based heuristics
@@ -190,5 +191,5 @@ def explore_flagged_reviews(collection_id):
 
 
 # --- Wrapper function as requested ---
-def detect_suspicious_reviews(collection_id):
-    return analyze_review_authenticity(collection_id)
+def detect_suspicious_reviews(session):
+    return analyze_review_authenticity(session)
