@@ -118,6 +118,7 @@ def collect_reviews_for_asins(
 
                     # Parse reviews on current page
                     review_divs = soup.select('div[data-hook="review"]')
+                    print(f"[{asin}] Found {len(review_divs)} review blocks on page {current_page}")
                     for div in review_divs:
                         review = {
                             'asin': asin,
@@ -135,7 +136,7 @@ def collect_reviews_for_asins(
                         }
 
                         try:
-                            title_tag = div.select_one('a[data-hook="review-title"] span')
+                            title_tag = div.select_one('a[data-hook="review-title"]') or div.select_one('span[data-hook="review-title"]')
                             if title_tag:
                                 review['review_title'] = title_tag.text.strip()
                         except Exception as e:
@@ -165,13 +166,16 @@ def collect_reviews_for_asins(
                             print(f"[{asin}] Error parsing date: {e}")
 
                         try:
-                            review_text_tag = div.select_one('span[data-hook="review-body"] span')
+                            review_text_tag = div.select_one('span[data-hook="review-body"]')
                             if review_text_tag:
                                 review['review_text'] = review_text_tag.text.strip()
                         except Exception as e:
                             print(f"[{asin}] Error parsing review text: {e}")
 
                         reviews.append(review)
+
+                    if not reviews:
+                        print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.")
 
                     # Check if next page exists and navigate
                     try:
