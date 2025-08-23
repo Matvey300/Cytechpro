@@ -92,6 +92,7 @@ def analyze_review_authenticity(session):
     import seaborn as sns
 
     df = session.df_reviews
+    df = df.rename(columns={"review_rating": "rating"})
     if df is None or df.empty:
         print("[!] No review data found in session.")
         return
