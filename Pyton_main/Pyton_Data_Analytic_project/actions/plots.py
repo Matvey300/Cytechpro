@@ -29,5 +29,10 @@ def run_plotting(session: SessionState):
         print("[!] No review data available for plotting.")
         return
 
-    plot_review_dynamics(session.df_asin, session.df_reviews)
+    plot_review_dynamics(
+        df_asin=session.df_asin,
+        df_reviews=session.df_reviews,
+        collection_id=session.collection_id,
+        data_dir=session.collection_path
+    )
     print("✅ Done.")
