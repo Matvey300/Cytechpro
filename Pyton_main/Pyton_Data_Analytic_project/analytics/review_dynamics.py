@@ -6,34 +6,23 @@ import seaborn as sns
 import os
 
 # -*- coding: utf-8 -*-
-def plot_review_dynamics(collection_id: str, data_dir: str = "collections"):
+def plot_review_dynamics(df_snapshot: pd.DataFrame, collection_id: str, data_dir: str = "collections"):
     """
     Plots dynamics of rating, review count, price, and sentiment for a given ASIN collection.
 
     Parameters:
+        df_snapshot (pd.DataFrame): DataFrame containing snapshot data
         collection_id (str): ID of the ASIN collection
         data_dir (str): Base directory for data (default = "Out")
 
     Output:
         Saves line plots to Out/<collection_id>/plots/
     """
-    base_path = os.path.join(data_dir, collection_id)
-    snapshots_file = os.path.join(base_path, "daily_snapshots.csv")
-    sentiment_file = os.path.join(base_path, "review_sentiments.csv")
-    output_dir = os.path.join(base_path, "plots")
+    sentiment_file = os.path.join(data_dir, collection_id, "review_sentiments.csv")
+    output_dir = os.path.join(data_dir, collection_id, "plots")
     os.makedirs(output_dir, exist_ok=True)
 
-    try:
-        df_snapshots = pd.read_csv(snapshots_file, parse_dates=["date"])
-    except FileNotFoundError:
-        print(f"[ERROR] File not found: {snapshots_file}")
-        return
-
-    if df_snapshots.empty:
-        print("[WARN] No snapshot data found.")
-        return
-
-    asin_list = df_snapshots['asin'].unique()
+    asin_list = df_snapshot['asin'].unique()
 
     # Attempt to load sentiment data if available
     try:
@@ -45,7 +34,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "collections"):
 
     for asin in asin_list:
         # Skip ASINs with insufficient data
-        df_asin = df_snapshots[df_snapshots['asin'] == asin].sort_values("date")
+        df_asin = df_snapshot[df_snapshot['asin'] == asin].sort_values("date")
 
         if len(df_asin) < 2:
             continue
