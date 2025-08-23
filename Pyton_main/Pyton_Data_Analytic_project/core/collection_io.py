@@ -30,17 +30,7 @@ def create_collection(session: SessionState) -> SessionState:
     return session
 
 def load_collection(name: str, session: SessionState) -> SessionState:
-    path = COLLECTIONS_DIR / name
-    csv_file = path / f"{name}.csv"
-    if not path.is_dir():
-        raise NotADirectoryError(f"Expected a directory at {path}, but found a file.")
-    if not csv_file.exists():
-        raise FileNotFoundError(f"No such collection: {name}")
-
-    df = pd.read_csv(csv_file)
-    session.collection_id = name
-    session.collection_path = path
-    session.df_asin = df
+    session.load_collection(name)
     return session
 
 def select_collection(session: SessionState) -> SessionState:
