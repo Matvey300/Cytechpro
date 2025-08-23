@@ -80,4 +80,10 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
 
         print("[INFO] Spike analysis complete. Plot and spike CSV saved.")
     else:
+
         print("[INFO] No spikes detected across ASINs.")
+
+
+# --- Sentiment analysis placeholder ---
+def run_sentiment_analysis():
+    print("[⚠] Sentiment analysis not yet implemented.")
