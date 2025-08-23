@@ -44,10 +44,14 @@ def run_main_menu(session):
             else:
                 print("[!] Failed to load a collection.")
         elif choice == "5":
-            if session.df_reviews is None:
-                session.load_reviews_and_snapshot()
+            if not session.collection_path:
+                session.load_collection()
+            if not session.collection_path:
+                print("[!] No collection loaded. Skipping analysis.")
+                continue
 
-            if session.df_reviews is None or session.df_reviews.empty:
+            session.load_reviews_and_snapshot()
+            if not session.has_reviews():
                 print("[!] Reviews not loaded or empty. Skipping analysis.")
                 continue
 
