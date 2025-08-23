@@ -19,9 +19,9 @@ def run_main_menu(session):
         print("1) Load or create ASIN collection")
         print("2) Collect reviews (max 500 per ASIN)")
         print("3) Search ASINs by keyword and category")
-        print("4) Take daily snapshot (price, rating, BSR)")
+        print("4) Take regular snapshot (price, rating, BSR)")
         print("5) Analyze and visualize reviews")
-        print("6) Run correlation analysis")
+        print("6) Run correlation analysis (price, rating, BSR) after accumulation of 30 days of regular snapshots")
         print("7) List saved collections")
         print("0) Exit")
 
