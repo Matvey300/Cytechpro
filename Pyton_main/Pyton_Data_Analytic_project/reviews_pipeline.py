@@ -299,10 +299,8 @@ def collect_reviews_for_asins(
 
     if snapshots:
         snapshot_df = pd.DataFrame(snapshots)
-        snapshots_dir = collection_dir / "daily_snapshots"
-        snapshots_dir.mkdir(parents=True, exist_ok=True)
         snapshot_filename = f"{datetime.now().strftime('%y%m%d_%H%M')}__{collection_id}__snapshot.csv"
-        snapshot_path = snapshots_dir / snapshot_filename
+        snapshot_path = collection_dir / snapshot_filename
         snapshot_df.to_csv(snapshot_path, index=False)
         print(f"[📈] Snapshot for {collection_id} saved: {snapshot_path}")
 
