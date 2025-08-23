@@ -6,7 +6,14 @@ COLLECTIONS_DIR = Path("collections")
 COLLECTIONS_DIR.mkdir(exist_ok=True)
 
 def list_collections() -> list[str]:
-    return sorted([f.name for f in COLLECTIONS_DIR.iterdir() if f.is_dir() and (f / f"{f.name}.csv").exists()])
+    valid_collections = []
+    for collection_dir in COLLECTIONS_DIR.iterdir():
+        if not collection_dir.is_dir():
+            continue
+        review_files = list(collection_dir.glob(f"*__{collection_dir.name}__reviews.csv"))
+        if review_files:
+            valid_collections.append(collection_dir.name)
+    return sorted(valid_collections)
 
 def create_collection(session: SessionState) -> SessionState:
     name = input("Enter a name for the new ASIN collection: ").strip()
