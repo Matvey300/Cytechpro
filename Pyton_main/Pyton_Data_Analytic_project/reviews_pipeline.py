@@ -25,6 +25,7 @@ def collect_reviews_for_asins(
 ) -> Tuple[pd.DataFrame, Dict[str, int]]:
     all_reviews = []
     stats = {}
+    snapshots = []
 
     collection_dir = out_dir / collection_id
     collection_dir.mkdir(parents=True, exist_ok=True)
@@ -111,15 +112,7 @@ def collect_reviews_for_asins(
                     'review_count': review_count,
                     'scan_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
-
-                # Save snapshot CSV
-                snapshot_df = pd.DataFrame([snapshot])
-                snapshots_dir = collection_dir / "daily_snapshots"
-                snapshots_dir.mkdir(parents=True, exist_ok=True)
-                snapshot_filename = f"{asin}_snapshot__{datetime.now().strftime('%y%m%d_%H%M')}.csv"
-                snapshot_path = snapshots_dir / snapshot_filename
-                snapshot_df.to_csv(snapshot_path, index=False)
-                print(f"[{asin}] Snapshot saved: {snapshot_path}")
+                snapshots.append(snapshot)
 
                 print(f"[{asin}] Loading first reviews page...")
                 url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent&pageNumber=1"
@@ -236,6 +229,11 @@ def collect_reviews_for_asins(
                     if not reviews:
                         print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.")
 
+                    # Check if reached max pages before trying to find next button
+                    if current_page >= max_pages:
+                        print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
+                        break
+
                     # Check if next page exists and navigate
                     try:
                         next_button = driver.find_element(By.CSS_SELECTOR, 'li.a-last a')
@@ -255,12 +253,17 @@ def collect_reviews_for_asins(
 
                         current_page += 1
                     except Exception:
-                        if current_page >= max_pages:
-                            print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
-                        elif current_page == 1:
+                        # if current_page >= max_pages:
+                        #     print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
+                        # elif current_page == 1:
+                        #     print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
+                        # else:
+                        #     print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
+                        # break
+                        if current_page == 1:
                             print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
                         else:
-                            print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
+                            print(f"[{asin}] No next button found. Pagination ended at page {current_page}.")
                         break
 
                 df = pd.DataFrame(reviews)
@@ -282,6 +285,15 @@ def collect_reviews_for_asins(
     finally:
         if driver:
             driver.quit()
+
+    if snapshots:
+        snapshot_df = pd.DataFrame(snapshots)
+        snapshots_dir = collection_dir / "daily_snapshots"
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_filename = f"{datetime.now().strftime('%y%m%d_%H%M')}__{collection_id}__snapshot.csv"
+        snapshot_path = snapshots_dir / snapshot_filename
+        snapshot_df.to_csv(snapshot_path, index=False)
+        print(f"[📈] Snapshot for {collection_id} saved: {snapshot_path}")
 
     if all_reviews:
         df_all = pd.concat(all_reviews, ignore_index=True)
