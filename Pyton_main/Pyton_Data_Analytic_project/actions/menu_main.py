@@ -37,15 +37,20 @@ def run_main_menu(session):
         elif choice == "3":
             run_asin_search(session)
         elif choice == "4":
+            if not session.is_collection_loaded():
+                session.load_collection()
             if session.is_collection_loaded():
                 run_daily_screening(session)
             else:
-                print("[!] Please load a collection first.")
+                print("[!] Failed to load a collection.")
         elif choice == "5":
+            if not session.is_collection_loaded():
+                session.load_collection()
             if session.is_collection_loaded():
+                session.load_reviews_and_snapshot()
                 run_plotting(session)
             else:
-                print("[!] Please load a collection first.")
+                print("[!] Failed to load a collection.")
         elif choice == "6":
             if session.is_collection_loaded():
                 run_correlation_analysis(session)
