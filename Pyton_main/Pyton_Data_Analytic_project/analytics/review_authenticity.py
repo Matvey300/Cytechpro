@@ -136,8 +136,7 @@ def analyze_review_authenticity(session):
     print(f" - Hyperactive reviewers: {(hyperactive_flags != '').sum()}")
     print(f"\n[ℹ️] Total flagged reviews: {(df['auth_flag'] != '').sum()}")
 
-    save_collection(None, f"authcheck__{collection_id}", df)
-    print(f"[💾] Saved flagged data as: authcheck__{collection_id}.csv")
+    
     print("\n[✅] Authenticity check completed.")
 
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
