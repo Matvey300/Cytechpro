@@ -140,52 +140,11 @@ def analyze_review_authenticity(session):
     
     print("\n[✅] Authenticity check completed.")
 
-    # Visualization
-    labels = [
-        "Too Short",
-        "Too Long",
-        "High-Volume Days",
-        "Duplicated",
-        "Hyperactive"
-    ]
-    values = [
-        too_short.sum(),
-        too_long.sum(),
-        len(high_volume_pairs),
-        duplicates.sum(),
-        (hyperactive_flags != "").sum()
-    ]
-
-    plt.figure(figsize=(8, 5))
-    bars = plt.bar(labels, values, color='steelblue')
-    plt.title(f'Authenticity Flags for {collection_id}')
-    plt.ylabel('Count')
-
-    for bar in bars:
-        yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.5, str(yval), ha='center', va='bottom')
-
-    plt.tight_layout()
-    plt.show()
-
-    # --- Enhanced Visualization by ASIN ---
+    # --- Pie charts for top 5 ASINs with most flags ---
     asin_flag_counts = df[df["auth_flag"] != ""].copy()
     asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
     exploded = asin_flag_counts.explode("auth_flag_list")
 
-    asin_flag_summary = exploded.groupby(["asin", "auth_flag_list"]).size().unstack(fill_value=0)
-    filtered = asin_flag_summary[asin_flag_summary.sum(axis=1) >= 2]
-
-    if not filtered.empty:
-        filtered.plot(kind="bar", stacked=True, figsize=(12, 6), colormap="tab10")
-        plt.title("ASINs with Multiple Authenticity Flags (>=2 total)")
-        plt.xlabel("ASIN")
-        plt.ylabel("Number of Flags")
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        plt.show()
-
-    # --- Pie charts for top 5 ASINs with most flags ---
     top_asins = exploded["asin"].value_counts().nlargest(5).index
     fig, axes = plt.subplots(1, len(top_asins), figsize=(5 * len(top_asins), 5))
 
