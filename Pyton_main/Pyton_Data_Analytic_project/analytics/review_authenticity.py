@@ -187,3 +187,8 @@ def explore_flagged_reviews(collection_id):
         print(f"Date: {row.get('review_date', '')}")
         print(f"Flags: {row['auth_flag']}")
         print(f"Review: {row.get('review_text', '')[:300]}...")
+
+
+# --- Wrapper function as requested ---
+def detect_suspicious_reviews(collection_id):
+    return analyze_review_authenticity(collection_id)
