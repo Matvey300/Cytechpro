@@ -32,11 +32,14 @@ class SessionState:
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
         asin_file = path / "asins.csv"
+        print(f"[DEBUG] Looking for ASIN file at: {asin_file}")
         if asin_file.exists():
+            print(f"[DEBUG] ASIN file found. Loading collection: {collection_id}")
             self.df_asin = pd.read_csv(asin_file)
             self.collection_id = collection_id
             self.collection_path = path
         else:
+            print(f"[DEBUG] ASIN file not found at: {asin_file}")
             print(f"[!] ASIN file not found for collection: {collection_id}")
 
     def load_full_context(self, collection_id: str):
