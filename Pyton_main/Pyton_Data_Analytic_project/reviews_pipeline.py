@@ -8,6 +8,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from dateutil import parser as dateparser
 from datetime import datetime
+from core import SESSION
 
 from math import ceil
 from pathlib import Path
@@ -319,4 +320,9 @@ def collect_reviews_for_asins(
         df_all = pd.DataFrame()
         print("No reviews collected for any ASIN.")
 
+    # Save session state before returning
+    from core import SESSION
+    SESSION.df_reviews = df_all
+    SESSION.df_snapshot = snapshot_df if snapshots else pd.DataFrame()
+    SESSION.save()
     return df_all, stats
