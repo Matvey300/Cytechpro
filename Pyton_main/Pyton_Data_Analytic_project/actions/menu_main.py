@@ -44,13 +44,13 @@ def run_main_menu(session):
             else:
                 print("[!] Failed to load a collection.")
         elif choice == "5":
-            if not session.is_collection_loaded():
-                print("[ℹ] No collection loaded. Select from saved collections:")
-                session.load_collection()
-            if not session.is_collection_loaded():
-                print("[!] No collection selected. Returning to main menu.")
+            if session.df_reviews is None:
+                session.load_reviews_and_snapshot()
+
+            if session.df_reviews is None or session.df_reviews.empty:
+                print("[!] Reviews not loaded or empty. Skipping analysis.")
                 continue
-            session.load_reviews_and_snapshot()
+
             from analytics.review_authenticity import detect_suspicious_reviews
             from analytics.reaction_pulse import run_sentiment_analysis
 
