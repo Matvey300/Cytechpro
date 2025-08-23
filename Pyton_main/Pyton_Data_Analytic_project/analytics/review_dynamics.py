@@ -6,7 +6,7 @@ import seaborn as sns
 import os
 
 # -*- coding: utf-8 -*-
-def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
+def plot_review_dynamics(collection_id: str, data_dir: str = "collections"):
     """
     Plots dynamics of rating, review count, price, and sentiment for a given ASIN collection.
 
