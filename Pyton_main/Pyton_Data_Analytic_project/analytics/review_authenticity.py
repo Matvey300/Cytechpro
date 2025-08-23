@@ -102,6 +102,8 @@ def analyze_review_authenticity(session):
     collection_id = session.collection_id
     print(f"\n[🔍] Authenticity analysis for collection: {collection_id}")
 
+    print(f"[DEBUG] ASINs in dataset: {df['asin'].nunique()}")
+
     # Step 1: Length-based heuristics
     df["text_length"] = df["review_text"].astype(str).apply(len)
     too_short = df["text_length"] < 20
@@ -145,13 +147,16 @@ def analyze_review_authenticity(session):
 
     print("\n[📊] Running sentiment-based NPS analysis...")
     nps_df = compute_nps_per_asin(df)
+    print(f"[DEBUG] ASINs in NPS analysis: {nps_df['asin'].nunique()}")
     if nps_df.empty:
         print("[⚠] NPS analysis could not be performed.")
     else:
+        top_asins_nps = nps_df[nps_df["n_reviews"] >= 5].sort_values(by="nps", ascending=False).head(5)
+        if len(top_asins_nps) < 5:
+            print(f"[⚠] Only {len(top_asins_nps)} ASINs qualified for NPS analysis.")
         print(nps_df[["asin", "nps"]].to_string(index=False))
 
         # Pie charts for NPS composition
-        top_asins_nps = nps_df[nps_df["n_reviews"] >= 10].sort_values(by="nps", ascending=False).head(5)
         print("\n[🧪] Top ASINs by NPS:\n", top_asins_nps[["asin", "n_reviews", "nps"]])
 
         fig, axes = plt.subplots(1, len(top_asins_nps), figsize=(6 * len(top_asins_nps), 6))
@@ -176,6 +181,7 @@ def analyze_review_authenticity(session):
     )
 
     sentiment_summary = df.groupby("asin")["sentiment"].mean().reset_index()
+    print(f"[DEBUG] ASINs in sentiment analysis: {sentiment_summary['asin'].nunique()}")
     sentiment_summary = sentiment_summary.sort_values(by="sentiment", ascending=False)
     top_sentiment_asins = sentiment_summary.head(5)
 
@@ -201,6 +207,7 @@ def analyze_review_authenticity(session):
     asin_flag_counts = df[df["auth_flag"] != ""].copy()
     asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
     exploded = asin_flag_counts.explode("auth_flag_list")
+    print(f"[DEBUG] ASINs with flags: {exploded['asin'].nunique()}")
 
     top_asins = exploded.groupby("asin").size().sort_values(ascending=False).head(5).index
     flag_colors = {
