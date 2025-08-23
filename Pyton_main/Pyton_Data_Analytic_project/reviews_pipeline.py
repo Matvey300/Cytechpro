@@ -37,6 +37,61 @@ def collect_reviews_for_asins(
             print(f"[{asin}] Starting review collection...")
 
             try:
+                print(f"[{asin}] Loading product page...")
+                product_url = f"https://www.amazon.{marketplace}/dp/{asin}"
+                driver.get(product_url)
+                time.sleep(3)  # Wait for product page to load
+                product_html = driver.page_source
+                soup = BeautifulSoup(product_html, 'html.parser')
+
+                # Extract price, BSR, review_count, category_path here (переместить соответствующий блок сюда)
+                category_path = 'unknown'
+                breadcrumb = soup.select_one('#wayfinding-breadcrumbs_feature_div ul.a-unordered-list')
+                if breadcrumb:
+                    category_path = ' > '.join([li.get_text(strip=True) for li in breadcrumb.find_all('li') if li.get_text(strip=True)])
+                if (category_path == 'unknown' or not category_path.strip()) and 'category_path' in row and pd.notna(row['category_path']):
+                    category_path = row['category_path']
+
+                price = None
+                bsr = None
+                review_count = None
+
+                # Try to extract price
+                price_tag = soup.select_one('span.a-price span.a-offscreen')
+                if price_tag:
+                    price = price_tag.text.strip()
+
+                # Try to extract BSR and review count from product details
+                product_details = soup.select_one('#prodDetails')
+                if product_details:
+                    text = product_details.get_text(separator=' ', strip=True)
+                    bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
+                    if bsr_match:
+                        bsr = bsr_match.group(1).replace(',', '')
+                    review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
+                    if review_count_match:
+                        review_count = review_count_match.group(1).replace(',', '')
+
+                # Alternative location for BSR and review count
+                if not bsr or not review_count:
+                    detail_bullets = soup.select_one('#detailBullets_feature_div')
+                    if detail_bullets:
+                        text = detail_bullets.get_text(separator=' ', strip=True)
+                        bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
+                        if bsr_match:
+                            bsr = bsr_match.group(1).replace(',', '')
+                        review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
+                        if review_count_match:
+                            review_count = review_count_match.group(1).replace(',', '')
+
+                # If still missing, fallback to df_asin values if available
+                if not bsr and 'best_sellers_rank' in row and pd.notna(row['best_sellers_rank']):
+                    bsr = str(row['best_sellers_rank'])
+                if not review_count and 'total_review_count' in row and pd.notna(row['total_review_count']):
+                    review_count = str(row['total_review_count'])
+                if not price and 'price' in row and pd.notna(row['price']):
+                    price = str(row['price'])
+
                 print(f"[{asin}] Loading first reviews page...")
                 url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent&pageNumber=1"
                 driver.get(url)
@@ -67,55 +122,6 @@ def collect_reviews_for_asins(
                     page_hashes.add(page_hash)
                     print(f"[{asin}] Parsing page {current_page}...")
 
-                    # Extract category path
-                    category_path = 'unknown'
-                    breadcrumb = soup.select_one('#wayfinding-breadcrumbs_feature_div ul.a-unordered-list')
-                    if breadcrumb:
-                        category_path = ' > '.join([li.get_text(strip=True) for li in breadcrumb.find_all('li') if li.get_text(strip=True)])
-                    if (category_path == 'unknown' or not category_path.strip()) and 'category_path' in row and pd.notna(row['category_path']):
-                        category_path = row['category_path']
-
-                    # Extract price, BSR, review_count from product details on first page
-                    price = None
-                    bsr = None
-                    review_count = None
-                    if current_page == 1:
-                        # Try to extract price
-                        price_tag = soup.select_one('span.a-price span.a-offscreen')
-                        if price_tag:
-                            price = price_tag.text.strip()
-
-                        # Try to extract BSR and review count from product details
-                        product_details = soup.select_one('#prodDetails')
-                        if product_details:
-                            text = product_details.get_text(separator=' ', strip=True)
-                            bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
-                            if bsr_match:
-                                bsr = bsr_match.group(1).replace(',', '')
-                            review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
-                            if review_count_match:
-                                review_count = review_count_match.group(1).replace(',', '')
-
-                        # Alternative location for BSR and review count
-                        if not bsr or not review_count:
-                            detail_bullets = soup.select_one('#detailBullets_feature_div')
-                            if detail_bullets:
-                                text = detail_bullets.get_text(separator=' ', strip=True)
-                                bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
-                                if bsr_match:
-                                    bsr = bsr_match.group(1).replace(',', '')
-                                review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
-                                if review_count_match:
-                                    review_count = review_count_match.group(1).replace(',', '')
-
-                        # If still missing, fallback to df_asin values if available
-                        if not bsr and 'best_sellers_rank' in row and pd.notna(row['best_sellers_rank']):
-                            bsr = str(row['best_sellers_rank'])
-                        if not review_count and 'total_review_count' in row and pd.notna(row['total_review_count']):
-                            review_count = str(row['total_review_count'])
-                        if not price and 'price' in row and pd.notna(row['price']):
-                            price = str(row['price'])
-
                     # Parse reviews on current page
                     review_divs = soup.select('[data-hook="review"]')
                     print(f"[{asin}] Found {len(review_divs)} review blocks on page {current_page}")
@@ -130,9 +136,6 @@ def collect_reviews_for_asins(
                             'review_author': None,
                             'review_date': None,
                             'review_text': None,
-                            'price': price if current_page == 1 else None,
-                            'best_sellers_rank': bsr if current_page == 1 else None,
-                            'total_review_count': review_count if current_page == 1 else None,
                             'review_location': None,
                             'review_verified_purchase': None,
                             'review_helpful_votes': None,
@@ -226,7 +229,10 @@ def collect_reviews_for_asins(
 
                         current_page += 1
                     except Exception:
-                        print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
+                        if current_page == max_pages:
+                            print(f"[{asin}] Reached page {current_page} (max allowed), stopping pagination.")
+                        else:
+                            print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
                         break
 
                 df = pd.DataFrame(reviews)
@@ -254,7 +260,11 @@ def collect_reviews_for_asins(
         timestamp = datetime.now().strftime("%y%m%d_%H%M")
         filename = f"{timestamp}__{collection_id}__reviews.csv"
         df_all.to_csv(collection_dir / filename, index=False)
-        print(f"Saved all reviews to {collection_dir / filename}")
+        print(f"[✅] Review collection complete. Saved to: {collection_dir / filename}")
+
+        user_input = input("Do you want to delete raw HTML files? (y/n): ")
+        if user_input.strip().lower() == 'y':
+            shutil.rmtree(rawdata_dir)
     else:
         df_all = pd.DataFrame()
         print("No reviews collected for any ASIN.")
