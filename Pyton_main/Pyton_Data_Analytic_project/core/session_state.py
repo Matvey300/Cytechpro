@@ -31,7 +31,7 @@ class SessionState:
             path.unlink()
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
-        asin_file = path / "asins.csv"
+        asin_file = next(path.glob(f"{collection_id}.csv"), None)
         print(f"[DEBUG] Looking for ASIN file at: {asin_file}")
         if asin_file.exists():
             print(f"[DEBUG] ASIN file found. Loading collection: {collection_id}")
