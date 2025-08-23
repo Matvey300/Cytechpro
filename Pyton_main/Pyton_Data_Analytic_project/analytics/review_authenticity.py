@@ -148,14 +148,23 @@ def analyze_review_authenticity(session):
     else:
         print(nps_df[["asin", "nps"]].to_string(index=False))
 
-        # Optional: visualize top 10 by NPS
-        top_n = nps_df.head(10).sort_values(by="nps", ascending=True)
-        plt.figure(figsize=(10, 6))
-        sns.barplot(data=top_n, x="nps", y="asin", palette="coolwarm")
-        plt.xlabel("Net Promoter Score")
-        plt.ylabel("ASIN")
-        plt.title("Top 10 ASINs by NPS (Sentiment Proxy)")
-        plt.tight_layout()
+        # Pie charts for NPS composition
+        top_asins_nps = nps_df.sort_values(by="n_reviews", ascending=False).head(5)
+
+        fig, axes = plt.subplots(1, len(top_asins_nps), figsize=(6 * len(top_asins_nps), 6))
+        if len(top_asins_nps) == 1:
+            axes = [axes]
+
+        for ax, (_, row) in zip(axes, top_asins_nps.iterrows()):
+            asin = row["asin"]
+            sizes = [row["promoter_pct"], row["passive_pct"], row["detractor_pct"]]
+            labels = ["Promoter", "Passive", "Detractor"]
+            colors = ["mediumseagreen", "gold", "tomato"]
+            ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
+            ax.set_title(f"ASIN: {asin}\n({int(row['n_reviews'])} reviews)", fontsize=12)
+
+        plt.suptitle("NPS Composition for Top 5 ASINs", fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
 
     # --- Pie charts for top 5 ASINs with most flags ---
@@ -280,5 +289,6 @@ def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
 
     result = summary[["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]].reset_index()
     result = result.sort_values(by="nps", ascending=False)
+    result = result[result["n_reviews"] >= 10]
 
     return result
