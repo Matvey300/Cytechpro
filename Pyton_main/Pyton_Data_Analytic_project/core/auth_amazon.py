@@ -4,7 +4,28 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.common.exceptions import SessionNotCreatedException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 import os
+
+def ask_yes_no(prompt: str) -> bool:
+    while True:
+        answer = input(prompt).strip().lower()
+        if answer in ("y", "yes"):
+            return True
+        elif answer in ("n", "no"):
+            return False
+        else:
+            print("Please enter 'y' or 'n'.")
+
+def open_amazon_home(driver: WebDriver) -> bool:
+    try:
+        driver.get("https://www.amazon.com/")
+        return True
+    except Exception as e:
+        print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
+        return False
 
 def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebDriver:
     """
@@ -20,7 +41,6 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
     """
     if not user_data_dir or not profile_dir:
         raise ValueError("Both user_data_dir and profile_dir must be provided. Please check your environment variables.")
-        print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
     options = Options()
     options.add_argument(f"--user-data-dir={user_data_dir}")
     options.add_argument(f"--profile-directory={profile_dir}")
@@ -30,22 +50,21 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
 
     try:
         driver = webdriver.Chrome(options=options)
-        try:
-            driver.get("https://www.amazon.com/")
-        except Exception as e:
-            print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
-            decision = input("Do you want to restart the Chrome session? (y/n): ").strip().lower()
-            if decision == "y":
+        if not driver.session_id:
+            raise RuntimeError("Browser session has been closed unexpectedly.")
+        if not open_amazon_home(driver):
+            decision = ask_yes_no("Do you want to restart the Chrome session? (y/n): ")
+            if decision:
                 driver.quit()
                 return get_chrome_driver_with_profile(user_data_dir, profile_dir)
             else:
                 print("[✋] Review collection aborted by user.")
                 driver.quit()
                 raise RuntimeError("User aborted due to closed Chrome.")
+        print(f"[🟢] Chrome started with user profile")
         return driver
     except SessionNotCreatedException as e:
         print("[⚠] Chrome profile is currently in use or unavailable.")
-        # print("[ℹ] Proceeding without Amazon login. Some reviews may be unavailable or limited.")
 
         temp_options = Options()
         temp_options.add_argument("--disable-notifications")
@@ -53,12 +72,11 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         temp_options.add_experimental_option("detach", True)
         try:
             driver = webdriver.Chrome(options=temp_options)
-            try:
-                driver.get("https://www.amazon.com/")
-            except Exception as e:
-                print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
-                decision = input("Do you want to restart the Chrome session? (y/n): ").strip().lower()
-                if decision == "y":
+            if not driver.session_id:
+                raise RuntimeError("Browser session has been closed unexpectedly.")
+            if not open_amazon_home(driver):
+                decision = ask_yes_no("Do you want to restart the Chrome session? (y/n): ")
+                if decision:
                     driver.quit()
                     return get_chrome_driver_with_profile(user_data_dir, profile_dir)
                 else:
@@ -72,11 +90,12 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
             if is_logged_in(driver):
                 print("[✅] Login confirmed. Proceeding with review collection.")
             else:
-                proceed = input("[⚠] Login not detected. Continue with limited access? (y/n): ").strip().lower()
-                if proceed != "y":
+                proceed = ask_yes_no("[⚠] Login not detected. Continue with limited access? (y/n): ")
+                if not proceed:
                     print("[✋] Aborting session as requested by user.")
                     driver.quit()
                     raise RuntimeError("User aborted due to missing login.")
+            print(f"[🟢] Chrome started with temporary profile")
             return driver
         except Exception as temp_e:
             print("[❌] Failed to start temporary session.")
@@ -95,7 +114,7 @@ def is_logged_in(driver: WebDriver) -> bool:
     """
     try:
         driver.get("https://www.amazon.com/")
-        driver.implicitly_wait(5)
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "nav-link-accountList")))
         account_element = driver.find_element("id", "nav-link-accountList")
         if "Sign in" not in account_element.text:
             print("[✅] Amazon session is active.")
