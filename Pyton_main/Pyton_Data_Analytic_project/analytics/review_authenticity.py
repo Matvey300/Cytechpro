@@ -122,17 +122,42 @@ def analyze_review_authenticity(collection_id):
         if duplicates[i]:
             flags[i].append("duplicate")
 
+    hyperactive_flags = flag_hyperactive_reviewers(df)
+
     df["auth_flag"] = df.index.map(lambda i: ",".join(flags[i]) if flags[i] else "")
+    df.loc[hyperactive_flags != "", "auth_flag"] += "," + hyperactive_flags
+    df["auth_flag"] = df["auth_flag"].str.strip(",")  # cleanup leading/trailing commas
 
     print(f" - Reviews too short: {too_short.sum()}")
     print(f" - Reviews too long: {too_long.sum()}")
     print(f" - High-volume days: {len(high_volume_pairs)}")
     print(f" - Duplicated reviews: {duplicates.sum()}")
+    print(f" - Hyperactive reviewers: {(hyperactive_flags != '').sum()}")
     print(f"\n[ℹ️] Total flagged reviews: {(df['auth_flag'] != '').sum()}")
 
     save_collection(None, f"authcheck__{collection_id}", df)
     print(f"[💾] Saved flagged data as: authcheck__{collection_id}.csv")
     print("\n[✅] Authenticity check completed.")
+
+def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
+    """
+    Flags reviews written by authors who post more than `threshold_per_day` reviews in a day.
+    Returns a Series with same index as df, containing 'hyperactive_author' where applicable.
+    """
+    if "review_author" not in df.columns or "review_date" not in df.columns:
+        print("[!] Missing 'review_author' or 'review_date' in dataset.")
+        return pd.Series([""] * len(df), index=df.index)
+
+    df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+    counts = df.groupby(["review_author", "review_date"]).size()
+    active_pairs = counts[counts > threshold_per_day].index
+
+    return df.apply(
+        lambda row: "hyperactive_author"
+        if (row["review_author"], row["review_date"]) in active_pairs
+        else "",
+        axis=1
+    )
 
 def explore_flagged_reviews(collection_id):
     """
