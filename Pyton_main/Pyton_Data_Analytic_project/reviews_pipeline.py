@@ -46,6 +46,15 @@ def collect_reviews_for_asins(
                 product_url = f"https://www.amazon.{marketplace}/dp/{asin}"
                 driver.get(product_url)
 
+                # Wait for full product page to load (#dp)
+                try:
+                    WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "#dp"))
+                    )
+                except TimeoutException:
+                    print(f"[{asin}] Timeout while waiting for full product page to load (#dp).")
+                    continue
+
                 if "signin" in driver.current_url:
                     print(f"[{asin}] Redirected to Amazon login page. Session expired or unauthorized.")
                     continue
@@ -59,6 +68,9 @@ def collect_reviews_for_asins(
                     continue
 
                 product_html = driver.page_source
+                print(f"[{asin}] Product page HTML length: {len(product_html)}")
+                if len(product_html) < 10000:
+                    print(f"[{asin}] Warning: Product page source may be incomplete.")
 
                 rawdata_dir = collection_dir / "RawData"
                 rawdata_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +79,8 @@ def collect_reviews_for_asins(
                 product_html_path = rawdata_dir / f"{asin}_product.html"
                 with open(product_html_path, "w", encoding="utf-8") as f:
                     f.write(product_html)
+                # Save screenshot of product page
+                driver.save_screenshot(str(rawdata_dir / f"{asin}_product_screenshot.png"))
 
                 soup = BeautifulSoup(product_html, 'html.parser')
 
@@ -142,6 +156,12 @@ def collect_reviews_for_asins(
                 pagination_limit_reached = False
 
                 while current_page <= max_pages:
+                    # Insert pagination max check at the top of the loop
+                    if current_page >= max_pages:
+                        print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
+                        pagination_limit_reached = True
+                        break
+
                     html = driver.page_source
 
                     # Save raw HTML
@@ -245,12 +265,6 @@ def collect_reviews_for_asins(
 
                     if not reviews:
                         print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.")
-
-                    # Check if reached max pages before trying to find next button
-                    if current_page >= max_pages:
-                        print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
-                        pagination_limit_reached = True
-                        break
 
                     # Check if next page exists and navigate
                     try:
