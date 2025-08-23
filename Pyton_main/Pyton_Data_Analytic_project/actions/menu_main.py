@@ -20,7 +20,7 @@ def run_main_menu(session):
         print("2) Collect reviews (max 500 per ASIN)")
         print("3) Search ASINs by keyword and category")
         print("4) Take daily snapshot (price, rating, BSR)")
-        print("5) Plot review / rating / price dynamics")
+        print("5) Analyze and visualize reviews")
         print("6) Run correlation analysis")
         print("7) List saved collections")
         print("0) Exit")
@@ -51,7 +51,11 @@ def run_main_menu(session):
                 print("[!] No collection selected. Returning to main menu.")
                 continue
             session.load_reviews_and_snapshot()
-            run_plotting(session)
+            from analytics.review_authenticity import detect_suspicious_reviews
+            from analytics.reaction_pulse import run_sentiment_analysis
+
+            detect_suspicious_reviews(session.df_reviews)
+            run_sentiment_analysis(session.df_reviews)
         elif choice == "6":
             if not session.is_collection_loaded():
                 print("[ℹ] No collection loaded. Select from saved collections:")
