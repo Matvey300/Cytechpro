@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+from datetime import datetime
 
 class SessionState:
     def __init__(self):
@@ -21,6 +22,23 @@ class SessionState:
             self.collection_path = path
         else:
             print(f"[!] ASIN file not found for collection: {collection_id}")
+
+    def load_reviews_and_snapshot(self):
+        if not self.collection_path:
+            print("[!] No collection path set.")
+            return
+        reviews_file = max(self.collection_path.glob("*__reviews.csv"), default=None)
+        snapshot_file = max(self.collection_path.glob("*__snapshot.csv"), default=None)
+        if reviews_file and reviews_file.exists():
+            self.df_reviews = pd.read_csv(reviews_file)
+            print(f"[+] Loaded reviews: {reviews_file.name}")
+        else:
+            print("[!] Reviews file not found.")
+        if snapshot_file and snapshot_file.exists():
+            self.df_snapshot = pd.read_csv(snapshot_file)
+            print(f"[+] Loaded snapshot: {snapshot_file.name}")
+        else:
+            print("[!] Snapshot file not found.")
 
     def is_collection_loaded(self):
         return (
@@ -56,5 +74,20 @@ class SessionState:
             return self.df_asin["country"].iloc[0]
         else:
             return "com"
+
+    def save(self):
+        if self.df_asin is not None:
+            asin_path = self.collection_path / "asins.csv"
+            self.df_asin.to_csv(asin_path, index=False)
+        if hasattr(self, 'df_reviews') and self.df_reviews is not None:
+            timestamp = datetime.now().strftime("%y%m%d_%H%M")
+            reviews_filename = f"{timestamp}__{self.collection_id}__reviews.csv"
+            reviews_path = self.collection_path / reviews_filename
+            self.df_reviews.to_csv(reviews_path, index=False)
+        if hasattr(self, 'df_snapshot') and self.df_snapshot is not None:
+            timestamp = datetime.now().strftime("%y%m%d_%H%M")
+            snapshot_filename = f"{timestamp}__{self.collection_id}__snapshot.csv"
+            snapshot_path = self.collection_path / snapshot_filename
+            self.df_snapshot.to_csv(snapshot_path, index=False)
 
 SESSION = SessionState()
