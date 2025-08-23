@@ -8,7 +8,23 @@ class SessionState:
         self.collection_id = None
         self.collection_path = None
 
-    def load_collection(self, collection_id: str):
+    def load_collection(self, collection_id: str = None):
+        from core.collection_io import list_collections  # Импортировать здесь, чтобы избежать циклического импорта
+
+        if collection_id is None:
+            print("[ℹ] No collection loaded. Select from saved collections:")
+            collections = list_collections()
+            if not collections:
+                print("[!] No available collections.")
+                return
+            for idx, name in enumerate(collections, 1):
+                print(f"{idx}) {name}")
+            choice = input("Enter collection number (or press Enter to cancel): ").strip()
+            if not choice.isdigit() or not (1 <= int(choice) <= len(collections)):
+                print("[✖] Invalid selection.")
+                return
+            collection_id = collections[int(choice) - 1]
+
         collection_id = collection_id.replace(".csv", "")
         path = Path("collections") / collection_id
         if path.exists() and not path.is_dir():
