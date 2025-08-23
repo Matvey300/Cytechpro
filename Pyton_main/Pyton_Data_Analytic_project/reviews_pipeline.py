@@ -101,6 +101,26 @@ def collect_reviews_for_asins(
                 if not price and 'price' in row and pd.notna(row['price']):
                     price = str(row['price'])
 
+                # Prepare snapshot dictionary
+                snapshot = {
+                    'asin': asin,
+                    'marketplace': marketplace,
+                    'category_path': category_path,
+                    'price': price,
+                    'best_sellers_rank': bsr,
+                    'review_count': review_count,
+                    'scan_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+
+                # Save snapshot CSV
+                snapshot_df = pd.DataFrame([snapshot])
+                snapshots_dir = collection_dir / "daily_snapshots"
+                snapshots_dir.mkdir(parents=True, exist_ok=True)
+                snapshot_filename = f"{asin}_snapshot__{datetime.now().strftime('%y%m%d_%H%M')}.csv"
+                snapshot_path = snapshots_dir / snapshot_filename
+                snapshot_df.to_csv(snapshot_path, index=False)
+                print(f"[{asin}] Snapshot saved: {snapshot_path}")
+
                 print(f"[{asin}] Loading first reviews page...")
                 url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent&pageNumber=1"
                 driver.get(url)
