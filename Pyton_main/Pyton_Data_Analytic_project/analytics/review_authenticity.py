@@ -151,7 +151,8 @@ def analyze_review_authenticity(session):
         print(nps_df[["asin", "nps"]].to_string(index=False))
 
         # Pie charts for NPS composition
-        top_asins_nps = nps_df.sort_values(by="n_reviews", ascending=False).head(5)
+        top_asins_nps = nps_df[nps_df["n_reviews"] >= 10].sort_values(by="nps", ascending=False).head(5)
+        print("\n[🧪] Top ASINs by NPS:\n", top_asins_nps[["asin", "n_reviews", "nps"]])
 
         fig, axes = plt.subplots(1, len(top_asins_nps), figsize=(6 * len(top_asins_nps), 6))
         if len(top_asins_nps) == 1:
