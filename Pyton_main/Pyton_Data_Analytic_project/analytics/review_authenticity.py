@@ -225,3 +225,42 @@ def explore_flagged_reviews(collection_id):
 # --- Wrapper function as requested ---
 def detect_suspicious_reviews(session):
     return analyze_review_authenticity(session)
+
+import pandas as pd
+
+def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute Net Promoter Score (NPS) per ASIN.
+    NPS = %Promoters (5 stars) - %Detractors (1-3 stars)
+    """
+    if "rating" not in df_reviews.columns or "asin" not in df_reviews.columns:
+        print("[!] Missing required columns in reviews dataset.")
+        return pd.DataFrame()
+
+    df = df_reviews.copy()
+    df = df[df["rating"].notnull()]
+    df = df[df["rating"].apply(lambda x: isinstance(x, (int, float)))]
+
+    def classify_nps_group(rating):
+        if rating == 5:
+            return "promoter"
+        elif rating == 4:
+            return "passive"
+        elif 1 <= rating <= 3:
+            return "detractor"
+        else:
+            return "unknown"
+
+    df["nps_group"] = df["rating"].apply(classify_nps_group)
+    summary = df.groupby("asin")["nps_group"].value_counts().unstack(fill_value=0)
+
+    summary["n_reviews"] = summary.sum(axis=1)
+    summary["promoter_pct"] = (summary.get("promoter", 0) / summary["n_reviews"]) * 100
+    summary["detractor_pct"] = (summary.get("detractor", 0) / summary["n_reviews"]) * 100
+    summary["passive_pct"] = (summary.get("passive", 0) / summary["n_reviews"]) * 100
+    summary["nps"] = summary["promoter_pct"] - summary["detractor_pct"]
+
+    result = summary[["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]].reset_index()
+    result = result.sort_values(by="nps", ascending=False)
+
+    return result
