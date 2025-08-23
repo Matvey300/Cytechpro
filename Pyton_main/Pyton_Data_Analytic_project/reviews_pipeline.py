@@ -42,6 +42,15 @@ def collect_reviews_for_asins(
                 driver.get(product_url)
                 time.sleep(3)  # Wait for product page to load
                 product_html = driver.page_source
+
+                rawdata_dir = collection_dir / "RawData"
+                rawdata_dir.mkdir(parents=True, exist_ok=True)
+
+                # Save product HTML for snapshot
+                product_html_path = rawdata_dir / f"{asin}_product.html"
+                with open(product_html_path, "w", encoding="utf-8") as f:
+                    f.write(product_html)
+
                 soup = BeautifulSoup(product_html, 'html.parser')
 
                 # Extract price, BSR, review_count, category_path here (переместить соответствующий блок сюда)
@@ -101,9 +110,6 @@ def collect_reviews_for_asins(
                 page_hashes = set()
                 current_page = 1
                 max_pages = ceil(max_reviews_per_asin / 10)  # Amazon shows 10 reviews per page
-
-                rawdata_dir = collection_dir / "RawData"
-                rawdata_dir.mkdir(parents=True, exist_ok=True)
 
                 while current_page <= max_pages:
                     html = driver.page_source
@@ -229,8 +235,10 @@ def collect_reviews_for_asins(
 
                         current_page += 1
                     except Exception:
-                        if current_page == max_pages:
-                            print(f"[{asin}] Reached page {current_page} (max allowed), stopping pagination.")
+                        if current_page >= max_pages:
+                            print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
+                        elif current_page == 1:
+                            print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
                         else:
                             print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
                         break
