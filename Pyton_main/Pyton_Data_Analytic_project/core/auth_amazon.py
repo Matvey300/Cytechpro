@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import os
+from pathlib import Path
 
 def ask_yes_no(prompt: str) -> bool:
     while True:
@@ -124,3 +125,44 @@ def is_logged_in(driver: WebDriver) -> bool:
             return False
     except Exception:
         return False
+
+
+# ------------------------------
+# Utility: Start Amazon Session
+def start_amazon_browser_session(asin: str, collection_dir: Path) -> WebDriver:
+    """
+    Start a browser session with Chrome, navigate to Amazon, and ensure user login.
+
+    Args:
+        asin: ASIN string to construct the target URL for review scraping.
+        collection_dir: Directory where HTML snapshots may be stored.
+
+    Returns:
+        Selenium WebDriver instance with an active Amazon session.
+    """
+    user_data_dir = os.environ.get("CHROME_USER_DATA_DIR")
+    profile_dir = os.environ.get("CHROME_PROFILE_DIR")
+
+    try:
+        driver = get_chrome_driver_with_profile(user_data_dir, profile_dir)
+        return driver
+    except Exception:
+        print("[🔄] Trying temporary Chrome profile as fallback.")
+        options = Options()
+        options.add_argument("--disable-notifications")
+        options.add_argument("--start-maximized")
+        options.add_experimental_option("detach", True)
+        driver = webdriver.Chrome(options=options)
+
+        if not open_amazon_home(driver):
+            raise RuntimeError("Failed to load Amazon homepage.")
+
+        print("[🔐] Please log into Amazon in the opened Chrome window.")
+        print("Press [Enter] when you have completed login.")
+        input()
+
+        if is_logged_in(driver):
+            print("[✅] Login successful.")
+            return driver
+        else:
+            raise RuntimeError("Amazon login was not successful.")
