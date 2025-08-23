@@ -6,18 +6,14 @@ import shutil
 import glob
 import pandas as pd
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from dateutil import parser as dateparser
 from datetime import datetime
-
-
 
 from math import ceil
 from pathlib import Path
 from typing import Tuple, Dict
+
+from core.auth_amazon import start_amazon_browser_session
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
@@ -172,7 +168,7 @@ def collect_reviews_for_asins(
                         break
 
                     current_page += 1
-                except NoSuchElementException:
+                except Exception:
                     print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
                     break
 
@@ -201,42 +197,3 @@ def collect_reviews_for_asins(
         print("No reviews collected for any ASIN.")
 
     return df_all, stats
-
-def start_amazon_browser_session(asin: str, save_dir: Path):
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.chrome.webdriver import WebDriver
-    import subprocess
-
-    print(f"[{asin}] Preparing browser session...")
-
-    chrome_options = Options()
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_experimental_option("detach", True)
-
-    # Check if Chrome is already running
-    if subprocess.run(["pgrep", "-i", "chrome"], capture_output=True, text=True).stdout.strip():
-        print("[❌] Chrome is already running. Please close all Chrome windows and try again.")
-        raise RuntimeError("Chrome already running.")
-
-    use_temp_profile = input("Do you want to proceed with a temporary profile? (y/n): ").strip().lower()
-    if use_temp_profile not in ("y", "n"):
-        print("[!] Invalid input. Defaulting to 'y'.")
-        use_temp_profile = "y"
-
-    if use_temp_profile == "y":
-        print("[🧪] Starting Chrome with a temporary profile...")
-        chrome_options.add_argument("--user-data-dir=/tmp/temp_chrome_profile")
-    else:
-        print("[ℹ️] You must provide a custom user profile if not using temporary. Exiting.")
-        raise RuntimeError("Custom profile not supported yet.")
-
-    service = Service()
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-
-    driver.get("https://www.amazon.com/")
-    input("🔐 Please log in to Amazon in the opened Chrome window, then press [Enter] to continue...")
-
-    return driver
