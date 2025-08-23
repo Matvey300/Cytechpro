@@ -1,0 +1,24 @@
+{
+  "reviews_path": "./Data/all_reviews.csv",
+  "synccentric_path": "./Data/output total synccentric.csv",
+  "outdir": "./Out",
+  "reviews_found": true,
+  "synccentric_found": true,
+  "reviews_shape": [
+    4400,
+    9
+  ],
+  "synccentric_shape": [
+    100,
+    222
+  ],
+  "reviews_loaded": true,
+  "sync_loaded": true,
+  "weekly_reviews_rows": 420,
+  "sync_meta": {
+    "date_col": "publication_date",
+    "sales_col": null,
+    "price_col": "bb_new_landed_price_avg_3mo"
+  },
+  "weekly_sales_rows": 0
+}
