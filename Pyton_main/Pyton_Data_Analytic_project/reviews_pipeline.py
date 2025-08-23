@@ -38,7 +38,7 @@ def collect_reviews_for_asins(
 
             try:
                 print(f"[{asin}] Loading first reviews page...")
-                url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?pageNumber=1"
+                url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?sortBy=recent&pageNumber=1"
                 driver.get(url)
                 time.sleep(3)  # Wait for page to load
 
@@ -117,7 +117,7 @@ def collect_reviews_for_asins(
                             price = str(row['price'])
 
                     # Parse reviews on current page
-                    review_divs = soup.select('div[data-hook="review"]')
+                    review_divs = soup.select('[data-hook="review"]')
                     print(f"[{asin}] Found {len(review_divs)} review blocks on page {current_page}")
                     for div in review_divs:
                         review = {
@@ -132,7 +132,10 @@ def collect_reviews_for_asins(
                             'review_text': None,
                             'price': price if current_page == 1 else None,
                             'best_sellers_rank': bsr if current_page == 1 else None,
-                            'total_review_count': review_count if current_page == 1 else None
+                            'total_review_count': review_count if current_page == 1 else None,
+                            'review_location': None,
+                            'review_verified_purchase': None,
+                            'review_helpful_votes': None,
                         }
 
                         try:
@@ -159,9 +162,20 @@ def collect_reviews_for_asins(
                             print(f"[{asin}] Error parsing author: {e}")
 
                         try:
+                            verified_tag = div.select_one('span[data-hook="avp-badge"]')
+                            review['review_verified_purchase'] = bool(verified_tag and "Verified Purchase" in verified_tag.text)
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing verified_purchase: {e}")
+
+                        try:
                             date_tag = div.select_one('span[data-hook="review-date"]')
                             if date_tag:
-                                review['review_date'] = dateparser.parse(date_tag.text.strip()).date()
+                                date_text = date_tag.text.strip()
+                                review['review_date'] = dateparser.parse(date_text).date()
+                                if " in " in date_text:
+                                    review['review_location'] = date_text.split(" in ")[-1].split(" on ")[0].strip()
+                                else:
+                                    review['review_location'] = None
                         except Exception as e:
                             print(f"[{asin}] Error parsing date: {e}")
 
@@ -171,6 +185,21 @@ def collect_reviews_for_asins(
                                 review['review_text'] = review_text_tag.text.strip()
                         except Exception as e:
                             print(f"[{asin}] Error parsing review text: {e}")
+
+                        try:
+                            helpful_tag = div.select_one('span[data-hook="helpful-vote-statement"]')
+                            if helpful_tag:
+                                txt = helpful_tag.get_text(strip=True)
+                                if "One person found this helpful" in txt:
+                                    review['review_helpful_votes'] = 1
+                                elif "people found this helpful" in txt:
+                                    review['review_helpful_votes'] = int(txt.split()[0].replace(",", ""))
+                                else:
+                                    review['review_helpful_votes'] = 0
+                            else:
+                                review['review_helpful_votes'] = 0
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing helpful_votes: {e}")
 
                         reviews.append(review)
 
