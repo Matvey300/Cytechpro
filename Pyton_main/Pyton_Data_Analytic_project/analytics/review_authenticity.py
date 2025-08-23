@@ -146,8 +146,6 @@ def analyze_review_authenticity(session):
     exploded = asin_flag_counts.explode("auth_flag_list")
 
     top_asins = exploded.groupby("asin").size().sort_values(ascending=False).head(5).index
-    fig, axes = plt.subplots(1, len(top_asins), figsize=(5 * len(top_asins), 5))
-
     flag_colors = {
         "short": "steelblue",
         "long": "orange",
@@ -155,6 +153,10 @@ def analyze_review_authenticity(session):
         "duplicate": "purple",
         "hyperactive_author": "green"
     }
+
+    fig, axes = plt.subplots(1, len(top_asins), figsize=(6 * len(top_asins), 6))
+    if len(top_asins) == 1:
+        axes = [axes]  # Ensure iterable if only one ASIN
 
     for ax, asin in zip(axes, top_asins):
         asin_flags = exploded[exploded["asin"] == asin]["auth_flag_list"].value_counts()
@@ -164,9 +166,9 @@ def analyze_review_authenticity(session):
 
         ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
         total_flags = asin_flags.sum()
-        ax.set_title(f"ASIN: {asin} ({total_flags} flags)", fontsize=10)
+        ax.set_title(f"ASIN: {asin} ({total_flags} flags)", fontsize=12)
 
-    plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=14)
+    plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
