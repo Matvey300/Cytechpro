@@ -6,5 +6,5 @@ from core.session_state import SessionState
 def run_plotting(session: SessionState):
     """Run plotting for review and sentiment dynamics."""
     print("\n📊 Plotting review dynamics...")
-    plot_review_dynamics(session.df_asin, session.collection_path)
+    plot_review_dynamics(session.collection_id, data_dir="collections")
     print("✅ Done.")
