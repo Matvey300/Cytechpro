@@ -45,17 +45,22 @@ def run_main_menu(session):
                 print("[!] Failed to load a collection.")
         elif choice == "5":
             if not session.is_collection_loaded():
+                print("[ℹ] No collection loaded. Select from saved collections:")
                 session.load_collection()
-            if session.is_collection_loaded():
-                session.load_reviews_and_snapshot()
-                run_plotting(session)
-            else:
-                print("[!] Failed to load a collection.")
+            if not session.is_collection_loaded():
+                print("[!] No collection selected. Returning to main menu.")
+                continue
+            session.load_reviews_and_snapshot()
+            run_plotting(session)
         elif choice == "6":
-            if session.is_collection_loaded():
-                run_correlation_analysis(session)
-            else:
-                print("[!] Please load a collection first.")
+            if not session.is_collection_loaded():
+                print("[ℹ] No collection loaded. Select from saved collections:")
+                session.load_collection()
+            if not session.is_collection_loaded():
+                print("[!] No collection selected. Returning to main menu.")
+                continue
+            session.load_reviews_and_snapshot()
+            run_correlation_analysis(session)
         elif choice == "7":
             session.list_available_collections()
         elif choice == "0":

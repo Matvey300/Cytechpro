@@ -23,6 +23,10 @@ class SessionState:
         else:
             print(f"[!] ASIN file not found for collection: {collection_id}")
 
+    def load_full_context(self, collection_id: str):
+        self.load_collection(collection_id)
+        self.load_reviews_and_snapshot()
+
     def load_reviews_and_snapshot(self):
         if not self.collection_path:
             print("[!] No collection path set.")
@@ -39,6 +43,12 @@ class SessionState:
             print(f"[+] Loaded snapshot: {snapshot_file.name}")
         else:
             print("[!] Snapshot file not found.")
+
+    def has_reviews(self):
+        return hasattr(self, 'df_reviews') and self.df_reviews is not None
+
+    def has_snapshot(self):
+        return hasattr(self, 'df_snapshot') and self.df_snapshot is not None
 
     def is_collection_loaded(self):
         return (
@@ -89,5 +99,11 @@ class SessionState:
             snapshot_filename = f"{timestamp}__{self.collection_id}__snapshot.csv"
             snapshot_path = self.collection_path / snapshot_filename
             self.df_snapshot.to_csv(snapshot_path, index=False)
+
+    def __str__(self):
+        return f"Session(collection_id={self.collection_id}, " \
+               f"has_asins={self.df_asin is not None}, " \
+               f"has_reviews={self.has_reviews()}, " \
+               f"has_snapshot={self.has_snapshot()})"
 
 SESSION = SessionState()
