@@ -54,7 +54,7 @@ def run_main_menu(session):
             from analytics.review_authenticity import detect_suspicious_reviews
             from analytics.reaction_pulse import run_sentiment_analysis
 
-            detect_suspicious_reviews(session.df_reviews)
+            detect_suspicious_reviews(session)
             run_sentiment_analysis(session.df_reviews)
         elif choice == "6":
             if not session.is_collection_loaded():
