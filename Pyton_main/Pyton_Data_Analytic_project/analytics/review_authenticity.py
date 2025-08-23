@@ -1,5 +1,3 @@
-# menu_main.py
-
 import pandas as pd
 from core.collection_io import load_collection
 
