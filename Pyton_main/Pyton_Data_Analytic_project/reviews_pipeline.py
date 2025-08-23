@@ -158,8 +158,7 @@ def collect_reviews_for_asins(
                 while current_page <= max_pages:
                     # Insert pagination max check at the top of the loop
                     if current_page >= max_pages:
-                        print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
-                        pagination_limit_reached = True
+                        print(f"[{asin}] Reached page {current_page} (max allowed), stopping pagination.")
                         break
 
                     html = driver.page_source
@@ -285,10 +284,7 @@ def collect_reviews_for_asins(
 
                         current_page += 1
                     except Exception:
-                        if current_page == 1:
-                            print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
-                        elif not pagination_limit_reached:
-                            print(f"[{asin}] No next button found. Pagination ended at page {current_page}.")
+                        print(f"[{asin}] No next button found on page {current_page}. Pagination ended.")
                         break
 
                 df = pd.DataFrame(reviews)

@@ -137,6 +137,36 @@ def analyze_review_authenticity(session):
     
     print("\n[✅] Authenticity check completed.")
 
+    # Visualization
+    import matplotlib.pyplot as plt
+
+    labels = [
+        "Too Short",
+        "Too Long",
+        "High-Volume Days",
+        "Duplicated",
+        "Hyperactive"
+    ]
+    values = [
+        too_short.sum(),
+        too_long.sum(),
+        len(high_volume_pairs),
+        duplicates.sum(),
+        (hyperactive_flags != "").sum()
+    ]
+
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(labels, values, color='steelblue')
+    plt.title(f'Authenticity Flags for {collection_id}')
+    plt.ylabel('Count')
+
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.5, str(yval), ha='center', va='bottom')
+
+    plt.tight_layout()
+    plt.show()
+
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
     Flags reviews written by authors who post more than `threshold_per_day` reviews in a day.
