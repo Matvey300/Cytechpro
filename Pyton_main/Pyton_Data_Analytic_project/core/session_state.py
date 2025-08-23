@@ -5,6 +5,8 @@ from datetime import datetime
 class SessionState:
     def __init__(self):
         self.df_asin = None
+        self.df_reviews = None
+        self.df_snapshot = None
         self.collection_id = None
         self.collection_path = None
 
