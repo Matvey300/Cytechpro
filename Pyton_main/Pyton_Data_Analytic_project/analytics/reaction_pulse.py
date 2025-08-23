@@ -85,5 +85,5 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
 
 
 # --- Sentiment analysis placeholder ---
-def run_sentiment_analysis():
+def run_sentiment_analysis(df_reviews):
     print("[⚠] Sentiment analysis not yet implemented.")
