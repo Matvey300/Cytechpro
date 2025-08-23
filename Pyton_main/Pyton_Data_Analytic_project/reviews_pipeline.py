@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Tuple, Dict
 
 from core.auth_amazon import start_amazon_browser_session
+from selenium.webdriver.common.by import By
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
@@ -28,68 +29,66 @@ def collect_reviews_for_asins(
     collection_dir = out_dir / collection_id
     collection_dir.mkdir(parents=True, exist_ok=True)
 
-    for _, row in df_asin.iterrows():
-        asin = row['asin']
-        print(f"[{asin}] Starting review collection...")
+    driver = None
+    try:
+        driver = start_amazon_browser_session(None, collection_dir)
+        for _, row in df_asin.iterrows():
+            asin = row['asin']
+            print(f"[{asin}] Starting review collection...")
 
-        try:
-            driver = start_amazon_browser_session(asin, collection_dir)
+            try:
+                print(f"[{asin}] Loading first reviews page...")
+                url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?pageNumber=1"
+                driver.get(url)
+                time.sleep(3)  # Wait for page to load
 
-            print(f"[{asin}] Loading first reviews page...")
-            url = f"https://www.amazon.{marketplace}/product-reviews/{asin}/?pageNumber=1"
-            driver.get(url)
-            time.sleep(3)  # Wait for page to load
+                reviews = []
+                page_hashes = set()
+                current_page = 1
+                max_pages = ceil(max_reviews_per_asin / 10)  # Amazon shows 10 reviews per page
 
-            reviews = []
-            page_hashes = set()
-            current_page = 1
-            max_pages = ceil(max_reviews_per_asin / 10)  # Amazon shows 10 reviews per page
+                rawdata_dir = collection_dir / "RawData"
+                rawdata_dir.mkdir(parents=True, exist_ok=True)
 
-            while current_page <= max_pages:
-                html = driver.page_source
-                soup = BeautifulSoup(html, 'html.parser')
+                while current_page <= max_pages:
+                    html = driver.page_source
 
-                page_hash = hash(html)
-                if page_hash in page_hashes:
-                    print(f"[{asin}] Detected repeated page content at page {current_page}, stopping pagination.")
-                    break
-                page_hashes.add(page_hash)
-                print(f"[{asin}] Parsing page {current_page}...")
+                    # Save raw HTML
+                    raw_html_path = rawdata_dir / f"{asin}_p{current_page}.html"
+                    with open(raw_html_path, "w", encoding="utf-8") as f:
+                        f.write(html)
 
-                # Extract category path
-                category_path = 'unknown'
-                breadcrumb = soup.select_one('#wayfinding-breadcrumbs_feature_div ul.a-unordered-list')
-                if breadcrumb:
-                    category_path = ' > '.join([li.get_text(strip=True) for li in breadcrumb.find_all('li') if li.get_text(strip=True)])
-                if category_path == 'unknown' and 'category_path' in row and pd.notna(row['category_path']):
-                    category_path = row['category_path']
+                    soup = BeautifulSoup(html, 'html.parser')
 
-                # Extract price, BSR, review_count from product details on first page
-                price = None
-                bsr = None
-                review_count = None
-                if current_page == 1:
-                    # Try to extract price
-                    price_tag = soup.select_one('span.a-price span.a-offscreen')
-                    if price_tag:
-                        price = price_tag.text.strip()
+                    page_hash = hash(html)
+                    if page_hash in page_hashes:
+                        print(f"[{asin}] Detected repeated page content at page {current_page}, stopping pagination.")
+                        break
+                    page_hashes.add(page_hash)
+                    print(f"[{asin}] Parsing page {current_page}...")
 
-                    # Try to extract BSR and review count from product details
-                    product_details = soup.select_one('#prodDetails')
-                    if product_details:
-                        text = product_details.get_text(separator=' ', strip=True)
-                        bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
-                        if bsr_match:
-                            bsr = bsr_match.group(1).replace(',', '')
-                        review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
-                        if review_count_match:
-                            review_count = review_count_match.group(1).replace(',', '')
+                    # Extract category path
+                    category_path = 'unknown'
+                    breadcrumb = soup.select_one('#wayfinding-breadcrumbs_feature_div ul.a-unordered-list')
+                    if breadcrumb:
+                        category_path = ' > '.join([li.get_text(strip=True) for li in breadcrumb.find_all('li') if li.get_text(strip=True)])
+                    if (category_path == 'unknown' or not category_path.strip()) and 'category_path' in row and pd.notna(row['category_path']):
+                        category_path = row['category_path']
 
-                    # Alternative location for BSR and review count
-                    if not bsr or not review_count:
-                        detail_bullets = soup.select_one('#detailBullets_feature_div')
-                        if detail_bullets:
-                            text = detail_bullets.get_text(separator=' ', strip=True)
+                    # Extract price, BSR, review_count from product details on first page
+                    price = None
+                    bsr = None
+                    review_count = None
+                    if current_page == 1:
+                        # Try to extract price
+                        price_tag = soup.select_one('span.a-price span.a-offscreen')
+                        if price_tag:
+                            price = price_tag.text.strip()
+
+                        # Try to extract BSR and review count from product details
+                        product_details = soup.select_one('#prodDetails')
+                        if product_details:
+                            text = product_details.get_text(separator=' ', strip=True)
                             bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
                             if bsr_match:
                                 bsr = bsr_match.group(1).replace(',', '')
@@ -97,94 +96,123 @@ def collect_reviews_for_asins(
                             if review_count_match:
                                 review_count = review_count_match.group(1).replace(',', '')
 
-                # Parse reviews on current page
-                review_divs = soup.select('div[data-hook="review"]')
-                for div in review_divs:
-                    review = {}
-                    review['asin'] = asin
-                    review['marketplace'] = marketplace
-                    review['category_path'] = category_path
-                    review['scan_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        # Alternative location for BSR and review count
+                        if not bsr or not review_count:
+                            detail_bullets = soup.select_one('#detailBullets_feature_div')
+                            if detail_bullets:
+                                text = detail_bullets.get_text(separator=' ', strip=True)
+                                bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
+                                if bsr_match:
+                                    bsr = bsr_match.group(1).replace(',', '')
+                                review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
+                                if review_count_match:
+                                    review_count = review_count_match.group(1).replace(',', '')
 
-                    # Review title
-                    title_tag = div.select_one('a[data-hook="review-title"] span')
-                    review['review_title'] = title_tag.text.strip() if title_tag else None
+                        # If still missing, fallback to df_asin values if available
+                        if not bsr and 'best_sellers_rank' in row and pd.notna(row['best_sellers_rank']):
+                            bsr = str(row['best_sellers_rank'])
+                        if not review_count and 'total_review_count' in row and pd.notna(row['total_review_count']):
+                            review_count = str(row['total_review_count'])
+                        if not price and 'price' in row and pd.notna(row['price']):
+                            price = str(row['price'])
 
-                    # Review rating
-                    rating_tag = div.select_one('i[data-hook="review-star-rating"] span')
-                    if not rating_tag:
-                        rating_tag = div.select_one('i[data-hook="cmps-review-star-rating"] span')
-                    if rating_tag:
-                        rating_text = rating_tag.text.strip()
-                        review['review_rating'] = float(rating_text.split()[0])
-                    else:
-                        review['review_rating'] = None
+                    # Parse reviews on current page
+                    review_divs = soup.select('div[data-hook="review"]')
+                    for div in review_divs:
+                        review = {}
+                        review['asin'] = asin
+                        review['marketplace'] = marketplace
+                        review['category_path'] = category_path
+                        review['scan_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    # Review author
-                    author_tag = div.select_one('span.a-profile-name')
-                    review['review_author'] = author_tag.text.strip() if author_tag else None
+                        # Review title
+                        title_tag = div.select_one('a[data-hook="review-title"] span')
+                        review['review_title'] = title_tag.text.strip() if title_tag else None
 
-                    # Review date
-                    date_tag = div.select_one('span[data-hook="review-date"]')
-                    if date_tag:
-                        try:
-                            review['review_date'] = dateparser.parse(date_tag.text.strip()).date()
-                        except Exception:
+                        # Review rating
+                        rating_tag = div.select_one('i[data-hook="review-star-rating"] span')
+                        if not rating_tag:
+                            rating_tag = div.select_one('i[data-hook="cmps-review-star-rating"] span')
+                        if rating_tag:
+                            rating_text = rating_tag.text.strip()
+                            try:
+                                review['review_rating'] = float(rating_text.split()[0])
+                            except Exception:
+                                review['review_rating'] = None
+                        else:
+                            review['review_rating'] = None
+
+                        # Review author
+                        author_tag = div.select_one('span.a-profile-name')
+                        review['review_author'] = author_tag.text.strip() if author_tag else None
+
+                        # Review date
+                        date_tag = div.select_one('span[data-hook="review-date"]')
+                        if date_tag:
+                            try:
+                                review['review_date'] = dateparser.parse(date_tag.text.strip()).date()
+                            except Exception:
+                                review['review_date'] = None
+                        else:
                             review['review_date'] = None
-                    else:
-                        review['review_date'] = None
 
-                    # Review text
-                    review_text_tag = div.select_one('span[data-hook="review-body"] span')
-                    review['review_text'] = review_text_tag.text.strip() if review_text_tag else None
+                        # Review text
+                        review_text_tag = div.select_one('span[data-hook="review-body"] span')
+                        review['review_text'] = review_text_tag.text.strip() if review_text_tag else None
 
-                    # Add price, BSR, review count to each review (only from first page)
-                    if current_page == 1:
-                        review['price'] = price
-                        review['best_sellers_rank'] = bsr
-                        review['total_review_count'] = review_count
-                    else:
-                        review['price'] = None
-                        review['best_sellers_rank'] = None
-                        review['total_review_count'] = None
+                        # Add price, BSR, review count to each review (only from first page)
+                        if current_page == 1:
+                            review['price'] = price
+                            review['best_sellers_rank'] = bsr
+                            review['total_review_count'] = review_count
+                        else:
+                            review['price'] = None
+                            review['best_sellers_rank'] = None
+                            review['total_review_count'] = None
 
-                    reviews.append(review)
+                        reviews.append(review)
 
-                # Check if next page exists and navigate
-                try:
-                    next_button = driver.find_element(By.CSS_SELECTOR, 'li.a-last a')
-                    if not next_button.is_enabled():
-                        print(f"[{asin}] Next button disabled on page {current_page}, ending pagination.")
+                    # Check if next page exists and navigate
+                    try:
+                        next_button = driver.find_element(By.CSS_SELECTOR, 'li.a-last a')
+                        if not next_button.is_enabled():
+                            print(f"[{asin}] Next button disabled on page {current_page}, ending pagination.")
+                            break
+                        prev_html_hash = page_hash
+                        next_button.click()
+                        time.sleep(3)  # Wait for page to load
+
+                        # Confirm page changed by checking new HTML hash
+                        new_html = driver.page_source
+                        new_hash = hash(new_html)
+                        if new_hash == prev_html_hash:
+                            print(f"[{asin}] Page did not change after clicking next on page {current_page}, stopping.")
+                            break
+
+                        current_page += 1
+                    except Exception:
+                        print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
                         break
-                    prev_html_hash = page_hash
-                    next_button.click()
-                    time.sleep(3)  # Wait for page to load
 
-                    # Confirm page changed by checking new HTML hash
-                    new_html = driver.page_source
-                    new_hash = hash(new_html)
-                    if new_hash == prev_html_hash:
-                        print(f"[{asin}] Page did not change after clicking next on page {current_page}, stopping.")
-                        break
+                df = pd.DataFrame(reviews)
+                if not df.empty:
+                    all_reviews.append(df)
+                    cat_label = category_path if category_path != 'unknown' else 'unknown'
+                    stats[cat_label] = stats.get(cat_label, 0) + len(df)
+                    print(f"[{asin}] Collected {len(df)} reviews.")
+                else:
+                    print(f"[{asin}] No reviews found.")
 
-                    current_page += 1
-                except Exception:
-                    print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
-                    break
+            except Exception as e:
+                print(f"[!] Failed to collect for ASIN {asin}: {e}")
+            finally:
+                page_hashes = set()
 
-            df = pd.DataFrame(reviews)
-            if not df.empty:
-                all_reviews.append(df)
-                cat_label = category_path if category_path != 'unknown' else 'unknown'
-                stats[cat_label] = stats.get(cat_label, 0) + len(df)
-                print(f"[{asin}] Collected {len(df)} reviews.")
-            else:
-                print(f"[{asin}] No reviews found.")
-
+    except Exception as e:
+        print(f"[!] Failed to start Amazon browser session: {e}")
+    finally:
+        if driver:
             driver.quit()
-
-        except Exception as e:
-            print(f"[!] Failed to collect for ASIN {asin}: {e}")
 
     if all_reviews:
         df_all = pd.concat(all_reviews, ignore_index=True)
