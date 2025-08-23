@@ -140,6 +140,23 @@ def analyze_review_authenticity(session):
     
     print("\n[✅] Authenticity check completed.")
 
+    print("\n[📊] Running sentiment-based NPS analysis...")
+    nps_df = compute_nps_per_asin(df)
+    if nps_df.empty:
+        print("[⚠] NPS analysis could not be performed.")
+    else:
+        print(nps_df[["asin", "nps"]].to_string(index=False))
+
+        # Optional: visualize top 10 by NPS
+        top_n = nps_df.head(10).sort_values(by="nps", ascending=True)
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=top_n, x="nps", y="asin", palette="coolwarm")
+        plt.xlabel("Net Promoter Score")
+        plt.ylabel("ASIN")
+        plt.title("Top 10 ASINs by NPS (Sentiment Proxy)")
+        plt.tight_layout()
+        plt.show()
+
     # --- Pie charts for top 5 ASINs with most flags ---
     asin_flag_counts = df[df["auth_flag"] != ""].copy()
     asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
