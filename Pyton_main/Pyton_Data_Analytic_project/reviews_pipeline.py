@@ -153,12 +153,11 @@ def collect_reviews_for_asins(
                 page_hashes = set()
                 current_page = 1
                 max_pages = ceil(max_reviews_per_asin / 10)  # Amazon shows 10 reviews per page
-                pagination_limit_reached = False
-
-                while current_page <= max_pages:
-                    # Insert pagination max check at the top of the loop
+                reached_max_pages = False
+                while True:
                     if current_page >= max_pages:
                         print(f"[{asin}] Reached max page {current_page}, stopping pagination.")
+                        reached_max_pages = True
                         break
 
                     html = driver.page_source
@@ -262,8 +261,7 @@ def collect_reviews_for_asins(
 
                         reviews.append(review)
 
-                    if not reviews:
-                        print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.")
+                    print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.") if not review_divs else None
 
                     # Check if next page exists and navigate
                     try:
@@ -286,6 +284,9 @@ def collect_reviews_for_asins(
                     except Exception:
                         print(f"[{asin}] No next button found in DOM or not clickable on page {current_page}. Possible end of pagination or selector issue.")
                         break
+
+                if reached_max_pages:
+                    print(f"[⚠️] {asin} Review collection stopped at {len(reviews)} reviews (max pages reached). More reviews may be available.")
 
                 df = pd.DataFrame(reviews)
                 if not df.empty:
