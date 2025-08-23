@@ -167,6 +167,23 @@ def analyze_review_authenticity(session):
     plt.tight_layout()
     plt.show()
 
+    # --- Visualization by ASIN ---
+    asin_flags = df[df["auth_flag"] != ""].groupby("asin")["auth_flag"].count()
+    asin_flags = asin_flags[asin_flags >= 2].sort_values(ascending=False)
+
+    if not asin_flags.empty:
+        plt.figure(figsize=(10, 5))
+        bars = plt.bar(asin_flags.index, asin_flags.values, color='indianred')
+        plt.title("ASINs with Multiple Authenticity Flags")
+        plt.xlabel("ASIN")
+        plt.ylabel("Number of Flagged Reviews")
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.3, str(yval), ha='center')
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        plt.show()
+
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
     Flags reviews written by authors who post more than `threshold_per_day` reviews in a day.
