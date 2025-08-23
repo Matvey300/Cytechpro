@@ -167,19 +167,21 @@ def analyze_review_authenticity(session):
     plt.tight_layout()
     plt.show()
 
-    # --- Visualization by ASIN ---
-    asin_flags = df[df["auth_flag"] != ""].groupby("asin")["auth_flag"].count()
-    asin_flags = asin_flags[asin_flags >= 2].sort_values(ascending=False)
+    # --- Enhanced Visualization by ASIN ---
+    import seaborn as sns
 
-    if not asin_flags.empty:
-        plt.figure(figsize=(10, 5))
-        bars = plt.bar(asin_flags.index, asin_flags.values, color='indianred')
-        plt.title("ASINs with Multiple Authenticity Flags")
+    asin_flag_counts = df[df["auth_flag"] != ""].copy()
+    asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
+    exploded = asin_flag_counts.explode("auth_flag_list")
+
+    asin_flag_summary = exploded.groupby(["asin", "auth_flag_list"]).size().unstack(fill_value=0)
+    filtered = asin_flag_summary[asin_flag_summary.sum(axis=1) >= 2]
+
+    if not filtered.empty:
+        filtered.plot(kind="bar", stacked=True, figsize=(12, 6), colormap="tab10")
+        plt.title("ASINs with Multiple Authenticity Flags (>=2 total)")
         plt.xlabel("ASIN")
-        plt.ylabel("Number of Flagged Reviews")
-        for bar in bars:
-            yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.3, str(yval), ha='center')
+        plt.ylabel("Number of Flags")
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
         plt.show()
