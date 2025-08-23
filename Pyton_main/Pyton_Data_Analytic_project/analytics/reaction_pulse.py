@@ -98,6 +98,12 @@ def run_sentiment_analysis(df_reviews):
         print("[!] Missing 'review_text' column. Cannot compute sentiment.")
         return df_reviews
 
+    print("[DEBUG] Количество отзывов по ASIN (до анализа):")
+    print(df_reviews["asin"].value_counts())
+
     df_reviews["sentiment"] = df_reviews["review_text"].apply(compute_sentiment)
     print(f"[+] Sentiment scores computed for {len(df_reviews)} reviews.")
+    print("[DEBUG] Пропуски по sentiment:", df_reviews["sentiment"].isna().sum())
+    print("[DEBUG] Примеры значений sentiment:")
+    print(df_reviews["sentiment"].describe())
     return df_reviews
