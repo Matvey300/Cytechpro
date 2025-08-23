@@ -85,5 +85,19 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
 
 
 # --- Sentiment analysis placeholder ---
+from textblob import TextBlob
+
 def run_sentiment_analysis(df_reviews):
-    print("[⚠] Sentiment analysis not yet implemented.")
+    def compute_sentiment(text):
+        try:
+            return TextBlob(str(text)).sentiment.polarity
+        except Exception:
+            return 0.0
+
+    if "review_text" not in df_reviews.columns:
+        print("[!] Missing 'review_text' column. Cannot compute sentiment.")
+        return df_reviews
+
+    df_reviews["sentiment"] = df_reviews["review_text"].apply(compute_sentiment)
+    print(f"[+] Sentiment scores computed for {len(df_reviews)} reviews.")
+    return df_reviews
