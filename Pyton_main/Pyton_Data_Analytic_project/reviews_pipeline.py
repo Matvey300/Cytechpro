@@ -283,6 +283,3 @@ def collect_reviews_for_asins(
         df_all = pd.DataFrame()
 
     return df_all, stats
-
-# For backward compatibility with modules importing collect_reviews_for_asins
-collect_reviews_for_asins = download_amazon_reviews
