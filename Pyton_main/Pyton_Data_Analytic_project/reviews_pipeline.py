@@ -119,56 +119,57 @@ def collect_reviews_for_asins(
                     # Parse reviews on current page
                     review_divs = soup.select('div[data-hook="review"]')
                     for div in review_divs:
-                        review = {}
-                        review['asin'] = asin
-                        review['marketplace'] = marketplace
-                        review['category_path'] = category_path
-                        review['scan_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        review = {
+                            'asin': asin,
+                            'marketplace': marketplace,
+                            'category_path': category_path,
+                            'scan_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'review_title': None,
+                            'review_rating': None,
+                            'review_author': None,
+                            'review_date': None,
+                            'review_text': None,
+                            'price': price if current_page == 1 else None,
+                            'best_sellers_rank': bsr if current_page == 1 else None,
+                            'total_review_count': review_count if current_page == 1 else None
+                        }
 
-                        # Review title
-                        title_tag = div.select_one('a[data-hook="review-title"] span')
-                        review['review_title'] = title_tag.text.strip() if title_tag else None
+                        try:
+                            title_tag = div.select_one('a[data-hook="review-title"] span')
+                            if title_tag:
+                                review['review_title'] = title_tag.text.strip()
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing title: {e}")
 
-                        # Review rating
-                        rating_tag = div.select_one('i[data-hook="review-star-rating"] span')
-                        if not rating_tag:
-                            rating_tag = div.select_one('i[data-hook="cmps-review-star-rating"] span')
-                        if rating_tag:
-                            rating_text = rating_tag.text.strip()
-                            try:
+                        try:
+                            rating_tag = div.select_one('i[data-hook="review-star-rating"] span') or \
+                                         div.select_one('i[data-hook="cmps-review-star-rating"] span')
+                            if rating_tag:
+                                rating_text = rating_tag.text.strip()
                                 review['review_rating'] = float(rating_text.split()[0])
-                            except Exception:
-                                review['review_rating'] = None
-                        else:
-                            review['review_rating'] = None
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing rating: {e}")
 
-                        # Review author
-                        author_tag = div.select_one('span.a-profile-name')
-                        review['review_author'] = author_tag.text.strip() if author_tag else None
+                        try:
+                            author_tag = div.select_one('span.a-profile-name')
+                            if author_tag:
+                                review['review_author'] = author_tag.text.strip()
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing author: {e}")
 
-                        # Review date
-                        date_tag = div.select_one('span[data-hook="review-date"]')
-                        if date_tag:
-                            try:
+                        try:
+                            date_tag = div.select_one('span[data-hook="review-date"]')
+                            if date_tag:
                                 review['review_date'] = dateparser.parse(date_tag.text.strip()).date()
-                            except Exception:
-                                review['review_date'] = None
-                        else:
-                            review['review_date'] = None
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing date: {e}")
 
-                        # Review text
-                        review_text_tag = div.select_one('span[data-hook="review-body"] span')
-                        review['review_text'] = review_text_tag.text.strip() if review_text_tag else None
-
-                        # Add price, BSR, review count to each review (only from first page)
-                        if current_page == 1:
-                            review['price'] = price
-                            review['best_sellers_rank'] = bsr
-                            review['total_review_count'] = review_count
-                        else:
-                            review['price'] = None
-                            review['best_sellers_rank'] = None
-                            review['total_review_count'] = None
+                        try:
+                            review_text_tag = div.select_one('span[data-hook="review-body"] span')
+                            if review_text_tag:
+                                review['review_text'] = review_text_tag.text.strip()
+                        except Exception as e:
+                            print(f"[{asin}] Error parsing review text: {e}")
 
                         reviews.append(review)
 
