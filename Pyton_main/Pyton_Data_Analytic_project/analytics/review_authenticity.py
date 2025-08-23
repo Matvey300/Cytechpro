@@ -1,3 +1,4 @@
+from textblob import TextBlob
 import pandas as pd
 from core.collection_io import load_collection
 
@@ -92,6 +93,7 @@ def analyze_review_authenticity(session):
     import seaborn as sns
 
     df = session.df_reviews
+    df = compute_sentiment(df)
     df = df.rename(columns={"review_rating": "rating"})
     if df is None or df.empty:
         print("[!] No review data found in session.")
@@ -163,9 +165,36 @@ def analyze_review_authenticity(session):
             ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
             ax.set_title(f"ASIN: {asin}\n({int(row['n_reviews'])} reviews)", fontsize=12)
 
-        plt.suptitle("NPS Composition for Top 5 ASINs", fontsize=16)
+        plt.suptitle("NPS Composition for Top 5 ASINs (≥10 reviews)", fontsize=16)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
+
+    # --- Sentiment analysis and visualization ---
+    df["sentiment_label"] = df["sentiment"].apply(
+        lambda x: "positive" if x > 0.3 else "negative" if x < -0.3 else "neutral"
+    )
+
+    sentiment_summary = df.groupby("asin")["sentiment"].mean().reset_index()
+    sentiment_summary = sentiment_summary.sort_values(by="sentiment", ascending=False)
+    top_sentiment_asins = sentiment_summary.head(5)
+
+    sentiment_dist = df[df["asin"].isin(top_sentiment_asins["asin"])]
+    sentiment_dist = sentiment_dist.groupby(["asin", "sentiment_label"]).size().unstack(fill_value=0)
+
+    fig, axes = plt.subplots(1, len(top_sentiment_asins), figsize=(6 * len(top_sentiment_asins), 6))
+    if len(top_sentiment_asins) == 1:
+        axes = [axes]
+
+    for ax, asin in zip(axes, top_sentiment_asins["asin"]):
+        sizes = sentiment_dist.loc[asin].values
+        labels = sentiment_dist.columns.tolist()
+        colors = ["mediumseagreen", "gold", "tomato"]
+        ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
+        ax.set_title(f"ASIN: {asin}", fontsize=12)
+
+    plt.suptitle("Sentiment Composition for Top 5 ASINs (≥10 reviews)", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
 
     # --- Pie charts for top 5 ASINs with most flags ---
     asin_flag_counts = df[df["auth_flag"] != ""].copy()
@@ -198,6 +227,14 @@ def analyze_review_authenticity(session):
     plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+
+    # --- Comparison summary ---
+    nps_asins = set(top_asins_nps["asin"])
+    sentiment_asins = set(top_sentiment_asins["asin"])
+
+    print(f"\n[📊] Shared ASINs in Top-5 NPS & Sentiment: {nps_asins & sentiment_asins}")
+    print(f"[📊] NPS-only Top: {nps_asins - sentiment_asins}")
+    print(f"[📊] Sentiment-only Top: {sentiment_asins - nps_asins}")
 
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
@@ -292,3 +329,9 @@ def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
     result = result[result["n_reviews"] >= 10]
 
     return result
+
+def compute_sentiment(df: pd.DataFrame) -> pd.DataFrame:
+    df["sentiment"] = df["review_text"].astype(str).apply(
+        lambda x: round(TextBlob(x).sentiment.polarity, 3) if x.strip() else 0.0
+    )
+    return df
