@@ -88,6 +88,9 @@ def analyze_review_authenticity(session):
     from collections import defaultdict
     from core.collection_io import save_collection
 
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     df = session.df_reviews
     if df is None or df.empty:
         print("[!] No review data found in session.")
@@ -138,8 +141,6 @@ def analyze_review_authenticity(session):
     print("\n[✅] Authenticity check completed.")
 
     # Visualization
-    import matplotlib.pyplot as plt
-
     labels = [
         "Too Short",
         "Too Long",
@@ -168,8 +169,6 @@ def analyze_review_authenticity(session):
     plt.show()
 
     # --- Enhanced Visualization by ASIN ---
-    import seaborn as sns
-
     asin_flag_counts = df[df["auth_flag"] != ""].copy()
     asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
     exploded = asin_flag_counts.explode("auth_flag_list")
@@ -185,6 +184,31 @@ def analyze_review_authenticity(session):
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
         plt.show()
+
+    # --- Pie charts for top 5 ASINs with most flags ---
+    top_asins = exploded["asin"].value_counts().nlargest(5).index
+    fig, axes = plt.subplots(1, len(top_asins), figsize=(5 * len(top_asins), 5))
+
+    flag_colors = {
+        "short": "steelblue",
+        "long": "orange",
+        "high_volume": "red",
+        "duplicate": "purple",
+        "hyperactive_author": "green"
+    }
+
+    for ax, asin in zip(axes, top_asins):
+        asin_flags = exploded[exploded["asin"] == asin]["auth_flag_list"].value_counts()
+        labels = asin_flags.index
+        sizes = asin_flags.values
+        colors = [flag_colors.get(label, "gray") for label in labels]
+
+        ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
+        ax.set_title(f"ASIN: {asin}", fontsize=10)
+
+    plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=14)
+    plt.tight_layout()
+    plt.show()
 
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
