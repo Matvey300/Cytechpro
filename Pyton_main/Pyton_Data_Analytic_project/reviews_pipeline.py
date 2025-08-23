@@ -15,6 +15,9 @@ from typing import Tuple, Dict
 
 from core.auth_amazon import start_amazon_browser_session
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
@@ -41,7 +44,19 @@ def collect_reviews_for_asins(
                 print(f"[{asin}] Loading product page...")
                 product_url = f"https://www.amazon.{marketplace}/dp/{asin}"
                 driver.get(product_url)
-                time.sleep(3)  # Wait for product page to load
+
+                if "signin" in driver.current_url:
+                    print(f"[{asin}] Redirected to Amazon login page. Session expired or unauthorized.")
+                    continue
+
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "productTitle"))
+                    )
+                except TimeoutException:
+                    print(f"[{asin}] Timeout while waiting for product page to load.")
+                    continue
+
                 product_html = driver.page_source
 
                 rawdata_dir = collection_dir / "RawData"
@@ -123,6 +138,7 @@ def collect_reviews_for_asins(
                 page_hashes = set()
                 current_page = 1
                 max_pages = ceil(max_reviews_per_asin / 10)  # Amazon shows 10 reviews per page
+                pagination_limit_reached = False
 
                 while current_page <= max_pages:
                     html = driver.page_source
@@ -232,6 +248,7 @@ def collect_reviews_for_asins(
                     # Check if reached max pages before trying to find next button
                     if current_page >= max_pages:
                         print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
+                        pagination_limit_reached = True
                         break
 
                     # Check if next page exists and navigate
@@ -253,16 +270,9 @@ def collect_reviews_for_asins(
 
                         current_page += 1
                     except Exception:
-                        # if current_page >= max_pages:
-                        #     print(f"[{asin}] Reached maximum allowed page count ({max_pages}), stopping pagination.")
-                        # elif current_page == 1:
-                        #     print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
-                        # else:
-                        #     print(f"[{asin}] No next button found on page {current_page}, ending pagination.")
-                        # break
                         if current_page == 1:
                             print(f"[{asin}] No next button found on the first page. Pagination may not be available.")
-                        else:
+                        elif not pagination_limit_reached:
                             print(f"[{asin}] No next button found. Pagination ended at page {current_page}.")
                         break
 
