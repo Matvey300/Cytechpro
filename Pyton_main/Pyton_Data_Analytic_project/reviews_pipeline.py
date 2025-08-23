@@ -233,12 +233,6 @@ def download_amazon_reviews(
     if cleanup:
         shutil.rmtree(raw_dir, ignore_errors=True)
 
-# Example usage:
-# download_amazon_reviews(
-#     asin="B08N5WRWNW",
-#     collection_dir="MyCollection",
-#     recent_only=True,
-#     max_pages=10,
-#     delay=2.0,
-#     cleanup=True
-# )
+
+# For backward compatibility with modules importing collect_reviews_for_asins
+collect_reviews_for_asins = download_amazon_reviews
