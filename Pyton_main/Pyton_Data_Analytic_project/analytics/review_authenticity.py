@@ -145,7 +145,7 @@ def analyze_review_authenticity(session):
     asin_flag_counts["auth_flag_list"] = asin_flag_counts["auth_flag"].str.split(",")
     exploded = asin_flag_counts.explode("auth_flag_list")
 
-    top_asins = exploded["asin"].value_counts().nlargest(5).index
+    top_asins = exploded.groupby("asin").size().sort_values(ascending=False).head(5).index
     fig, axes = plt.subplots(1, len(top_asins), figsize=(5 * len(top_asins), 5))
 
     flag_colors = {
@@ -163,10 +163,11 @@ def analyze_review_authenticity(session):
         colors = [flag_colors.get(label, "gray") for label in labels]
 
         ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
-        ax.set_title(f"ASIN: {asin}", fontsize=10)
+        total_flags = asin_flags.sum()
+        ax.set_title(f"ASIN: {asin} ({total_flags} flags)", fontsize=10)
 
     plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=14)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
