@@ -56,7 +56,7 @@ def main():
         elif choice == "8":
             from core.collection_io import list_collections, load_collection
             print("\nAvailable flagged collections:")
-            collections = [c for c in list_collections() if c.startswith("authcheck__")]
+            collections = [c for c in list_collections() if c.startswith("authcheck__") and c.endswith("__reviews.csv")]
             if not collections:
                 print("[!] No flagged collections found.")
                 continue
