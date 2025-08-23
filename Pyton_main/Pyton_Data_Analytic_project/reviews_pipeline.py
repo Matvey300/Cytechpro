@@ -234,5 +234,55 @@ def download_amazon_reviews(
         shutil.rmtree(raw_dir, ignore_errors=True)
 
 
+
+from math import ceil
+from pathlib import Path
+from typing import Tuple, Dict
+
+def collect_reviews_for_asins(
+    df_asin: pd.DataFrame,
+    max_reviews_per_asin: int,
+    marketplace: str,
+    out_dir: Path,
+    collection_id: str
+) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    all_reviews = []
+    stats = {}
+
+    collection_dir = out_dir / collection_id
+    for _, row in df_asin.iterrows():
+        asin = row['asin']
+        print(f"[{asin}] Collecting reviews...")
+
+        try:
+            download_amazon_reviews(
+                asin=asin,
+                collection_dir=str(collection_dir),
+                recent_only=False,
+                max_pages=ceil(max_reviews_per_asin / 10),
+                delay=2.0,
+                cleanup=True
+            )
+
+            review_path = collection_dir / 'reviews.csv'
+            if review_path.exists():
+                df = pd.read_csv(review_path)
+                df['asin'] = asin
+                all_reviews.append(df)
+
+                cat = df['category_path'].dropna().unique()
+                cat_label = cat[0] if len(cat) > 0 else 'unknown'
+                stats[cat_label] = stats.get(cat_label, 0) + len(df)
+        except Exception as e:
+            print(f"[!] Failed to collect for ASIN {asin}: {e}")
+
+    if all_reviews:
+        df_all = pd.concat(all_reviews, ignore_index=True)
+        df_all.to_csv(collection_dir / 'reviews.csv', index=False)
+    else:
+        df_all = pd.DataFrame()
+
+    return df_all, stats
+
 # For backward compatibility with modules importing collect_reviews_for_asins
 collect_reviews_for_asins = download_amazon_reviews
