@@ -25,10 +25,8 @@ def run_plotting(session: SessionState):
         session.load_reviews_and_snapshot()
     print("\n📊 Plotting review dynamics...")
 
-    session.load_reviews_and_snapshot()
-
-    if session.df_asin is None or session.df_reviews is None:
-        print("[ERROR] Required data not loaded.")
+    if session.df_reviews is None or session.df_reviews.empty:
+        print("[!] No review data available for plotting.")
         return
 
     plot_review_dynamics(session.df_asin, session.df_reviews)
