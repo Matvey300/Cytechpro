@@ -28,7 +28,7 @@ def run_main_menu(session):
         choice = input(" > Enter choice: ").strip()
 
         if choice == "1":
-            select_collection(session)
+            session.load_collection()
         elif choice == "2":
             if session.is_collection_loaded():
                 run_review_collection(session)
