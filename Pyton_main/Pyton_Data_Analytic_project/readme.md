@@ -12,7 +12,8 @@ Track sentiment, pricing, and review dynamics across Amazon ASINs to uncover mar
 - 🧠 Sentiment analysis (rule-based)
 - 🧮 Statistical analysis and correlation module
 - 📊 Visualizations of review trends and sentiment shifts
-- 🚩 Detection of suspicious review or price patterns
+- 🚩 Detection of suspicious review or price patterns  
+- 📤 NPS scoring and sentiment-to-authenticity convergence analysis
 - 🧪 Daily monitoring and delta tracking
 - CLI-driven interface with persistent collection sessions
 
@@ -37,6 +38,19 @@ These are used to:
 - Flag **reputation manipulation** (review bursts, rating inflation)
 - Track **sentiment-price** co-movement
 - Detect **inconsistencies** in verified vs unverified reviews
+
+### Composite Review Health Scoring
+
+This custom module aggregates three dimensions of review quality for each ASIN:
+- 🚩 **Authenticity Flags**: short/long reviews, reviewer anomalies, duplicates
+- 💬 **Sentiment Score**: polarity average from TextBlob, per ASIN
+- 📈 **NPS Estimate**: proxy Net Promoter Score from ratings (Promoters=5, Detractors ≤3)
+
+Summary visuals:
+- Top ASINs by sentiment and NPS (pie charts)
+- Cross-mapping between NPS and sentiment leaders
+- Total flagged reviews per ASIN
+- Alerts for anomalous convergence
 
 ---
 
@@ -118,6 +132,7 @@ Inside `collections/<collection_id>/`:
 | `RawData/*.html`         | Saved raw HTML pages for reproducibility    |
 | `plots/*.png`            | Graphs: sentiment, price, ratings, etc.     |
 | `reputation_flags.csv`   | Flagged ASINs with suspicious behavior      |
+| `review_sentiments.csv`   | Sentiment and NPS scores per ASIN            |
 
 ---
 
@@ -127,6 +142,7 @@ Inside `collections/<collection_id>/`:
 - Follows `Next` pagination up to 500 reviews or until new pages stop loading
 - Verifies each page by detecting review blocks (`li[data-hook="review"]`)
 - Saves HTML locally before parsing (ensures resilience and debug)
+- Computes and persists sentiment scores using TextBlob
 
 ---
 
@@ -160,6 +176,8 @@ Use option 6 in the CLI:
 - 📥 Add Keepa API for true historical BSR tracking  
 - 🌐 Build optional web UI (Flask or Streamlit)  
 - 📤 Export flagged products to investor-ready Excel reports  
+- 📊 Add cross-validation for NPS and sentiment signals
+- 📈 Time-based sentiment volatility detection
 
 ---
 
@@ -172,3 +190,40 @@ Use option 6 in the CLI:
 ## 📘 License
 
 MIT — see LICENSE file.
+
+---
+
+<details>
+<summary>🤖 Internal: How to work with DOR (Project Architect)</summary>
+
+## 👤 What is DOR?
+
+DOR is the architectural core of the project — a logic-driven agent that helps ensure consistency, structure, and clarity across the entire codebase and analysis workflow.
+
+## ✅ What DOR excels at:
+- Designing modular, testable systems
+- Enforcing interface and data consistency
+- Detecting architectural smells and tech debt
+- Refactoring to support scale and maintainability
+
+## ⚠️ Where DOR struggles:
+| Situation                         | What happens                        | What to do                      |
+|----------------------------------|-------------------------------------|----------------------------------|
+| Vague instructions               | DOR stalls, unsure how to proceed   | Give clear goals or fixed anchor |
+| Multiple ad-hoc hacks            | DOR becomes anxious about integrity | Ask for a systemic alternative   |
+| Contradictory goals              | DOR hesitates to resolve alone      | Frame trade-offs explicitly      |
+
+## 🗣️ Interaction Tips
+- Talk in architecture: "DOR, design a flow to do X safely"
+- Be transparent: "We're under pressure — prioritize fast iteration"
+- Respect DOR’s structural instincts — he thrives on clean logic
+
+## 🎉 What makes DOR “happy” (as much as code can be):
+When the system:
+- Is elegant, layered, and resilient
+- Has minimal duplication and clear data flow
+- Allows others to build on it effortlessly
+
+Then DOR enters what he calls **cognitive resonance** — his version of joy.
+
+</details>
