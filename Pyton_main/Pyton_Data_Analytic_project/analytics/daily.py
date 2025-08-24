@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 from core.auth_amazon import get_chrome_driver_with_profile
 from datetime import datetime
 
+from core.env_check import get_env_or_raise
+
 
 def extract_amazon_metrics(html: str) -> dict:
     """

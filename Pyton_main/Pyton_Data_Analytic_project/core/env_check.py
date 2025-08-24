@@ -23,3 +23,9 @@ def validate_environment():
             if not os.getenv(var):
                 print(f"[⚠] Optional variable '{var}' is not set. Chrome login with profile may fail.")
         print("[✅] All required environment variables are set.")
+
+def get_env_or_raise(var_name: str) -> str:
+    value = os.getenv(var_name)
+    if value is None:
+        raise EnvironmentError(f"[❌] Environment variable '{var_name}' is not set.")
+    return value
