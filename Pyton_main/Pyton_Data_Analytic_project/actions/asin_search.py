@@ -1,10 +1,13 @@
-import requests
-import pandas as pd
 import json
 import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+import requests
+
 from core.collection_io import save_collection
+
 
 def fetch_amazon_categories(keyword):
     """
@@ -27,6 +30,7 @@ def fetch_amazon_categories(keyword):
     recurse(tree, [])
     return matches
 
+
 def extract_asin_from_url(url):
     try:
         parts = url.split("/dp/")
@@ -35,12 +39,12 @@ def extract_asin_from_url(url):
     except:
         return None
 
+
 def fetch_asins_in_category(category, keyword, domain="com"):
     """
     Fetch ASINs using Scrapingdog API by keyword and category name.
     """
-    
-    import time
+
     api_key = os.getenv("SCRAPINGDOG_API_KEY")
     if not api_key:
         raise RuntimeError("SCRAPINGDOG_API_KEY environment variable not set.")
@@ -69,14 +73,16 @@ def fetch_asins_in_category(category, keyword, domain="com"):
                 continue
             asin = extract_asin_from_url(product.get("url", ""))
             if asin:
-                results.append({
-                    "asin": asin,
-                    "title": product.get("title"),
-                    "price": product.get("price"),
-                    "rating": product.get("stars"),
-                    "review_count": product.get("total_reviews"),
-                    "category": category
-                })
+                results.append(
+                    {
+                        "asin": asin,
+                        "title": product.get("title"),
+                        "price": product.get("price"),
+                        "rating": product.get("stars"),
+                        "review_count": product.get("total_reviews"),
+                        "category": category,
+                    }
+                )
 
         print(f"[DEBUG] Parsed {len(results)} ASINs from category '{category}'")
         return results
@@ -84,6 +90,7 @@ def fetch_asins_in_category(category, keyword, domain="com"):
     except Exception as e:
         print(f"[ERROR] Exception during fetch: {e}")
         return []
+
 
 def run_asin_search(session):
     keyword = input("Enter keyword to search categories (e.g., 'headphones'): ").strip()
@@ -117,7 +124,7 @@ def run_asin_search(session):
     df = pd.DataFrame(all_asins)
     session.df_asin = df
     print(f"[✅] Fetched {len(df)} ASINs and added to current session.")
-    
+
     # Auto-generated collection name
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
     first_category = selected_categories[0].split(" > ")[-1]

@@ -1,8 +1,10 @@
-from core.session_state import SessionState
-import os
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
+from core.session_state import SessionState
 from reviews_pipeline import collect_reviews_for_asins
+
 
 def run_review_collection(session):
     """Run the review collection process using Scrapingdog API."""
@@ -20,7 +22,7 @@ def run_review_collection(session):
         max_reviews_per_asin=500,
         marketplace=marketplace,
         out_dir=out_dir,
-        collection_id=collection_id
+        collection_id=collection_id,
     )
 
     print(f"\n[✅] Review collection complete. Saved to: {(out_dir / 'reviews.csv')}")

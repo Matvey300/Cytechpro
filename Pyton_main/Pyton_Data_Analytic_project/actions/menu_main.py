@@ -1,12 +1,11 @@
-from pathlib import Path
-from core.env_check import validate_environment
-from core.session_state import SessionState
-from core.collection_io import select_collection
+from actions.asin_search import run_asin_search
+from actions.correlations import run_correlation_analysis
 from actions.reviews import run_review_collection
 from actions.snapshots import run_daily_screening
-from actions.plots import run_plotting
-from actions.correlations import run_correlation_analysis
-from actions.asin_search import run_asin_search
+from core.collection_io import select_collection
+from core.env_check import validate_environment
+from core.session_state import SessionState
+
 
 def run_main_menu(session):
     while True:
@@ -21,7 +20,9 @@ def run_main_menu(session):
         print("3) Search ASINs by keyword and category")
         print("4) Take regular snapshot (price, rating, BSR)")
         print("5) Analyze and visualize reviews")
-        print("6) Run correlation analysis (price, rating, BSR) after accumulation of 30 days of regular snapshots")
+        print(
+            "6) Run correlation analysis (price, rating, BSR) after accumulation of 30 days of regular snapshots"
+        )
         print("7) List saved collections")
         print("0) Exit")
 
@@ -55,8 +56,8 @@ def run_main_menu(session):
                 print("[!] Reviews not loaded or empty. Skipping analysis.")
                 continue
 
-            from analytics.review_authenticity import detect_suspicious_reviews
             from analytics.reaction_pulse import run_sentiment_analysis
+            from analytics.review_authenticity import detect_suspicious_reviews
 
             detect_suspicious_reviews(session)
             run_sentiment_analysis(session.df_reviews)
@@ -77,7 +78,9 @@ def run_main_menu(session):
         else:
             print("[!] Invalid choice.")
 
+
 def main_menu():
     from core.session_state import SESSION
+
     validate_environment()
     run_main_menu(SESSION)

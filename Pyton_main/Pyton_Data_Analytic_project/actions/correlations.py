@@ -1,9 +1,11 @@
 # Missing import for pandas
 import pandas as pd
-# actions/correlations.py
 
 from analytics.correlation_analysis import compute_correlation_matrix
 from core.session_state import SessionState
+
+# actions/correlations.py
+
 
 # NOTE: This module is currently unused in the CLI or scheduled pipelines and may be deprecated.
 def run_correlation_analysis(session: SessionState):

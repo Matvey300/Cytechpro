@@ -1,9 +1,12 @@
 from pathlib import Path
+
 import pandas as pd
+
 from core.session_state import SessionState
 
 COLLECTIONS_DIR = Path("collections")
 COLLECTIONS_DIR.mkdir(exist_ok=True)
+
 
 def list_collections() -> list[str]:
     valid_collections = []
@@ -14,6 +17,7 @@ def list_collections() -> list[str]:
         if review_files:
             valid_collections.append(collection_dir.name)
     return sorted(valid_collections)
+
 
 def create_collection(session: SessionState) -> SessionState:
     name = input("Enter a name for the new ASIN collection: ").strip()
@@ -27,7 +31,9 @@ def create_collection(session: SessionState) -> SessionState:
         return create_collection(session)
 
     path.mkdir(parents=True, exist_ok=True)
-    df = pd.DataFrame(columns=["asin", "title", "rating", "review_count", "country", "category_path"])
+    df = pd.DataFrame(
+        columns=["asin", "title", "rating", "review_count", "country", "category_path"]
+    )
     df.to_csv(path / f"{name}.csv", index=False)
     print(f"[✅] Created new collection: {name}")
 
@@ -36,9 +42,11 @@ def create_collection(session: SessionState) -> SessionState:
     session.df_asin = df
     return session
 
+
 def load_collection(name: str, session: SessionState) -> SessionState:
     session.load_collection(name)
     return session
+
 
 def select_collection(session: SessionState) -> SessionState:
     collections = list_collections()
@@ -64,6 +72,7 @@ def select_collection(session: SessionState) -> SessionState:
 
     print("Invalid selection.")
     return select_collection(session)
+
 
 def save_collection(session: SessionState, collection_id: str, df: pd.DataFrame):
     collection_path = COLLECTIONS_DIR / collection_id

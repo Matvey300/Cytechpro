@@ -1,9 +1,10 @@
 # actions/plots.py
 
+import pandas as pd
+
 from analytics.review_dynamics import plot_review_dynamics
 from core.session_state import SessionState
-import os
-import pandas as pd
+
 
 def run_plotting(session: SessionState):
     """Run plotting for review and sentiment dynamics."""
@@ -33,6 +34,6 @@ def run_plotting(session: SessionState):
         df_asin=session.df_asin,
         df_reviews=session.df_reviews,
         collection_id=session.collection_id,
-        data_dir=session.collection_path
+        data_dir=session.collection_path,
     )
     print("✅ Done.")

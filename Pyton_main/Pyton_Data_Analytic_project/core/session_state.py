@@ -1,6 +1,8 @@
-from pathlib import Path
-import pandas as pd
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
 
 class SessionState:
     def __init__(self):
@@ -11,7 +13,9 @@ class SessionState:
         self.collection_path = None
 
     def load_collection(self, collection_id: str = None):
-        from core.collection_io import list_collections  # Импортировать здесь, чтобы избежать циклического импорта
+        from core.collection_io import (
+            list_collections,  # Импортировать здесь, чтобы избежать циклического импорта
+        )
 
         if collection_id is None:
             print("[ℹ] No collection loaded. Select from saved collections:")
@@ -66,22 +70,28 @@ class SessionState:
             print("[!] Snapshot file not found.")
 
     def has_reviews(self):
-        return hasattr(self, 'df_reviews') and self.df_reviews is not None
+        return hasattr(self, "df_reviews") and self.df_reviews is not None
 
     def has_snapshot(self):
-        return hasattr(self, 'df_snapshot') and self.df_snapshot is not None
+        return hasattr(self, "df_snapshot") and self.df_snapshot is not None
 
     def is_collection_loaded(self):
         return (
-            self.df_asin is not None and
-            self.collection_path is not None and
-            self.collection_path.exists() and
-            self.collection_path.is_dir()
+            self.df_asin is not None
+            and self.collection_path is not None
+            and self.collection_path.exists()
+            and self.collection_path.is_dir()
         )
 
     def ensure_collection_dir(self):
-        if self.collection_path and self.collection_path.exists() and not self.collection_path.is_dir():
-            raise NotADirectoryError(f"[ERR] Path exists but is not a directory: {self.collection_path}")
+        if (
+            self.collection_path
+            and self.collection_path.exists()
+            and not self.collection_path.is_dir()
+        ):
+            raise NotADirectoryError(
+                f"[ERR] Path exists but is not a directory: {self.collection_path}"
+            )
         if self.collection_path and not self.collection_path.exists():
             self.collection_path.mkdir(parents=True, exist_ok=True)
 
@@ -91,8 +101,7 @@ class SessionState:
             print("[No collections found]")
         else:
             collections = [
-                d.name for d in data_dir.iterdir()
-                if d.is_dir() and (d / "asins.csv").exists()
+                d.name for d in data_dir.iterdir() if d.is_dir() and (d / "asins.csv").exists()
             ]
             if not collections:
                 print("[No valid collections found]")
@@ -110,21 +119,24 @@ class SessionState:
         if self.df_asin is not None:
             asin_path = self.collection_path / "asins.csv"
             self.df_asin.to_csv(asin_path, index=False)
-        if hasattr(self, 'df_reviews') and self.df_reviews is not None:
+        if hasattr(self, "df_reviews") and self.df_reviews is not None:
             timestamp = datetime.now().strftime("%y%m%d_%H%M")
             reviews_filename = f"{timestamp}__{self.collection_id}__reviews.csv"
             reviews_path = self.collection_path / reviews_filename
             self.df_reviews.to_csv(reviews_path, index=False)
-        if hasattr(self, 'df_snapshot') and self.df_snapshot is not None:
+        if hasattr(self, "df_snapshot") and self.df_snapshot is not None:
             timestamp = datetime.now().strftime("%y%m%d_%H%M")
             snapshot_filename = f"{timestamp}__{self.collection_id}__snapshot.csv"
             snapshot_path = self.collection_path / snapshot_filename
             self.df_snapshot.to_csv(snapshot_path, index=False)
 
     def __str__(self):
-        return f"Session(collection_id={self.collection_id}, " \
-               f"has_asins={self.df_asin is not None}, " \
-               f"has_reviews={self.has_reviews()}, " \
-               f"has_snapshot={self.has_snapshot()})"
+        return (
+            f"Session(collection_id={self.collection_id}, "
+            f"has_asins={self.df_asin is not None}, "
+            f"has_reviews={self.has_reviews()}, "
+            f"has_snapshot={self.has_snapshot()})"
+        )
+
 
 SESSION = SessionState()

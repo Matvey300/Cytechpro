@@ -1,16 +1,13 @@
 # actions/create_collection.py
 
-import json
-from pathlib import Path
 from typing import List
 
 import pandas as pd
-
-from core.session_state import SESSION
-from api.serpapi import fetch_categories_strict
 from ASIN_data_import import collect_asins
-from storage.io_utils import save_asin_collection, list_saved_collections
-from utils.console import ask, info, warn, slugify, today_ymd, split_tokens
+from utils.console import ask, info, slugify, split_tokens, today_ymd, warn
+
+from api.serpapi import fetch_categories_strict
+from core.session_state import SESSION
 
 
 def prompt_marketplace_inside() -> str:
@@ -68,7 +65,9 @@ def create_collection_by_keyword_flow() -> None:
     df_all = pd.concat(all_rows, ignore_index=True).drop_duplicates(subset="asin")
 
     cid = f"{slugify(keyword)}_kw_{marketplace}_{today_ymd()}"
-    path = save_asin_collection(df_all, cid, marketplace, meta_extra={"keyword": keyword, "categories": selected})
+    path = save_asin_collection(
+        df_all, cid, marketplace, meta_extra={"keyword": keyword, "categories": selected}
+    )
 
     SESSION.collection_id = cid
     SESSION.collection_path = path

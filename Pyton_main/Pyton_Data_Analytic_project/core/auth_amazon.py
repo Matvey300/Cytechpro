@@ -1,14 +1,16 @@
 # core/auth_amazon.py
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.common.exceptions import SessionNotCreatedException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 import os
 from pathlib import Path
+
+from selenium import webdriver
+from selenium.common.exceptions import SessionNotCreatedException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
 
 def ask_yes_no(prompt: str) -> bool:
     while True:
@@ -20,6 +22,7 @@ def ask_yes_no(prompt: str) -> bool:
         else:
             print("Please enter 'y' or 'n'.")
 
+
 def open_amazon_home(driver: WebDriver) -> bool:
     try:
         driver.get("https://www.amazon.com/")
@@ -27,6 +30,7 @@ def open_amazon_home(driver: WebDriver) -> bool:
     except Exception as e:
         print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
         return False
+
 
 def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebDriver:
     """
@@ -41,7 +45,9 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         Configured Selenium WebDriver instance.
     """
     if not user_data_dir or not profile_dir:
-        raise ValueError("Both user_data_dir and profile_dir must be provided. Please check your environment variables.")
+        raise ValueError(
+            "Both user_data_dir and profile_dir must be provided. Please check your environment variables."
+        )
     options = Options()
     options.add_argument(f"--user-data-dir={user_data_dir}")
     options.add_argument(f"--profile-directory={profile_dir}")
@@ -91,7 +97,9 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
             if is_logged_in(driver):
                 print("[✅] Login confirmed. Proceeding with review collection.")
             else:
-                proceed = ask_yes_no("[⚠] Login not detected. Continue with limited access? (y/n): ")
+                proceed = ask_yes_no(
+                    "[⚠] Login not detected. Continue with limited access? (y/n): "
+                )
                 if not proceed:
                     print("[✋] Aborting session as requested by user.")
                     driver.quit()
@@ -106,7 +114,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
 def is_logged_in(driver: WebDriver) -> bool:
     """
     Check if the user is logged into Amazon by looking for the account menu.
-    
+
     Args:
         driver: Selenium WebDriver currently on amazon.com
 
@@ -115,7 +123,9 @@ def is_logged_in(driver: WebDriver) -> bool:
     """
     try:
         driver.get("https://www.amazon.com/")
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "nav-link-accountList")))
+        WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.ID, "nav-link-accountList"))
+        )
         account_element = driver.find_element("id", "nav-link-accountList")
         if "Sign in" not in account_element.text:
             print("[✅] Amazon session is active.")
