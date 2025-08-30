@@ -7,7 +7,7 @@ ENTRYPOINT_HINTS = {"menu_main.py","app.py","pipeline.py","reviews_pipeline.py",
 import_re = re.compile(r'^\s*(?:from\s+([\w\.]+)\s+import|import\s+([\w\.]+))', re.M)
 
 def all_py(root: Path):
-    skip = {"venv",".venv",".git","site-packages","archive"}
+    skip = {"venv",".venv",".git","site-packages"}
     return [p for p in root.rglob("*.py") if not any(s in p.parts for s in skip)]
 
 def mod_name(root: Path, file: Path) -> str:
@@ -59,4 +59,4 @@ def main():
 
 if __name__=="__main__":
     sys.exit(main())
-PY
+

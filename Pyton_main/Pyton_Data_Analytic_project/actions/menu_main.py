@@ -36,14 +36,20 @@ def run_main_menu(session):
             else:
                 print("[!] Please load a valid collection first.")
         elif choice == "3":
-            run_asin_search(session)
-        elif choice == "4":
-            if not session.is_collection_loaded():
-                session.load_collection()
-            if session.is_collection_loaded():
-                run_daily_screening(session)
+            if run_asin_search is None:
+                print("[!] ASIN search module is temporarily unavailable (archived). Skipping.")
             else:
-                print("[!] Failed to load a collection.")
+                run_asin_search(session)
+        elif choice == "4":
+            if run_daily_screening is None:
+                print("[!] Snapshot module is temporarily unavailable (archived). Skipping.")
+            else:
+                if not session.is_collection_loaded():
+                    session.load_collection()
+                if session.is_collection_loaded():
+                    run_daily_screening(session)
+                else:
+                    print("[!] Failed to load a collection.")
         elif choice == "5":
             if not session.collection_path:
                 session.load_collection()
@@ -56,11 +62,18 @@ def run_main_menu(session):
                 print("[!] Reviews not loaded or empty. Skipping analysis.")
                 continue
 
-            from analytics.reaction_pulse import run_sentiment_analysis
-            from analytics.review_authenticity import detect_suspicious_reviews
+            try:
+                from analytics.reaction_pulse import run_sentiment_analysis
+                from analytics.review_authenticity import detect_suspicious_reviews
+            except Exception:
+                print("[!] Analytics modules are temporarily unavailable (archived). Skipping.")
+                continue
 
-            detect_suspicious_reviews(session)
-            run_sentiment_analysis(session.df_reviews)
+            try:
+                detect_suspicious_reviews(session)
+                run_sentiment_analysis(session.df_reviews)
+            except Exception as e:
+                print(f"[!] Analytics failed: {e}")
         elif choice == "6":
             if not session.is_collection_loaded():
                 print("[ℹ] No collection loaded. Select from saved collections:")
@@ -80,7 +93,15 @@ def run_main_menu(session):
 
 
 def main_menu():
-    from core.session_state import SESSION
+    try:
+        from core.session_state import SESSION
+    except Exception:
+        print("[!] SESSION object unavailable: cannot start main menu.")
+        return
 
-    validate_environment()
+    try:
+        validate_environment()
+    except Exception:
+        print("[!] Environment validation failed/skipped.")
+
     run_main_menu(SESSION)
