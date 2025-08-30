@@ -60,5 +60,3 @@ def main():
 if __name__=="__main__":
     sys.exit(main())
 PY
-
-python tools/find_orphan_modules.py | tee orphans_report.txt
