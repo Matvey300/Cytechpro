@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-
 from core.collection_io import save_collection
 
 

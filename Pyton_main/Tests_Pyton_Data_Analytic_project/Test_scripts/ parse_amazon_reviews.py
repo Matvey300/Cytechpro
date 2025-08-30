@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 from bs4 import BeautifulSoup
 from dateutil import parser as date_parser
@@ -18,8 +19,8 @@ for page in range(1, PAGES + 1):
 
     with open(file_path, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
-        
-        review_blocks = soup.find_all("li", {"data-hook": "review"}) 
+
+        review_blocks = soup.find_all("li", {"data-hook": "review"})
 
         if not review_blocks:
             print(f"⚠️ На странице {page} не найдено отзывов.")
@@ -32,7 +33,9 @@ for page in range(1, PAGES + 1):
                 author = author_tag.get_text(strip=True) if author_tag else "N/A"
 
                 # Рейтинг
-                rating_tag = r.find("i", {"data-hook": "review-star-rating"}) or r.find("i", {"data-hook": "cmps-review-star-rating"})
+                rating_tag = r.find("i", {"data-hook": "review-star-rating"}) or r.find(
+                    "i", {"data-hook": "cmps-review-star-rating"}
+                )
                 rating_str = rating_tag.find("span").get_text(strip=True) if rating_tag else ""
                 rating = float(rating_str.split()[0]) if rating_str else None
 
@@ -49,7 +52,11 @@ for page in range(1, PAGES + 1):
                 except:
                     date_iso = None
 
-                location = date_str.split(" in ")[-1].split(" on ")[0].strip() if " in " in date_str else "N/A"
+                location = (
+                    date_str.split(" in ")[-1].split(" on ")[0].strip()
+                    if " in " in date_str
+                    else "N/A"
+                )
 
                 # Тело отзыва
                 body_tag = r.find("span", {"data-hook": "review-body"})
@@ -57,7 +64,9 @@ for page in range(1, PAGES + 1):
 
                 # Verified Purchase
                 verified_tag = r.find("span", {"data-hook": "avp-badge"})
-                verified = True if verified_tag and "Verified Purchase" in verified_tag.text else False
+                verified = (
+                    True if verified_tag and "Verified Purchase" in verified_tag.text else False
+                )
 
                 # Полезность
                 helpful_tag = r.find("span", {"data-hook": "helpful-vote-statement"})
@@ -72,17 +81,19 @@ for page in range(1, PAGES + 1):
                 else:
                     helpful_votes = 0
 
-                reviews.append({
-                    "asin": ASIN,
-                    "author": author,
-                    "location": location,
-                    "date": date_iso,
-                    "rating": rating,
-                    "title": title,
-                    "body": body,
-                    "verified_purchase": verified,
-                    "helpful_votes": helpful_votes
-                })
+                reviews.append(
+                    {
+                        "asin": ASIN,
+                        "author": author,
+                        "location": location,
+                        "date": date_iso,
+                        "rating": rating,
+                        "title": title,
+                        "body": body,
+                        "verified_purchase": verified,
+                        "helpful_votes": helpful_votes,
+                    }
+                )
 
             except Exception as e:
                 print(f"⚠️ Пропущен отзыв из-за ошибки: {e}")

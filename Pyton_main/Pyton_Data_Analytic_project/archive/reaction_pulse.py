@@ -1,11 +1,15 @@
 # analytics/reaction_pulse.py
 
-import pandas as pd
 import os
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
-def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_multiplier: float = 3.0):
+
+def detect_review_spikes(
+    collection_id: str, data_dir: str = "Out", min_spike_multiplier: float = 3.0
+):
     """
     Identifies ASINs with sharp review activity bursts (sudden spikes).
 
@@ -46,13 +50,17 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
         spikes = daily_counts[daily_counts["review_count"] > spike_threshold]
 
         for _, row in spikes.iterrows():
-            result_rows.append({
-                "asin": asin,
-                "date": row["date"],
-                "review_count": row["review_count"],
-                "median_baseline": median_reviews,
-                "multiplier": row["review_count"] / median_reviews if median_reviews > 0 else None
-            })
+            result_rows.append(
+                {
+                    "asin": asin,
+                    "date": row["date"],
+                    "review_count": row["review_count"],
+                    "median_baseline": median_reviews,
+                    "multiplier": (
+                        row["review_count"] / median_reviews if median_reviews > 0 else None
+                    ),
+                }
+            )
 
         if not spikes.empty:
             daily_counts["is_spike"] = daily_counts["review_count"] > spike_threshold
@@ -69,7 +77,9 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
         plt.figure(figsize=(12, 6))
         sns.lineplot(data=all_data, x="date", y="review_count", hue="asin", alpha=0.5)
         spike_points = all_data[all_data["is_spike"]]
-        plt.scatter(spike_points["date"], spike_points["review_count"], color="red", s=50, label="Spike")
+        plt.scatter(
+            spike_points["date"], spike_points["review_count"], color="red", s=50, label="Spike"
+        )
         plt.title("Detected Review Activity Spikes")
         plt.xlabel("Date")
         plt.ylabel("Review Count")
@@ -86,6 +96,7 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
 
 # --- Sentiment analysis placeholder ---
 from textblob import TextBlob
+
 
 def run_sentiment_analysis(df_reviews):
     def compute_sentiment(text):

@@ -1,8 +1,5 @@
 from pathlib import Path
 
-import pandas as pd
-
-from core.session_state import SessionState
 from reviews_pipeline import collect_reviews_for_asins
 
 

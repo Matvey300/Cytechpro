@@ -1,15 +1,9 @@
-
-import numpy as np 
-import pandas as pd
-import scipy as sc
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
-import pandas as pd
 
-import matplotlib.pyplot as plt
-
-y_arr_1 = [1,4,5,6]
-x_arr_1 = [6,7,8,9]
+y_arr_1 = [1, 4, 5, 6]
+x_arr_1 = [6, 7, 8, 9]
 # plt.subplot(2,2,1)
 # plt.xlabel("nums X 1")
 # plt.ylabel("nums Y 1")
@@ -38,6 +32,6 @@ x_arr_1 = [6,7,8,9]
 
 # plt.show()
 
-df = pd.DataFrame({'x': x_arr_1, 'y': y_arr_1})
-sns.histplot(df['y'])
+df = pd.DataFrame({"x": x_arr_1, "y": y_arr_1})
+sns.histplot(df["y"])
 plt.show()

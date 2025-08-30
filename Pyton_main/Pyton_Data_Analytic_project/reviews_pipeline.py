@@ -1,31 +1,28 @@
 # -*- coding: utf-8 -*-
-import os
 import re
-import time
 import shutil
-import glob
-import pandas as pd
-from bs4 import BeautifulSoup
-from dateutil import parser as dateparser
+import time
 from datetime import datetime
-from core import SESSION
-
 from math import ceil
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
+import pandas as pd
+from bs4 import BeautifulSoup
 from core.auth_amazon import start_amazon_browser_session
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from dateutil import parser as dateparser
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
     max_reviews_per_asin: int,
     marketplace: str,
     out_dir: Path,
-    collection_id: str
+    collection_id: str,
 ) -> Tuple[pd.DataFrame, Dict[str, int]]:
     all_reviews = []
     stats = {}
@@ -38,7 +35,7 @@ def collect_reviews_for_asins(
     try:
         driver = start_amazon_browser_session(None, collection_dir)
         for _, row in df_asin.iterrows():
-            asin = row['asin']
+            asin = row["asin"]
             print(f"[{asin}] Starting review collection...")
 
             try:
@@ -56,7 +53,9 @@ def collect_reviews_for_asins(
                     continue
 
                 if "signin" in driver.current_url:
-                    print(f"[{asin}] Redirected to Amazon login page. Session expired or unauthorized.")
+                    print(
+                        f"[{asin}] Redirected to Amazon login page. Session expired or unauthorized."
+                    )
                     continue
 
                 try:
@@ -82,65 +81,81 @@ def collect_reviews_for_asins(
                 # Save screenshot of product page
                 driver.save_screenshot(str(rawdata_dir / f"{asin}_product_screenshot.png"))
 
-                soup = BeautifulSoup(product_html, 'html.parser')
+                soup = BeautifulSoup(product_html, "html.parser")
 
                 # Extract price, BSR, review_count, category_path here (переместить соответствующий блок сюда)
-                category_path = 'unknown'
-                breadcrumb = soup.select_one('#wayfinding-breadcrumbs_feature_div ul.a-unordered-list')
+                category_path = "unknown"
+                breadcrumb = soup.select_one(
+                    "#wayfinding-breadcrumbs_feature_div ul.a-unordered-list"
+                )
                 if breadcrumb:
-                    category_path = ' > '.join([li.get_text(strip=True) for li in breadcrumb.find_all('li') if li.get_text(strip=True)])
-                if (category_path == 'unknown' or not category_path.strip()) and 'category_path' in row and pd.notna(row['category_path']):
-                    category_path = row['category_path']
+                    category_path = " > ".join(
+                        [
+                            li.get_text(strip=True)
+                            for li in breadcrumb.find_all("li")
+                            if li.get_text(strip=True)
+                        ]
+                    )
+                if (
+                    (category_path == "unknown" or not category_path.strip())
+                    and "category_path" in row
+                    and pd.notna(row["category_path"])
+                ):
+                    category_path = row["category_path"]
 
                 price = None
                 bsr = None
                 review_count = None
 
                 # Try to extract price
-                price_tag = soup.select_one('span.a-price span.a-offscreen')
+                price_tag = soup.select_one("span.a-price span.a-offscreen")
                 if price_tag:
                     price = price_tag.text.strip()
 
                 # Try to extract BSR and review count from product details
-                product_details = soup.select_one('#prodDetails')
+                product_details = soup.select_one("#prodDetails")
                 if product_details:
-                    text = product_details.get_text(separator=' ', strip=True)
-                    bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
+                    text = product_details.get_text(separator=" ", strip=True)
+                    bsr_match = re.search(r"Best Sellers Rank\s*#([\d,]+)", text)
                     if bsr_match:
-                        bsr = bsr_match.group(1).replace(',', '')
-                    review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
+                        bsr = bsr_match.group(1).replace(",", "")
+                    review_count_match = re.search(r"Customer Reviews\s*([\d,]+)", text)
                     if review_count_match:
-                        review_count = review_count_match.group(1).replace(',', '')
+                        review_count = review_count_match.group(1).replace(",", "")
 
                 # Alternative location for BSR and review count
                 if not bsr or not review_count:
-                    detail_bullets = soup.select_one('#detailBullets_feature_div')
+                    detail_bullets = soup.select_one("#detailBullets_feature_div")
                     if detail_bullets:
-                        text = detail_bullets.get_text(separator=' ', strip=True)
-                        bsr_match = re.search(r'Best Sellers Rank\s*#([\d,]+)', text)
+                        text = detail_bullets.get_text(separator=" ", strip=True)
+                        bsr_match = re.search(r"Best Sellers Rank\s*#([\d,]+)", text)
                         if bsr_match:
-                            bsr = bsr_match.group(1).replace(',', '')
-                        review_count_match = re.search(r'Customer Reviews\s*([\d,]+)', text)
+                            bsr = bsr_match.group(1).replace(",", "")
+                        review_count_match = re.search(r"Customer Reviews\s*([\d,]+)", text)
                         if review_count_match:
-                            review_count = review_count_match.group(1).replace(',', '')
+                            review_count = review_count_match.group(1).replace(",", "")
 
                 # If still missing, fallback to df_asin values if available
-                if not bsr and 'best_sellers_rank' in row and pd.notna(row['best_sellers_rank']):
-                    bsr = str(row['best_sellers_rank'])
-                if not review_count and 'total_review_count' in row and pd.notna(row['total_review_count']):
-                    review_count = str(row['total_review_count'])
-                if not price and 'price' in row and pd.notna(row['price']):
-                    price = str(row['price'])
+                if not bsr and "best_sellers_rank" in row and pd.notna(row["best_sellers_rank"]):
+                    bsr = str(row["best_sellers_rank"])
+                if (
+                    not review_count
+                    and "total_review_count" in row
+                    and pd.notna(row["total_review_count"])
+                ):
+                    review_count = str(row["total_review_count"])
+                if not price and "price" in row and pd.notna(row["price"]):
+                    price = str(row["price"])
 
                 # Prepare snapshot dictionary
                 snapshot = {
-                    'asin': asin,
-                    'marketplace': marketplace,
-                    'category_path': category_path,
-                    'price': price,
-                    'best_sellers_rank': bsr,
-                    'review_count': review_count,
-                    'scan_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    "asin": asin,
+                    "marketplace": marketplace,
+                    "category_path": category_path,
+                    "price": price,
+                    "best_sellers_rank": bsr,
+                    "review_count": review_count,
+                    "scan_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 }
                 snapshots.append(snapshot)
 
@@ -167,11 +182,13 @@ def collect_reviews_for_asins(
                     with open(raw_html_path, "w", encoding="utf-8") as f:
                         f.write(html)
 
-                    soup = BeautifulSoup(html, 'html.parser')
+                    soup = BeautifulSoup(html, "html.parser")
 
                     page_hash = hash(html)
                     if page_hash in page_hashes:
-                        print(f"[{asin}] Detected repeated page content at page {current_page}, stopping pagination.")
+                        print(
+                            f"[{asin}] Detected repeated page content at page {current_page}, stopping pagination."
+                        )
                         break
                     page_hashes.add(page_hash)
                     print(f"[{asin}] Parsing page {current_page}...")
@@ -181,46 +198,51 @@ def collect_reviews_for_asins(
                     print(f"[{asin}] Found {len(review_divs)} review blocks on page {current_page}")
                     for div in review_divs:
                         review = {
-                            'asin': asin,
-                            'marketplace': marketplace,
-                            'category_path': category_path,
-                            'scan_timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            'review_title': None,
-                            'review_rating': None,
-                            'review_author': None,
-                            'review_date': None,
-                            'review_text': None,
-                            'review_location': None,
-                            'review_verified_purchase': None,
-                            'review_helpful_votes': None,
+                            "asin": asin,
+                            "marketplace": marketplace,
+                            "category_path": category_path,
+                            "scan_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "review_title": None,
+                            "review_rating": None,
+                            "review_author": None,
+                            "review_date": None,
+                            "review_text": None,
+                            "review_location": None,
+                            "review_verified_purchase": None,
+                            "review_helpful_votes": None,
                         }
 
                         try:
-                            title_tag = div.select_one('a[data-hook="review-title"]') or div.select_one('span[data-hook="review-title"]')
+                            title_tag = div.select_one(
+                                'a[data-hook="review-title"]'
+                            ) or div.select_one('span[data-hook="review-title"]')
                             if title_tag:
-                                review['review_title'] = title_tag.text.strip()
+                                review["review_title"] = title_tag.text.strip()
                         except Exception as e:
                             print(f"[{asin}] Error parsing title: {e}")
 
                         try:
-                            rating_tag = div.select_one('i[data-hook="review-star-rating"] span') or \
-                                         div.select_one('i[data-hook="cmps-review-star-rating"] span')
+                            rating_tag = div.select_one(
+                                'i[data-hook="review-star-rating"] span'
+                            ) or div.select_one('i[data-hook="cmps-review-star-rating"] span')
                             if rating_tag:
                                 rating_text = rating_tag.text.strip()
-                                review['review_rating'] = float(rating_text.split()[0])
+                                review["review_rating"] = float(rating_text.split()[0])
                         except Exception as e:
                             print(f"[{asin}] Error parsing rating: {e}")
 
                         try:
-                            author_tag = div.select_one('span.a-profile-name')
+                            author_tag = div.select_one("span.a-profile-name")
                             if author_tag:
-                                review['review_author'] = author_tag.text.strip()
+                                review["review_author"] = author_tag.text.strip()
                         except Exception as e:
                             print(f"[{asin}] Error parsing author: {e}")
 
                         try:
                             verified_tag = div.select_one('span[data-hook="avp-badge"]')
-                            review['review_verified_purchase'] = bool(verified_tag and "Verified Purchase" in verified_tag.text)
+                            review["review_verified_purchase"] = bool(
+                                verified_tag and "Verified Purchase" in verified_tag.text
+                            )
                         except Exception as e:
                             print(f"[{asin}] Error parsing verified_purchase: {e}")
 
@@ -228,19 +250,21 @@ def collect_reviews_for_asins(
                             date_tag = div.select_one('span[data-hook="review-date"]')
                             if date_tag:
                                 date_text = date_tag.text.strip()
-                                date_clean = re.sub(r'^Reviewed in .* on ', '', date_text)
-                                review['review_date'] = dateparser.parse(date_clean).date()
+                                date_clean = re.sub(r"^Reviewed in .* on ", "", date_text)
+                                review["review_date"] = dateparser.parse(date_clean).date()
                                 if " in " in date_text:
-                                    review['review_location'] = date_text.split(" in ")[-1].split(" on ")[0].strip()
+                                    review["review_location"] = (
+                                        date_text.split(" in ")[-1].split(" on ")[0].strip()
+                                    )
                                 else:
-                                    review['review_location'] = None
+                                    review["review_location"] = None
                         except Exception as e:
                             print(f"[{asin}] Error parsing date: {e}")
 
                         try:
                             review_text_tag = div.select_one('span[data-hook="review-body"]')
                             if review_text_tag:
-                                review['review_text'] = review_text_tag.text.strip()
+                                review["review_text"] = review_text_tag.text.strip()
                         except Exception as e:
                             print(f"[{asin}] Error parsing review text: {e}")
 
@@ -249,25 +273,35 @@ def collect_reviews_for_asins(
                             if helpful_tag:
                                 txt = helpful_tag.get_text(strip=True)
                                 if "One person found this helpful" in txt:
-                                    review['review_helpful_votes'] = 1
+                                    review["review_helpful_votes"] = 1
                                 elif "people found this helpful" in txt:
-                                    review['review_helpful_votes'] = int(txt.split()[0].replace(",", ""))
+                                    review["review_helpful_votes"] = int(
+                                        txt.split()[0].replace(",", "")
+                                    )
                                 else:
-                                    review['review_helpful_votes'] = 0
+                                    review["review_helpful_votes"] = 0
                             else:
-                                review['review_helpful_votes'] = 0
+                                review["review_helpful_votes"] = 0
                         except Exception as e:
                             print(f"[{asin}] Error parsing helpful_votes: {e}")
 
                         reviews.append(review)
 
-                    print(f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks.") if not review_divs else None
+                    (
+                        print(
+                            f"[{asin}] Warning: No reviews extracted from page {current_page} despite presence of review blocks."
+                        )
+                        if not review_divs
+                        else None
+                    )
 
                     # Check if next page exists and navigate
                     try:
-                        next_button = driver.find_element(By.CSS_SELECTOR, 'li.a-last a')
+                        next_button = driver.find_element(By.CSS_SELECTOR, "li.a-last a")
                         if not next_button.is_enabled():
-                            print(f"[{asin}] Next button disabled on page {current_page}, ending pagination.")
+                            print(
+                                f"[{asin}] Next button disabled on page {current_page}, ending pagination."
+                            )
                             break
                         prev_html_hash = page_hash
                         next_button.click()
@@ -277,21 +311,27 @@ def collect_reviews_for_asins(
                         new_html = driver.page_source
                         new_hash = hash(new_html)
                         if new_hash == prev_html_hash:
-                            print(f"[{asin}] Page did not change after clicking next on page {current_page}, stopping.")
+                            print(
+                                f"[{asin}] Page did not change after clicking next on page {current_page}, stopping."
+                            )
                             break
 
                         current_page += 1
                     except Exception:
-                        print(f"[{asin}] No next button found in DOM or not clickable on page {current_page}. Possible end of pagination or selector issue.")
+                        print(
+                            f"[{asin}] No next button found in DOM or not clickable on page {current_page}. Possible end of pagination or selector issue."
+                        )
                         break
 
                 if reached_max_pages:
-                    print(f"[⚠️] {asin} Review collection stopped at {len(reviews)} reviews (max pages reached). More reviews may be available.")
+                    print(
+                        f"[⚠️] {asin} Review collection stopped at {len(reviews)} reviews (max pages reached). More reviews may be available."
+                    )
 
                 df = pd.DataFrame(reviews)
                 if not df.empty:
                     all_reviews.append(df)
-                    cat_label = category_path if category_path != 'unknown' else 'unknown'
+                    cat_label = category_path if category_path != "unknown" else "unknown"
                     stats[cat_label] = stats.get(cat_label, 0) + len(df)
                     print(f"[{asin}] Collected {len(df)} reviews.")
                 else:
@@ -310,7 +350,9 @@ def collect_reviews_for_asins(
 
     if snapshots:
         snapshot_df = pd.DataFrame(snapshots)
-        snapshot_filename = f"{datetime.now().strftime('%y%m%d_%H%M')}__{collection_id}__snapshot.csv"
+        snapshot_filename = (
+            f"{datetime.now().strftime('%y%m%d_%H%M')}__{collection_id}__snapshot.csv"
+        )
         snapshot_path = collection_dir / snapshot_filename
         snapshot_df.to_csv(snapshot_path, index=False)
         print(f"[📈] Snapshot for {collection_id} saved: {snapshot_path}")
@@ -323,7 +365,7 @@ def collect_reviews_for_asins(
         print(f"[✅] Review collection complete. Saved to: {collection_dir / filename}")
 
         user_input = input("Do you want to delete raw HTML files? (y/n): ")
-        if user_input.strip().lower() == 'y':
+        if user_input.strip().lower() == "y":
             shutil.rmtree(rawdata_dir)
     else:
         df_all = pd.DataFrame()
@@ -331,6 +373,7 @@ def collect_reviews_for_asins(
 
     # Save session state before returning
     from core import SESSION
+
     SESSION.df_reviews = df_all
     SESSION.df_snapshot = snapshot_df if snapshots else pd.DataFrame()
     SESSION.save()

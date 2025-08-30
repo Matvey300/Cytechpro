@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 
+
 def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebDriver:
     """
     Launch a Chrome WebDriver session using an existing user profile
@@ -30,7 +31,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
 def is_logged_in(driver: WebDriver) -> bool:
     """
     Check if the user is logged into Amazon by looking for the account menu.
-    
+
     Args:
         driver: Selenium WebDriver currently on amazon.com
 

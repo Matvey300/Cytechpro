@@ -27,7 +27,7 @@ def open_amazon_home(driver: WebDriver) -> bool:
     try:
         driver.get("https://www.amazon.com/")
         return True
-    except Exception as e:
+    except Exception:
         print("[🚫] Failed to load Amazon page. Chrome may have been closed.")
         return False
 
@@ -70,7 +70,7 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
                 raise RuntimeError("User aborted due to closed Chrome.")
         print(f"[🟢] Chrome started with user profile")
         return driver
-    except SessionNotCreatedException as e:
+    except SessionNotCreatedException:
         print("[⚠] Chrome profile is currently in use or unavailable.")
 
         temp_options = Options()

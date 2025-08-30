@@ -1,15 +1,16 @@
 # core/session_state.py
 # Global session state shared between CLI actions
 
-from typing import Optional
 from pathlib import Path
+from typing import Optional
+
 import pandas as pd
 
 # Shared in-memory session state
 SESSION = {
-    "collection_id": None,       # type: Optional[str]
-    "collection_path": None,     # type: Optional[Path]
-    "df_asin": None,             # type: Optional[pd.DataFrame]
+    "collection_id": None,  # type: Optional[str]
+    "collection_path": None,  # type: Optional[Path]
+    "df_asin": None,  # type: Optional[pd.DataFrame]
 }
 
 

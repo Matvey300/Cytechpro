@@ -1,13 +1,14 @@
 # actions/menu_main.py
 
-from core.env_check import validate_environment
-from core.session_state import SessionState
-from core.collection_io import select_collection
+from actions.asin_search import run_asin_search
+from actions.correlations import run_correlation_analysis
+from actions.plots import run_plotting
 from actions.reviews import run_review_collection
 from actions.snapshots import run_daily_screening
-from actions.plots import run_plotting
-from actions.correlations import run_correlation_analysis
-from actions.asin_search import run_asin_search
+from core.collection_io import select_collection
+from core.env_check import validate_environment
+from core.session_state import SessionState
+
 
 def main_menu():
     validate_environment()

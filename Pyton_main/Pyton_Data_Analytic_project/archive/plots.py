@@ -1,7 +1,5 @@
 # actions/plots.py
 
-import pandas as pd
-
 from analytics.review_dynamics import plot_review_dynamics
 from core.session_state import SessionState
 

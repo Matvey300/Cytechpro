@@ -1,41 +1,41 @@
-
 import os
-import time
 import subprocess
+import time
+
 import pandas as pd
 from bs4 import BeautifulSoup
-from datetime import datetime
 from dateutil import parser as date_parser
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    WebDriverException,
-    NoSuchElementException,
-    TimeoutException
-)
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+
 
 # === ФУНКЦИЯ: Сбор HTML отзывов с Amazon ===
 def scrape_reviews(asin, country, pages, save_dir, profile_path):
     domain = "amazon." + country
-    base_url = f"https://www.{domain}/product-reviews/{asin}/?pageNumber=1&language=en_US&sortBy=recent"
+    base_url = (
+        f"https://www.{domain}/product-reviews/{asin}/?pageNumber=1&language=en_US&sortBy=recent"
+    )
 
     chrome_options = Options()
-    chrome_options.add_argument(f'--user-data-dir={profile_path}')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument(f"--user-data-dir={profile_path}")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
 
     if subprocess.run(["pgrep", "-i", "chrome"], capture_output=True, text=True).stdout.strip():
         print("❌ Chrome запущен! Закрой его и запусти скрипт снова.")
         return
 
     try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()), options=chrome_options
+        )
         driver.get(f"https://www.{domain}/")
     except WebDriverException as e:
         print("❌ Chrome не запустился:", str(e))
@@ -86,13 +86,29 @@ def parse_reviews(asin, html_dir, pages):
             for r in review_blocks:
                 try:
                     author = r.find("span", class_="a-profile-name").get_text(strip=True)
-                    rating_tag = r.find("i", {"data-hook": "review-star-rating"}) or r.find("i", {"data-hook": "cmps-review-star-rating"})
-                    rating = float(rating_tag.find("span").get_text(strip=True).split()[0]) if rating_tag else None
+                    rating_tag = r.find("i", {"data-hook": "review-star-rating"}) or r.find(
+                        "i", {"data-hook": "cmps-review-star-rating"}
+                    )
+                    rating = (
+                        float(rating_tag.find("span").get_text(strip=True).split()[0])
+                        if rating_tag
+                        else None
+                    )
                     title = r.find("a", {"data-hook": "review-title"}).get_text(strip=True)
                     date_raw = r.find("span", {"data-hook": "review-date"}).get_text(strip=True)
-                    date_iso = date_parser.parse(date_raw.split(" on ")[-1].strip()).strftime("%Y-%m-%d") if "on" in date_raw else None
-                    location = date_raw.split(" in ")[-1].split(" on ")[0].strip() if " in " in date_raw else "N/A"
-                    body = r.find("span", {"data-hook": "review-body"}).get_text(separator=" ", strip=True)
+                    date_iso = (
+                        date_parser.parse(date_raw.split(" on ")[-1].strip()).strftime("%Y-%m-%d")
+                        if "on" in date_raw
+                        else None
+                    )
+                    location = (
+                        date_raw.split(" in ")[-1].split(" on ")[0].strip()
+                        if " in " in date_raw
+                        else "N/A"
+                    )
+                    body = r.find("span", {"data-hook": "review-body"}).get_text(
+                        separator=" ", strip=True
+                    )
                     verified_tag = r.find("span", {"data-hook": "avp-badge"})
                     verified = bool(verified_tag and "Verified Purchase" in verified_tag.text)
                     helpful_tag = r.find("span", {"data-hook": "helpful-vote-statement"})
@@ -107,17 +123,19 @@ def parse_reviews(asin, html_dir, pages):
                     else:
                         helpful_votes = 0
 
-                    reviews.append({
-                        "asin": asin,
-                        "author": author,
-                        "location": location,
-                        "date": date_iso,
-                        "rating": rating,
-                        "title": title,
-                        "body": body,
-                        "verified_purchase": verified,
-                        "helpful_votes": helpful_votes
-                    })
+                    reviews.append(
+                        {
+                            "asin": asin,
+                            "author": author,
+                            "location": location,
+                            "date": date_iso,
+                            "rating": rating,
+                            "title": title,
+                            "body": body,
+                            "verified_purchase": verified,
+                            "helpful_votes": helpful_votes,
+                        }
+                    )
 
                 except Exception:
                     continue
@@ -127,7 +145,10 @@ def parse_reviews(asin, html_dir, pages):
 
 # === MAIN ===
 def main():
-    asin_file = input("📄 Введите путь к файлу со списком ASIN (по умолчанию search_results.csv): ").strip() or "DATA/search_results.csv"
+    asin_file = (
+        input("📄 Введите путь к файлу со списком ASIN (по умолчанию search_results.csv): ").strip()
+        or "DATA/search_results.csv"
+    )
     if not os.path.exists(asin_file):
         print("❌ Файл не найден.")
         return
@@ -159,6 +180,7 @@ def main():
         print("✅ Все отзывы сохранены в DATA/all_reviews.csv")
     else:
         print("⚠️ Отзывы не найдены.")
+
 
 if __name__ == "__main__":
     main()

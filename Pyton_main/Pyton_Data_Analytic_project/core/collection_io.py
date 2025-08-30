@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-
 from core.session_state import SessionState
 
 COLLECTIONS_DIR = Path("collections")

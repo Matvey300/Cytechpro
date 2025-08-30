@@ -1,6 +1,7 @@
-from textblob import TextBlob
 import pandas as pd
 from core.collection_io import load_collection
+from textblob import TextBlob
+
 
 def main_menu():
     print("1. Option One")
@@ -11,6 +12,7 @@ def main_menu():
     print("6. Option Six")
     print("7. Analyze Review Authenticity (Trustworthiness)")
     print("8. View flagged reviews (authcheck)")
+
 
 def main():
     while True:
@@ -38,6 +40,7 @@ def main():
         elif choice == "7":
             from analytics.review_authenticity import analyze_review_authenticity
             from core.collection_io import list_collections
+
             print("\nAvailable collections:")
             collections = list_collections()
             for i, name in enumerate(collections, 1):
@@ -53,9 +56,14 @@ def main():
             except ValueError:
                 print("[!] Invalid input.")
         elif choice == "8":
-            from core.collection_io import list_collections, load_collection
+            from core.collection_io import list_collections
+
             print("\nAvailable flagged collections:")
-            collections = [c for c in list_collections() if c.startswith("authcheck__") and c.endswith("__reviews.csv")]
+            collections = [
+                c
+                for c in list_collections()
+                if c.startswith("authcheck__") and c.endswith("__reviews.csv")
+            ]
             if not collections:
                 print("[!] No flagged collections found.")
                 continue
@@ -87,10 +95,8 @@ def analyze_review_authenticity(session):
     3. Duplicate review content across the dataset.
     """
     from collections import defaultdict
-    from core.collection_io import save_collection
 
     import matplotlib.pyplot as plt
-    import seaborn as sns
 
     df = session.df_reviews
     df = compute_sentiment(df)
@@ -142,7 +148,6 @@ def analyze_review_authenticity(session):
     print(f" - Hyperactive reviewers: {(hyperactive_flags != '').sum()}")
     print(f"\n[ℹ️] Total flagged reviews: {(df['auth_flag'] != '').sum()}")
 
-    
     print("\n[✅] Authenticity check completed.")
 
     print("\n[📊] Running sentiment-based NPS analysis...")
@@ -151,7 +156,9 @@ def analyze_review_authenticity(session):
     if nps_df.empty:
         print("[⚠] NPS analysis could not be performed.")
     else:
-        top_asins_nps = nps_df[nps_df["n_reviews"] >= 5].sort_values(by="nps", ascending=False).head(5)
+        top_asins_nps = (
+            nps_df[nps_df["n_reviews"] >= 5].sort_values(by="nps", ascending=False).head(5)
+        )
         if len(top_asins_nps) < 5:
             print(f"[⚠] Only {len(top_asins_nps)} ASINs qualified for NPS analysis.")
         print(nps_df[["asin", "nps"]].to_string(index=False))
@@ -186,7 +193,9 @@ def analyze_review_authenticity(session):
     top_sentiment_asins = sentiment_summary.head(5)
 
     sentiment_dist = df[df["asin"].isin(top_sentiment_asins["asin"])]
-    sentiment_dist = sentiment_dist.groupby(["asin", "sentiment_label"]).size().unstack(fill_value=0)
+    sentiment_dist = (
+        sentiment_dist.groupby(["asin", "sentiment_label"]).size().unstack(fill_value=0)
+    )
 
     fig, axes = plt.subplots(1, len(top_sentiment_asins), figsize=(6 * len(top_sentiment_asins), 6))
     if len(top_sentiment_asins) == 1:
@@ -215,7 +224,7 @@ def analyze_review_authenticity(session):
         "long": "orange",
         "high_volume": "red",
         "duplicate": "purple",
-        "hyperactive_author": "green"
+        "hyperactive_author": "green",
     }
 
     fig, axes = plt.subplots(1, len(top_asins), figsize=(6 * len(top_asins), 6))
@@ -244,6 +253,7 @@ def analyze_review_authenticity(session):
     print(f"[📊] NPS-only Top: {nps_asins - sentiment_asins}")
     print(f"[📊] Sentiment-only Top: {sentiment_asins - nps_asins}")
 
+
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
     Flags reviews written by authors who post more than `threshold_per_day` reviews in a day.
@@ -258,11 +268,14 @@ def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> 
     active_pairs = counts[counts > threshold_per_day].index
 
     return df.apply(
-        lambda row: "hyperactive_author"
-        if (row["review_author"], row["review_date"]) in active_pairs
-        else "",
-        axis=1
+        lambda row: (
+            "hyperactive_author"
+            if (row["review_author"], row["review_date"]) in active_pairs
+            else ""
+        ),
+        axis=1,
     )
+
 
 def explore_flagged_reviews(collection_id):
     """
@@ -298,7 +311,9 @@ def explore_flagged_reviews(collection_id):
 def detect_suspicious_reviews(session):
     return analyze_review_authenticity(session)
 
+
 import pandas as pd
+
 
 def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
     """
@@ -332,14 +347,19 @@ def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
     summary["passive_pct"] = (summary.get("passive", 0) / summary["n_reviews"]) * 100
     summary["nps"] = summary["promoter_pct"] - summary["detractor_pct"]
 
-    result = summary[["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]].reset_index()
+    result = summary[
+        ["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]
+    ].reset_index()
     result = result.sort_values(by="nps", ascending=False)
     result = result[result["n_reviews"] >= 10]
 
     return result
 
+
 def compute_sentiment(df: pd.DataFrame) -> pd.DataFrame:
-    df["sentiment"] = df["review_text"].astype(str).apply(
-        lambda x: round(TextBlob(x).sentiment.polarity, 3) if x.strip() else 0.0
+    df["sentiment"] = (
+        df["review_text"]
+        .astype(str)
+        .apply(lambda x: round(TextBlob(x).sentiment.polarity, 3) if x.strip() else 0.0)
     )
     return df

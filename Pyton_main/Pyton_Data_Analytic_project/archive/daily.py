@@ -2,15 +2,13 @@
 
 import os
 import time
-import json
-import pandas as pd
-from pathlib import Path
-from typing import List, Optional
-from bs4 import BeautifulSoup
-
-from core.auth_amazon import get_chrome_driver_with_profile
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
+import pandas as pd
+from bs4 import BeautifulSoup
+from core.auth_amazon import get_chrome_driver_with_profile
 from core.env_check import get_env_or_raise
 
 
@@ -54,6 +52,7 @@ def extract_amazon_metrics(html: str) -> dict:
     bsr_rank = None
     if bsr_text:
         import re
+
         match = re.search(r"#([\d,]+)", bsr_text)
         if match:
             bsr_rank = parse_number(match.group(1))
@@ -85,11 +84,7 @@ def run_daily_screening(df_asin: pd.DataFrame, out_dir: Path):
             time.sleep(3)  # give time to load
 
             metrics = extract_amazon_metrics(driver.page_source)
-            row = {
-                "asin": asin,
-                "timestamp_utc": utc_now,
-                **metrics
-            }
+            row = {"asin": asin, "timestamp_utc": utc_now, **metrics}
             snapshot_rows.append(row)
             print(f"[✓] {asin} → {metrics}")
         except Exception as e:

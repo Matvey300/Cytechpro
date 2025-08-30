@@ -3,6 +3,7 @@
 from analytics.review_dynamics import plot_review_dynamics
 from core.session_state import SessionState
 
+
 def run_plotting(session: SessionState):
     """Run plotting for review and sentiment dynamics."""
     print("\n📊 Plotting review dynamics...")

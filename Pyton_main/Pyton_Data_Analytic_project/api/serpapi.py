@@ -2,9 +2,9 @@
 # SerpApi integration for Amazon keyword → category extraction
 
 import os
-import requests
 from typing import List, Optional
 
+import requests
 from core.marketplaces import MARKETPLACES
 from core.synonyms import SYNONYMS
 
@@ -48,7 +48,7 @@ def search_amazon_categories(keyword: str, marketplace: str) -> List[str]:
         "amazon_domain": get_amazon_domain(marketplace),
         "api_key": api_key,
         "k": keyword,
-        "page": 1
+        "page": 1,
     }
 
     try:

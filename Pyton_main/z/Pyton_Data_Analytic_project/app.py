@@ -1,8 +1,9 @@
 # app.py
 
-from core.env_check import validate_environment
 from actions.menu_main import main_menu
+from core.env_check import validate_environment
 from core.session_state import SESSION
+
 
 def main():
     print("=" * 50)
@@ -25,5 +26,6 @@ def main():
     except KeyboardInterrupt:
         print("\n[Interrupted by user]")
 
+
 if __name__ == "__main__":
-   main_menu()
+    main_menu()

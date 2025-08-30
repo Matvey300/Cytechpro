@@ -1,9 +1,8 @@
 import importlib
-import pandas as pd
 from pathlib import Path
 
-from storage.io_utils import save_df_csv, new_out_dir_for_collection, today_ymd
-
+import pandas as pd
+from storage.io_utils import new_out_dir_for_collection, save_df_csv, today_ymd
 
 # asin_pipeline.py
 
@@ -31,8 +30,10 @@ def collect_asin_data(category_path: str, region: str, top_k: int = 100) -> pd.D
             df = mod.collect_asins(category_path, region)
 
     if df is None or not isinstance(df, pd.DataFrame):
-        raise RuntimeError("ASIN_data_import must provide Collect_ASIN_DATA(category, region) "
-                           "or collect_asins(category, region[, top_k]) returning a pandas DataFrame.")
+        raise RuntimeError(
+            "ASIN_data_import must provide Collect_ASIN_DATA(category, region) "
+            "or collect_asins(category, region[, top_k]) returning a pandas DataFrame."
+        )
 
     # Normalize columns
     if "asin" not in df.columns:
@@ -49,7 +50,9 @@ def collect_asin_data(category_path: str, region: str, top_k: int = 100) -> pd.D
     return df
 
 
-def save_asin_collection(df: pd.DataFrame, collection_id: str, out_root: Path = Path("Out")) -> Path:
+def save_asin_collection(
+    df: pd.DataFrame, collection_id: str, out_root: Path = Path("Out")
+) -> Path:
     """
     Save ASIN DataFrame to CSV with proper folder structure.
     """

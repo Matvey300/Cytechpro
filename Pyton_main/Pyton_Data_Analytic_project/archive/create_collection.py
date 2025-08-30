@@ -3,11 +3,10 @@
 from typing import List
 
 import pandas as pd
-from ASIN_data_import import collect_asins
-from utils.console import ask, info, slugify, split_tokens, today_ymd, warn
-
 from api.serpapi import fetch_categories_strict
+from ASIN_data_import import collect_asins
 from core.session_state import SESSION
+from utils.console import ask, info, slugify, split_tokens, today_ymd, warn
 
 
 def prompt_marketplace_inside() -> str:

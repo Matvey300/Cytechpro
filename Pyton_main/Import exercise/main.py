@@ -1,2 +1,3 @@
 import utils
-utils.greet('Petr')
+
+utils.greet("Petr")

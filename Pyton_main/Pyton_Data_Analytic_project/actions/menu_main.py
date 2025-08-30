@@ -1,5 +1,3 @@
-from core.session_state import SessionState
-
 try:
     from actions.asin_search import run_asin_search
 except Exception:
@@ -23,6 +21,7 @@ except Exception:
 try:
     from core.env_check import validate_environment
 except Exception:
+
     def validate_environment():
         print("[!] Environment validation unavailable")
 
@@ -106,7 +105,9 @@ def run_main_menu(session):
                 continue
             session.load_reviews_and_snapshot()
             if run_correlation_analysis is None:
-                print("[!] Correlation analysis module is temporarily unavailable (archived). Skipping.")
+                print(
+                    "[!] Correlation analysis module is temporarily unavailable (archived). Skipping."
+                )
             else:
                 run_correlation_analysis(session)
         elif choice == "7":

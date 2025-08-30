@@ -1,8 +1,10 @@
 # core/session.py
 
 from pathlib import Path
-import pandas as pd
 from typing import Optional
+
+import pandas as pd
+
 
 class Session:
     """
@@ -11,6 +13,7 @@ class Session:
     - collection path
     - ASIN DataFrame
     """
+
     def __init__(self):
         self.collection_id: Optional[str] = None
         self.collection_path: Optional[Path] = None
