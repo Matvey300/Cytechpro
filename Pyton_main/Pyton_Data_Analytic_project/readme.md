@@ -19,9 +19,9 @@ Track sentiment, pricing, and review dynamics across Amazon ASINs to uncover mar
 
 ---
 
-## 🧠 Statistical Tests (by Dr. Volkova, Analytics)
+## 🧠 Statistical Tests
 
-The tool includes an experimental **analytics module** developed in collaboration with data scientist Dr. Volkova.
+The tool includes an **analytics module** with several non-parametric and robust tests for noisy marketplace data.
 
 ### Included statistical tests:
 
@@ -100,6 +100,61 @@ pip install -r requirements.txt
 python app.py
 ```
 
+## 🧩 From GitHub: First-Time Setup
+
+1) Clone and create a virtual environment
+
+```bash
+git clone <your-repo-url>.git
+cd Pyton_main/Pyton_Data_Analytic_project
+python -m venv venv
+source venv/bin/activate   # Windows: venv\\Scripts\\activate
+pip install -r requirements.txt
+```
+
+2) Create `conf.env` in project root (minimal template)
+
+```
+# Marketplace and limits
+DEFAULT_MARKETPLACE=com
+REVIEWS_MAX_PER_ASIN=100
+REVIEWS_MAX_PAGES=3
+
+# Chrome profile (recommended)
+CHROME_USER_DATA_DIR=./DATA/.chrome_profile
+CHROME_PROFILE_DIR=Default
+BROWSER_VISIBILITY=normal   # normal|minimize|offscreen|headless
+
+# Optional external providers (can be disabled)
+SERPAPI_API_KEY=
+SCRAPINGDOG_API_KEY=
+DISABLE_SCRAPINGDOG=0
+DISABLE_SERPAPI=0
+
+# Optional auto-login (or use your Chrome profile already logged in)
+AMAZON_EMAIL=
+AMAZON_PASSWORD=
+```
+
+3) macOS: allow ChromeDriver if Gatekeeper blocks it (one-time)
+
+```bash
+# If you installed chromedriver via Homebrew and got a security dialog:
+xattr -dr com.apple.quarantine /opt/homebrew/bin/chromedriver || true
+# Or open System Settings → Privacy & Security → "Open Anyway"
+```
+
+4) Start the app
+
+```bash
+python app.py
+```
+
+5) Create a collection (menu 1 → Create new) or load an existing one.
+   - If external providers are unavailable or disabled, ASIN discovery falls back to Selenium search on Amazon.
+
+6) Collect reviews & snapshot (menu 3) and run analytics (menu 4).
+
 Menu options:
 
 1. Load or create ASIN collection  
@@ -177,81 +232,81 @@ Inside `DATA/<YYYYMMDD>_<cid>_created<YYYYMMDD>/`:
 
 ## 📈 Snapshot Logic
 
-- Appends a new row per ASIN (at каждый запуск пункта 3)
-- Содержит: `title`, `price`, `bsr`, `category_path`, `rating`, `review_count`, `total_reviews`, `snapshot_ts`, `captured_at`
-- Хранится в едином `snapshot.csv` в папке коллекции (анализируется как временной ряд)
+- Appends a new row per ASIN on each run of menu option 3
+- Contains: `title`, `price`, `bsr`, `category_path`, `rating`, `review_count`, `total_reviews`, `snapshot_ts`, `captured_at`
+- Stored as a single `snapshot.csv` in the collection folder (treated as a time series)
 
 ---
 
 ## 🤖 Auto-Collection (Scheduler)
 
-Встроен режим автосбора 4–6 раз в сутки для регулярного пополнения `reviews.csv` и `snapshot.csv`.
+Built-in auto-runs 4–6 times per day to keep `reviews.csv` and `snapshot.csv` up to date.
 
-Включение из CLI:
+Enable from CLI:
 
-- Загрузите коллекцию (п.1 меню) — будет предложено включить авто‑сбор.
-- Или откройте п.6 “Auto-collection settings”:
-  - Enable/Disable для текущей коллекции
-  - List всех включённых (частота, next_run, last_run)
+- Load a collection (menu 1) — you’ll be prompted to enable auto-collection.
+- Or open menu 6 “Auto-collection settings”:
+  - Enable/Disable for the current collection
+  - List all enabled (frequency, `next_run`, `last_run`)
 
-Файлы состояния и логов:
+State and logs:
 
-- `DATA/.auto_collect.json` — список коллекций с `enabled`, `frequency_per_day`, `next_run`, `last_run` (первый `next_run` назначается ~через 2 минуты после включения)
-- `DATA/.locks/<cid>.lock` — защита от параллельных запусков
-- `DATA/runs/<cid>.jsonl` — JSONL‑сводки запусков (rows, new_reviews, duplicates_skipped, snapshots)
+- `DATA/.auto_collect.json` — list of collections (`enabled`, `frequency_per_day`, `next_run`, `last_run`). First `next_run` is scheduled ~2 minutes after enabling.
+- `DATA/.locks/<cid>.lock` — per-collection run lock
+- `DATA/runs/<cid>.jsonl` — JSONL summaries (rows, `new_reviews`, `duplicates_skipped`, `snapshots`)
 
-Неблокирующие скрипты:
+Non-interactive scripts:
 
-- `scripts/run_pipeline.py --collection-id <cid>` — запускает сбор для одной коллекции (использует lock, пишет JSONL)
-- `scripts/auto_runner.py` — запускает все коллекции, у которых наступил `next_run`, и перевычисляет `next_run`
+- `scripts/run_pipeline.py --collection-id <cid>` — runs one collection (with file lock, writes JSONL)
+- `scripts/auto_runner.py` — runs all due collections and reschedules `next_run`
 
-Cron (пример):
+Cron (example):
 
 ```cron
-# Ежечасно с логом
+# Hourly with logging
 5 * * * * cd /path/to/Pyton_main/Pyton_Data_Analytic_project && ./venv/bin/python scripts/auto_runner.py >> logs/collector.log 2>&1
 ```
 
-macOS launchd (идея): создайте plist с `ProgramArguments=[..., python, scripts/auto_runner.py]` и `StartCalendarInterval` на нужные часы.
+macOS launchd: create a plist with `ProgramArguments=[..., python, scripts/auto_runner.py]` and a suitable `StartCalendarInterval`.
 
-Рекомендации:
+Recommendations:
 
-- `BROWSER_VISIBILITY=minimize` (или normal) — headless может хуже работать на Amazon
-- Профиль Chrome: `CHROME_USER_DATA_DIR`, `CHROME_PROFILE_DIR` в `conf.env`
-- Авто‑логин: `AMAZON_EMAIL`/`AMAZON_PASSWORD` (или keychain через `keyring`)
+- `BROWSER_VISIBILITY=minimize` (or normal) — headless tends to perform worse on Amazon
+- Chrome profile: `CHROME_USER_DATA_DIR`, `CHROME_PROFILE_DIR` in `conf.env`
+- Auto-login: set `AMAZON_EMAIL`/`AMAZON_PASSWORD` (or use keychain via `keyring`)
 
-### Отключение внешних провайдеров (опционально)
+### Disable external providers (optional)
 
-Если хотите полностью отказаться от внешних API при сборе ASIN:
+If you prefer to collect ASINs without any external APIs:
 
-- В `conf.env` установите:
+- In `conf.env` set:
   - `DISABLE_SCRAPINGDOG=1`
   - `DISABLE_SERPAPI=1`
-- Поток создания коллекции автоматически перейдёт на Selenium‑поиск `https://amazon.<domain>/s?k=...`.
+- The collection flow will fall back to Selenium search at `https://amazon.<domain>/s?k=...`.
 
-### Демон без cron (локально)
+### Daemon without cron (local)
 
-- Запуск: `./venv/bin/python scripts/auto_daemon.py`
-- Интервал проверок: `AUTO_DAEMON_INTERVAL_SEC` (по умолчанию 900)
-- Остановка: Ctrl+C или удаление `DATA/.locks/auto_daemon.lock`
+- Run: `./venv/bin/python scripts/auto_daemon.py`
+- Interval: `AUTO_DAEMON_INTERVAL_SEC` (default 900)
+- Stop: Ctrl+C or remove `DATA/.locks/auto_daemon.lock`
 
-### Вспомогательные скрипты
+### Helper scripts
 
-- `scripts/run_auto.sh` — запускает orchestrator с логом в `logs/collector.log`
-- `scripts/setup_cron.sh` — устанавливает hourly cron для orchestrator
+- `scripts/run_auto.sh` — runs the orchestrator with logging to `logs/collector.log`
+- `scripts/setup_cron.sh` — installs an hourly cron for the orchestrator
 
 ---
 
 ## 📒 Changelog (v1.2)
 
-- Reviews pipeline: инкремент по `review_id` и по дате; ранний стоп при отсутствии новых отзывов; non‑interactive режим для авто‑запуска.
-- Навигация: нормализация домена через `core/marketplaces.to_domain()` (пример: US → amazon.com).
-- Создание коллекции: добавлен Selenium‑fallback, флаги `DISABLE_SCRAPINGDOG`/`DISABLE_SERPAPI`.
-- Аналитика (UX):
-  - Короткие названия продуктов на графиках вместо голых ASIN
-  - Цветовые легенды для NPS/Sentiment/Flags
-  - Флаги коротких/длинных отзывов по децилям длины (p10/p90)
-- Авто‑сбор: добавлены `scripts/auto_runner.py`, `scripts/auto_daemon.py`, `scripts/run_auto.sh`, `scripts/setup_cron.sh`; первый запуск через ~2 минуты после включения.
+- Reviews pipeline: incremental by `review_id` and by date; early stop when no new reviews; non‑interactive mode for schedulers.
+- Navigation: domain normalization via `core/marketplaces.to_domain()` (e.g., US → amazon.com).
+- Collection creation: Selenium fallback added; env flags `DISABLE_SCRAPINGDOG` / `DISABLE_SERPAPI`.
+- Analytics (UX):
+  - Short product titles on charts instead of bare ASINs
+  - Color legends for NPS/Sentiment/Flags
+  - Short/long review flags by length deciles (p10/p90)
+- Autoscheduling: added `scripts/auto_runner.py`, `scripts/auto_daemon.py`, `scripts/run_auto.sh`, `scripts/setup_cron.sh`; first run ~2 minutes after enabling.
 
 
 
