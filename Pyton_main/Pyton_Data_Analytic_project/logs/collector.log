@@ -1,0 +1,1220 @@
+/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/scripts/auto_runner.py:21: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  return datetime.utcnow() >= next_dt
+[INFO] [auto] Running pipeline for '250822_1125__On-Ear_Headphones'
+[SUCCESS] Loaded ASINs: collection.csv (18 rows)
+[INFO] [→] Collecting reviews for 18 ASINs in com...
+[INFO] [debug] Type of collect_reviews_for_asins: <class 'function'>
+[✅] Amazon session is active.
+[INFO] [collector] B00004T8R2: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00004T8R2/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B00004T8R2/B00004T8R2_p1.html
+[INFO] [collector] B00004T8R2: page 1 review blocks: 0
+[INFO] [collector] B00004T8R2: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00004T8R2: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BS1PRC4L: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BS1PRC4L/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0BS1PRC4L/B0BS1PRC4L_p1.html
+[INFO] [collector] B0BS1PRC4L: page 1 review blocks: 0
+[INFO] [collector] B0BS1PRC4L: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BS1PRC4L: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00OUX6U6G: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00OUX6U6G/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B00OUX6U6G/B00OUX6U6G_p1.html
+[INFO] [collector] B00OUX6U6G: page 1 review blocks: 0
+[INFO] [collector] B00OUX6U6G: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00OUX6U6G: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DRDPJRL9: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DRDPJRL9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0DRDPJRL9/B0DRDPJRL9_p1.html
+[INFO] [collector] B0DRDPJRL9: page 1 review blocks: 0
+[INFO] [collector] B0DRDPJRL9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DRDPJRL9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08WM3LMJF: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08WM3LMJF/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B08WM3LMJF/B08WM3LMJF_p1.html
+[INFO] [collector] B08WM3LMJF: page 1 review blocks: 0
+[ℹ] [B08WM3LMJF] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B08WM3LMJF/B08WM3LMJF_p2.html
+[INFO] [collector] B08WM3LMJF: page 2 review blocks: 0
+[INFO] [collector] B08WM3LMJF: no new reviews on page 2; stopping early
+[SUCCESS] [collector] B08WM3LMJF: collected 1 reviews (pages visited: 2)
+[INFO] [collector] B006T9ZKAQ: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B006T9ZKAQ/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B006T9ZKAQ/B006T9ZKAQ_p1.html
+[INFO] [collector] B006T9ZKAQ: page 1 review blocks: 0
+[INFO] [collector] B006T9ZKAQ: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B006T9ZKAQ: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00IKYI6FO: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00IKYI6FO/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B00IKYI6FO/B00IKYI6FO_p1.html
+[INFO] [collector] B00IKYI6FO: page 1 review blocks: 0
+[INFO] [collector] B00IKYI6FO: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00IKYI6FO: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00NG57H4S: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00NG57H4S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B00NG57H4S/B00NG57H4S_p1.html
+[INFO] [collector] B00NG57H4S: page 1 review blocks: 0
+[INFO] [collector] B00NG57H4S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00NG57H4S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CGMV5TMR: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CGMV5TMR/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0CGMV5TMR/B0CGMV5TMR_p1.html
+[INFO] [collector] B0CGMV5TMR: page 1 review blocks: 0
+[INFO] [collector] B0CGMV5TMR: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CGMV5TMR: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CDZR83T8: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CDZR83T8/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0CDZR83T8/B0CDZR83T8_p1.html
+[INFO] [collector] B0CDZR83T8: page 1 review blocks: 0
+[INFO] [collector] B0CDZR83T8: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CDZR83T8: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07F2QF1P4: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07F2QF1P4/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B07F2QF1P4/B07F2QF1P4_p1.html
+[INFO] [collector] B07F2QF1P4: page 1 review blocks: 0
+[INFO] [collector] B07F2QF1P4: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07F2QF1P4: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07HB9Q3CY: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07HB9Q3CY/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B07HB9Q3CY/B07HB9Q3CY_p1.html
+[INFO] [collector] B07HB9Q3CY: page 1 review blocks: 0
+[INFO] [collector] B07HB9Q3CY: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07HB9Q3CY: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DZD82GTF: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DZD82GTF/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0DZD82GTF/B0DZD82GTF_p1.html
+[INFO] [collector] B0DZD82GTF: page 1 review blocks: 0
+[INFO] [collector] B0DZD82GTF: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DZD82GTF: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B004JRYLG4: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B004JRYLG4/?sortBy=recent&pageNumber=1/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/scripts/auto_runner.py:21: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  return datetime.utcnow() >= next_dt
+
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B004JRYLG4/B004JRYLG4_p1.html
+[INFO] [collector] B004JRYLG4: page 1 review blocks: 0
+[INFO] [collector] B004JRYLG4: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B004JRYLG4: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08FXR3BWX: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08FXR3BWX/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B08FXR3BWX/B08FXR3BWX_p1.html
+[INFO] [collector] B08FXR3BWX: page 1 review blocks: 0
+[ℹ] [B08FXR3BWX] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B08FXR3BWX/B08FXR3BWX_p2.html
+[INFO] [collector] B08FXR3BWX: page 2 review blocks: 0
+[INFO] [collector] B08FXR3BWX: no new reviews on page 2; stopping early
+[SUCCESS] [collector] B08FXR3BWX: collected 1 reviews (pages visited: 2)
+[INFO] [collector] B08WR6YDKP: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08WR6YDKP/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B08WR6YDKP/B08WR6YDKP_p1.html
+[INFO] [collector] B08WR6YDKP: page 1 review blocks: 0
+[INFO] [collector] B08WR6YDKP: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08WR6YDKP: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B073WN3W6M: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B073WN3W6M/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B073WN3W6M/B073WN3W6M_p1.html
+[INFO] [collector] B073WN3W6M: page 1 review blocks: 0
+[INFO] [collector] B073WN3W6M: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B073WN3W6M: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CRM4Q1W1: starting (market=com)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CRM4Q1W1/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250822_1125__On-Ear_Headphones_created20250905/Raw/reviews/20250920_140502/B0CRM4Q1W1/B0CRM4Q1W1_p1.html
+[INFO] [collector] B0CRM4Q1W1: page 1 review blocks: 0
+[INFO] [collector] B0CRM4Q1W1: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CRM4Q1W1: collected 0 reviews (pages visited: 1)
+[SUCCESS] [collector] snapshots saved: 18
+[SUCCESS] [collector] reviews saved: 2
+[INFO] [✓] Collected 2 reviews.
+[SUCCESS] [LOG] Reviews collected and saved for 2 entries
+[SUCCESS] [auto] done '250822_1125__On-Ear_Headphones': rows=2 new=2 dup=198 snaps=18
+[INFO] [auto] Running pipeline for '250920_1354__Wireless_Headphones'
+[SUCCESS] Loaded ASINs: collection.csv (63 rows)
+[INFO] [→] Collecting reviews for 63 ASINs in US...
+[INFO] [debug] Type of collect_reviews_for_asins: <class 'function'>
+[✅] Amazon session is active.
+[INFO] [collector] B08B477BHS: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08B477BHS/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B08B477BHS/B08B477BHS_p1.html
+[INFO] [collector] B08B477BHS: page 1 review blocks: 0
+[INFO] [collector] B08B477BHS: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08B477BHS: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DM9NJJ8L: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DM9NJJ8L/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DM9NJJ8L/B0DM9NJJ8L_p1.html
+[INFO] [collector] B0DM9NJJ8L: page 1 review blocks: 0
+[INFO] [WARN] No review blocks found for ASIN B0DM9NJJ8L
+[INFO] [collector] B0DM9NJJ8L: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DM9NJJ8L: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DLKB5V35: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DLKB5V35/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DLKB5V35/B0DLKB5V35_p1.html
+[INFO] [collector] B0DLKB5V35: page 1 review blocks: 0
+[ℹ] [B0DLKB5V35] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DLKB5V35/B0DLKB5V35_p2.html
+[INFO] [collector] B0DLKB5V35: page 2 review blocks: 0
+[INFO] [collector] B0DLKB5V35: no new reviews on page 2; stopping early
+[SUCCESS] [collector] B0DLKB5V35: collected 1 reviews (pages visited: 2)
+[INFO] [collector] B0CD1FHLMH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CD1FHLMH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CD1FHLMH/B0CD1FHLMH_p1.html
+[INFO] [collector] B0CD1FHLMH: page 1 review blocks: 0
+[INFO] [collector] B0CD1FHLMH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CD1FHLMH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DWX8YBKK: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DWX8YBKK/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DWX8YBKK/B0DWX8YBKK_p1.html
+[INFO] [collector] B0DWX8YBKK: page 1 review blocks: 0
+[INFO] [collector] B0DWX8YBKK: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DWX8YBKK: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B083P1HG9S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B083P1HG9S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B083P1HG9S/B083P1HG9S_p1.html
+[INFO] [collector] B083P1HG9S: page 1 review blocks: 0
+[INFO] [collector] B083P1HG9S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B083P1HG9S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07Z8J429C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07Z8J429C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8J429C/B07Z8J429C_p1.html
+[INFO] [collector] B07Z8J429C: page 1 review blocks: 0
+[INFO] [collector] B07Z8J429C: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07Z8J429C: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BH4KKZB4: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BH4KKZB4/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4KKZB4/B0BH4KKZB4_p1.html
+[INFO] [collector] B0BH4KKZB4: page 1 review blocks: 0
+[INFO] [collector] B0BH4KKZB4: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BH4KKZB4: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CRRRFZN5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CRRRFZN5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CRRRFZN5/B0CRRRFZN5_p1.html
+[INFO] [collector] B0CRRRFZN5: page 1 review blocks: 0
+[INFO] [collector] B0CRRRFZN5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CRRRFZN5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B01LDVQIF0: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B01LDVQIF0/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B01LDVQIF0/B01LDVQIF0_p1.html
+[INFO] [collector] B01LDVQIF0: page 1 review blocks: 0
+[INFO] [collector] B01LDVQIF0: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B01LDVQIF0: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BVRJXH27: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BVRJXH27/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BVRJXH27/B0BVRJXH27_p1.html
+[INFO] [collector] B0BVRJXH27: page 1 review blocks: 0
+[INFO] [collector] B0BVRJXH27: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BVRJXH27: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CGMV5TMR: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CGMV5TMR/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CGMV5TMR/B0CGMV5TMR_p1.html
+[INFO] [collector] B0CGMV5TMR: page 1 review blocks: 0
+[INFO] [collector] B0CGMV5TMR: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CGMV5TMR: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00QHOCTG6: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00QHOCTG6/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B00QHOCTG6/B00QHOCTG6_p1.html
+[INFO] [collector] B00QHOCTG6: page 1 review blocks: 0
+[INFO] [collector] B00QHOCTG6: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00QHOCTG6: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B75MQJQR: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B75MQJQR/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0B75MQJQR/B0B75MQJQR_p1.html
+[INFO] [collector] B0B75MQJQR: page 1 review blocks: 0
+[INFO] [collector] B0B75MQJQR: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B75MQJQR: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DJW5G283: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DJW5G283/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DJW5G283/B0DJW5G283_p1.html
+[INFO] [collector] B0DJW5G283: page 1 review blocks: 0
+[INFO] [collector] B0DJW5G283: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DJW5G283: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C3HCD34R: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C3HCD34R/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0C3HCD34R/B0C3HCD34R_p1.html
+[INFO] [collector] B0C3HCD34R: page 1 review blocks: 0
+[INFO] [collector] B0C3HCD34R: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C3HCD34R: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08HMWZBXC: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08HMWZBXC/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B08HMWZBXC/B08HMWZBXC_p1.html
+[INFO] [collector] B08HMWZBXC: page 1 review blocks: 0
+[INFO] [collector] B08HMWZBXC: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08HMWZBXC: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BS1QCFHX: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BS1QCFHX/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BS1QCFHX/B0BS1QCFHX_p1.html
+[INFO] [collector] B0BS1QCFHX: page 1 review blocks: 0
+[INFO] [collector] B0BS1QCFHX: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BS1QCFHX: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CQKMWNHQ: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CQKMWNHQ/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CQKMWNHQ/B0CQKMWNHQ_p1.html
+[INFO] [collector] B0CQKMWNHQ: page 1 review blocks: 0
+[INFO] [collector] B0CQKMWNHQ: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CQKMWNHQ: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CT9SBWC9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CT9SBWC9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CT9SBWC9/B0CT9SBWC9_p1.html
+[INFO] [collector] B0CT9SBWC9: page 1 review blocks: 0
+[INFO] [collector] B0CT9SBWC9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CT9SBWC9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DP8WJ5BN: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DP8WJ5BN/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DP8WJ5BN/B0DP8WJ5BN_p1.html
+[INFO] [collector] B0DP8WJ5BN: page 1 review blocks: 0
+[INFO] [collector] B0DP8WJ5BN: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DP8WJ5BN: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09S8XP2J2: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09S8XP2J2/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B09S8XP2J2/B09S8XP2J2_p1.html
+[INFO] [collector] B09S8XP2J2: page 1 review blocks: 0
+[INFO] [collector] B09S8XP2J2: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09S8XP2J2: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C6KFZC9Z: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C6KFZC9Z/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0C6KFZC9Z/B0C6KFZC9Z_p1.html
+[INFO] [collector] B0C6KFZC9Z: page 1 review blocks: 0
+[INFO] [collector] B0C6KFZC9Z: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C6KFZC9Z: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CTB1BM3P: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CTB1BM3P/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CTB1BM3P/B0CTB1BM3P_p1.html
+[INFO] [collector] B0CTB1BM3P: page 1 review blocks: 0
+[INFO] [collector] B0CTB1BM3P: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CTB1BM3P: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DMP36MVC: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DMP36MVC/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DMP36MVC/B0DMP36MVC_p1.html
+[INFO] [collector] B0DMP36MVC: page 1 review blocks: 0
+[INFO] [collector] B0DMP36MVC: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DMP36MVC: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BH4HYM6C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BH4HYM6C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p1.html
+[INFO] [collector] B0BH4HYM6C: page 1 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p2.html
+[INFO] [collector] B0BH4HYM6C: page 2 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p3.html
+[INFO] [collector] B0BH4HYM6C: page 3 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p4.html
+[INFO] [collector] B0BH4HYM6C: page 4 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p5.html
+[INFO] [collector] B0BH4HYM6C: page 5 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p6.html
+[INFO] [collector] B0BH4HYM6C: page 6 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p7.html
+[INFO] [collector] B0BH4HYM6C: page 7 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p8.html
+[INFO] [collector] B0BH4HYM6C: page 8 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p9.html
+[INFO] [collector] B0BH4HYM6C: page 9 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BH4HYM6C/B0BH4HYM6C_p10.html
+[INFO] [collector] B0BH4HYM6C: page 10 review blocks: 0
+[ℹ] [B0BH4HYM6C] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010109f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001010973b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000100bc1050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000100c08410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000100c49604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000100bfc0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000101063b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000101066d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x0000000101044e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001010675cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x000000010103659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001010869f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000101086b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000101097000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0BH4HYM6C: collected 100 reviews (pages visited: 10)
+[INFO] [collector] B0CMFXR4W5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CMFXR4W5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CMFXR4W5/B0CMFXR4W5_p1.html
+[INFO] [collector] B0CMFXR4W5: page 1 review blocks: 0
+[INFO] [collector] B0CMFXR4W5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CMFXR4W5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D4Z9C562: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D4Z9C562/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0D4Z9C562/B0D4Z9C562_p1.html
+[INFO] [collector] B0D4Z9C562: page 1 review blocks: 0
+[INFO] [collector] B0D4Z9C562: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D4Z9C562: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B085899TQ9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B085899TQ9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B085899TQ9/B085899TQ9_p1.html
+[INFO] [collector] B085899TQ9: page 1 review blocks: 0
+[INFO] [collector] B085899TQ9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B085899TQ9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BJSFSNKT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BJSFSNKT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BJSFSNKT/B0BJSFSNKT_p1.html
+[INFO] [collector] B0BJSFSNKT: page 1 review blocks: 0
+[INFO] [collector] B0BJSFSNKT: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BJSFSNKT: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CVX9PSL9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CVX9PSL9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9PSL9/B0CVX9PSL9_p1.html
+[INFO] [collector] B0CVX9PSL9: page 1 review blocks: 0
+[INFO] [collector] B0CVX9PSL9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CVX9PSL9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07Z8HNKKT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07Z8HNKKT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p1.html
+[INFO] [collector] B07Z8HNKKT: page 1 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p2.html
+[INFO] [collector] B07Z8HNKKT: page 2 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p3.html
+[INFO] [collector] B07Z8HNKKT: page 3 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p4.html
+[INFO] [collector] B07Z8HNKKT: page 4 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p5.html
+[INFO] [collector] B07Z8HNKKT: page 5 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p6.html
+[INFO] [collector] B07Z8HNKKT: page 6 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p7.html
+[INFO] [collector] B07Z8HNKKT: page 7 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p8.html
+[INFO] [collector] B07Z8HNKKT: page 8 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p9.html
+[INFO] [collector] B07Z8HNKKT: page 9 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07Z8HNKKT/B07Z8HNKKT_p10.html
+[INFO] [collector] B07Z8HNKKT: page 10 review blocks: 0
+[ℹ] [B07Z8HNKKT] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010109f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001010973b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000100bc1050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000100c08410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000100c49604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000100bfc0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000101063b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000101066d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x0000000101044e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001010675cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x000000010103659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001010869f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000101086b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000101097000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B07Z8HNKKT: collected 100 reviews (pages visited: 10)
+[INFO] [collector] B0DPK22VCQ: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DPK22VCQ/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK22VCQ/B0DPK22VCQ_p1.html
+[INFO] [collector] B0DPK22VCQ: page 1 review blocks: 0
+[INFO] [WARN] No review blocks found for ASIN B0DPK22VCQ
+[INFO] [collector] B0DPK22VCQ: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DPK22VCQ: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D2D75VNY: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D2D75VNY/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0D2D75VNY/B0D2D75VNY_p1.html
+[INFO] [collector] B0D2D75VNY: page 1 review blocks: 0
+[INFO] [collector] B0D2D75VNY: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D2D75VNY: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C8PSMPTH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C8PSMPTH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0C8PSMPTH/B0C8PSMPTH_p1.html
+[INFO] [collector] B0C8PSMPTH: page 1 review blocks: 0
+[INFO] [collector] B0C8PSMPTH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C8PSMPTH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D5Y2SG6P: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D5Y2SG6P/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0D5Y2SG6P/B0D5Y2SG6P_p1.html
+[INFO] [collector] B0D5Y2SG6P: page 1 review blocks: 0
+[INFO] [collector] B0D5Y2SG6P: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D5Y2SG6P: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00NG57H4S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00NG57H4S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B00NG57H4S/B00NG57H4S_p1.html
+[INFO] [collector] B00NG57H4S: page 1 review blocks: 0
+[INFO] [collector] B00NG57H4S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00NG57H4S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CRTYZG5C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CRTYZG5C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CRTYZG5C/B0CRTYZG5C_p1.html
+[INFO] [collector] B0CRTYZG5C: page 1 review blocks: 0
+[INFO] [collector] B0CRTYZG5C: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CRTYZG5C: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CT6C579K: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CT6C579K/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CT6C579K/B0CT6C579K_p1.html
+[INFO] [collector] B0CT6C579K: page 1 review blocks: 0
+[INFO] [collector] B0CT6C579K: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CT6C579K: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B5VHRX7F: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B5VHRX7F/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0B5VHRX7F/B0B5VHRX7F_p1.html
+[INFO] [collector] B0B5VHRX7F: page 1 review blocks: 0
+[INFO] [WARN] No review blocks found for ASIN B0B5VHRX7F
+[INFO] [collector] B0B5VHRX7F: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B5VHRX7F: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09NBVS84T: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09NBVS84T/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B09NBVS84T/B09NBVS84T_p1.html
+[INFO] [collector] B09NBVS84T: page 1 review blocks: 0
+[INFO] [WARN] No review blocks found for ASIN B09NBVS84T
+[INFO] [collector] B09NBVS84T: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09NBVS84T: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FJ8RXV1K: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FJ8RXV1K/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0FJ8RXV1K/B0FJ8RXV1K_p1.html
+[INFO] [collector] B0FJ8RXV1K: page 1 review blocks: 0
+[INFO] [collector] B0FJ8RXV1K: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FJ8RXV1K: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FHWF8GC5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FHWF8GC5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0FHWF8GC5/B0FHWF8GC5_p1.html
+[INFO] [collector] B0FHWF8GC5: page 1 review blocks: 0
+[INFO] [collector] B0FHWF8GC5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FHWF8GC5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DHX142GP: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DHX142GP/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DHX142GP/B0DHX142GP_p1.html
+[INFO] [collector] B0DHX142GP: page 1 review blocks: 0
+[INFO] [collector] B0DHX142GP: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DHX142GP: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CZPGX972: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CZPGX972/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CZPGX972/B0CZPGX972_p1.html
+[INFO] [collector] B0CZPGX972: page 1 review blocks: 0
+[INFO] [collector] B0CZPGX972: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CZPGX972: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CBLKS51N: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CBLKS51N/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CBLKS51N/B0CBLKS51N_p1.html
+[INFO] [collector] B0CBLKS51N: page 1 review blocks: 0
+[INFO] [collector] B0CBLKS51N: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CBLKS51N: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BTJ9WHL9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BTJ9WHL9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0BTJ9WHL9/B0BTJ9WHL9_p1.html
+[INFO] [collector] B0BTJ9WHL9: page 1 review blocks: 0
+[INFO] [collector] B0BTJ9WHL9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BTJ9WHL9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CBLLJTTN: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CBLLJTTN/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CBLLJTTN/B0CBLLJTTN_p1.html
+[INFO] [collector] B0CBLLJTTN: page 1 review blocks: 0
+[INFO] [collector] B0CBLLJTTN: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CBLLJTTN: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0F21S7DT5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0F21S7DT5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0F21S7DT5/B0F21S7DT5_p1.html
+[INFO] [collector] B0F21S7DT5: page 1 review blocks: 0
+[INFO] [collector] B0F21S7DT5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0F21S7DT5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B087JWTWF9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B087JWTWF9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B087JWTWF9/B087JWTWF9_p1.html
+[INFO] [collector] B087JWTWF9: page 1 review blocks: 0
+[INFO] [collector] B087JWTWF9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B087JWTWF9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0863TXGM3: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0863TXGM3/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0863TXGM3/B0863TXGM3_p1.html
+[INFO] [collector] B0863TXGM3: page 1 review blocks: 0
+[INFO] [collector] B0863TXGM3: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0863TXGM3: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08TMTFR6B: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08TMTFR6B/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B08TMTFR6B/B08TMTFR6B_p1.html
+[INFO] [collector] B08TMTFR6B: page 1 review blocks: 0
+[INFO] [collector] B08TMTFR6B: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08TMTFR6B: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FB2VCQG1: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FB2VCQG1/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0FB2VCQG1/B0FB2VCQG1_p1.html
+[INFO] [collector] B0FB2VCQG1: page 1 review blocks: 0
+[INFO] [collector] B0FB2VCQG1: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FB2VCQG1: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DZHC7YSY: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DZHC7YSY/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DZHC7YSY/B0DZHC7YSY_p1.html
+[INFO] [collector] B0DZHC7YSY: page 1 review blocks: 0
+[INFO] [collector] B0DZHC7YSY: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DZHC7YSY: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DPK2LN3G: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DPK2LN3G/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK2LN3G/B0DPK2LN3G_p1.html
+[INFO] [collector] B0DPK2LN3G: page 1 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK2LN3G/B0DPK2LN3G_p2.html
+[INFO] [collector] B0DPK2LN3G: page 2 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK2LN3G/B0DPK2LN3G_p3.html
+[INFO] [collector] B0DPK2LN3G: page 3 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK2LN3G/B0DPK2LN3G_p4.html
+[INFO] [collector] B0DPK2LN3G: page 4 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DPK2LN3G/B0DPK2LN3G_p5.html
+[INFO] [collector] B0DPK2LN3G: page 5 review blocks: 0
+[ℹ] [B0DPK2LN3G] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010109f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001010973b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000100bc1050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000100c08410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000100c49604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000100bfc0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000101063b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000101066d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x0000000101044e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001010675cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x000000010103659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001010869f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000101086b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000101097000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0DPK2LN3G: collected 49 reviews (pages visited: 5)
+[INFO] [collector] B094NC89P9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B094NC89P9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B094NC89P9/B094NC89P9_p1.html
+[INFO] [collector] B094NC89P9: page 1 review blocks: 0
+[INFO] [collector] B094NC89P9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B094NC89P9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CVX9YTDL: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CVX9YTDL/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9YTDL/B0CVX9YTDL_p1.html
+[INFO] [collector] B0CVX9YTDL: page 1 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9YTDL/B0CVX9YTDL_p2.html
+[INFO] [collector] B0CVX9YTDL: page 2 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9YTDL/B0CVX9YTDL_p3.html
+[INFO] [collector] B0CVX9YTDL: page 3 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9YTDL/B0CVX9YTDL_p4.html
+[INFO] [collector] B0CVX9YTDL: page 4 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0CVX9YTDL/B0CVX9YTDL_p5.html
+[INFO] [collector] B0CVX9YTDL: page 5 review blocks: 0
+[ℹ] [B0CVX9YTDL] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010109f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001010973b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000100bc1050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000100c08410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000100c49604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000100bfc0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000101063b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000101066d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x0000000101044e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001010675cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x000000010103659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001010869f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000101086b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000101097000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0CVX9YTDL: collected 47 reviews (pages visited: 5)
+[INFO] [collector] B07K2676W7: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07K2676W7/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B07K2676W7/B07K2676W7_p1.html
+[INFO] [collector] B07K2676W7: page 1 review blocks: 0
+[INFO] [collector] B07K2676W7: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07K2676W7: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09XS7JWHH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09XS7JWHH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B09XS7JWHH/B09XS7JWHH_p1.html
+[INFO] [collector] B09XS7JWHH: page 1 review blocks: 0
+[INFO] [collector] B09XS7JWHH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09XS7JWHH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DFYFW1HW: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DFYFW1HW/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DFYFW1HW/B0DFYFW1HW_p1.html
+[INFO] [collector] B0DFYFW1HW: page 1 review blocks: 0
+[INFO] [collector] B0DFYFW1HW: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DFYFW1HW: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DCN52TQH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DCN52TQH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0DCN52TQH/B0DCN52TQH_p1.html
+[INFO] [collector] B0DCN52TQH: page 1 review blocks: 0
+[INFO] [collector] B0DCN52TQH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DCN52TQH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B7WKH98S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B7WKH98S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0B7WKH98S/B0B7WKH98S_p1.html
+[INFO] [collector] B0B7WKH98S: page 1 review blocks: 0
+[INFO] [collector] B0B7WKH98S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B7WKH98S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D4ZC4XMT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D4ZC4XMT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_140612/B0D4ZC4XMT/B0D4ZC4XMT_p1.html
+[INFO] [collector] B0D4ZC4XMT: page 1 review blocks: 0
+[INFO] [collector] B0D4ZC4XMT: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D4ZC4XMT: collected 0 reviews (pages visited: 1)
+[SUCCESS] [collector] snapshots saved: 63
+[SUCCESS] [collector] reviews saved: 297
+[INFO] [✓] Collected 297 reviews.
+[SUCCESS] [LOG] Reviews collected and saved for 297 entries
+[SUCCESS] [auto] done '250920_1354__Wireless_Headphones': rows=297 new=297 dup=550 snaps=63
+/Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/scripts/auto_runner.py:21: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  return datetime.utcnow() >= next_dt
+[INFO] [auto] Running pipeline for '250920_1354__Wireless_Headphones'
+[SUCCESS] Loaded ASINs: collection.csv (63 rows)
+[INFO] [→] Collecting reviews for 63 ASINs in US...
+[INFO] [debug] Type of collect_reviews_for_asins: <class 'function'>
+[✅] Amazon session is active.
+[INFO] [collector] B08B477BHS: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08B477BHS/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B08B477BHS/B08B477BHS_p1.html
+[INFO] [collector] B08B477BHS: page 1 review blocks: 0
+[INFO] [collector] B08B477BHS: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08B477BHS: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DM9NJJ8L: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DM9NJJ8L/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DM9NJJ8L/B0DM9NJJ8L_p1.html
+[INFO] [collector] B0DM9NJJ8L: page 1 review blocks: 0
+[INFO] [WARN] No review blocks found for ASIN B0DM9NJJ8L
+[INFO] [collector] B0DM9NJJ8L: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DM9NJJ8L: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DLKB5V35: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DLKB5V35/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DLKB5V35/B0DLKB5V35_p1.html
+[INFO] [collector] B0DLKB5V35: page 1 review blocks: 0
+[INFO] [collector] B0DLKB5V35: page 1 has no reviews newer than 2025-09-19; stopping by date
+[SUCCESS] [collector] B0DLKB5V35: collected 1 reviews (pages visited: 1)
+[INFO] [collector] B0CD1FHLMH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CD1FHLMH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CD1FHLMH/B0CD1FHLMH_p1.html
+[INFO] [collector] B0CD1FHLMH: page 1 review blocks: 0
+[INFO] [collector] B0CD1FHLMH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CD1FHLMH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DWX8YBKK: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DWX8YBKK/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DWX8YBKK/B0DWX8YBKK_p1.html
+[INFO] [collector] B0DWX8YBKK: page 1 review blocks: 0
+[INFO] [collector] B0DWX8YBKK: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DWX8YBKK: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B083P1HG9S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B083P1HG9S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B083P1HG9S/B083P1HG9S_p1.html
+[INFO] [collector] B083P1HG9S: page 1 review blocks: 0
+[INFO] [collector] B083P1HG9S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B083P1HG9S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07Z8J429C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07Z8J429C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8J429C/B07Z8J429C_p1.html
+[INFO] [collector] B07Z8J429C: page 1 review blocks: 0
+[INFO] [collector] B07Z8J429C: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07Z8J429C: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BH4KKZB4: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BH4KKZB4/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4KKZB4/B0BH4KKZB4_p1.html
+[INFO] [collector] B0BH4KKZB4: page 1 review blocks: 0
+[INFO] [collector] B0BH4KKZB4: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BH4KKZB4: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CRRRFZN5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CRRRFZN5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CRRRFZN5/B0CRRRFZN5_p1.html
+[INFO] [collector] B0CRRRFZN5: page 1 review blocks: 0
+[INFO] [collector] B0CRRRFZN5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CRRRFZN5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B01LDVQIF0: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B01LDVQIF0/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B01LDVQIF0/B01LDVQIF0_p1.html
+[INFO] [collector] B01LDVQIF0: page 1 review blocks: 0
+[INFO] [collector] B01LDVQIF0: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B01LDVQIF0: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BVRJXH27: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BVRJXH27/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BVRJXH27/B0BVRJXH27_p1.html
+[INFO] [collector] B0BVRJXH27: page 1 review blocks: 0
+[INFO] [collector] B0BVRJXH27: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BVRJXH27: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CGMV5TMR: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CGMV5TMR/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CGMV5TMR/B0CGMV5TMR_p1.html
+[INFO] [collector] B0CGMV5TMR: page 1 review blocks: 0
+[INFO] [collector] B0CGMV5TMR: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CGMV5TMR: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00QHOCTG6: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00QHOCTG6/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B00QHOCTG6/B00QHOCTG6_p1.html
+[INFO] [collector] B00QHOCTG6: page 1 review blocks: 0
+[INFO] [collector] B00QHOCTG6: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00QHOCTG6: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B75MQJQR: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B75MQJQR/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0B75MQJQR/B0B75MQJQR_p1.html
+[INFO] [collector] B0B75MQJQR: page 1 review blocks: 0
+[INFO] [collector] B0B75MQJQR: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B75MQJQR: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DJW5G283: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DJW5G283/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DJW5G283/B0DJW5G283_p1.html
+[INFO] [collector] B0DJW5G283: page 1 review blocks: 0
+[INFO] [collector] B0DJW5G283: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DJW5G283: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C3HCD34R: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C3HCD34R/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0C3HCD34R/B0C3HCD34R_p1.html
+[INFO] [collector] B0C3HCD34R: page 1 review blocks: 0
+[INFO] [collector] B0C3HCD34R: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C3HCD34R: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08HMWZBXC: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08HMWZBXC/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B08HMWZBXC/B08HMWZBXC_p1.html
+[INFO] [collector] B08HMWZBXC: page 1 review blocks: 0
+[ℹ] [B08HMWZBXC] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B08HMWZBXC/B08HMWZBXC_p2.html
+[INFO] [collector] B08HMWZBXC: page 2 review blocks: 0
+[INFO] [collector] B08HMWZBXC: no new reviews on page 2; stopping early
+[SUCCESS] [collector] B08HMWZBXC: collected 1 reviews (pages visited: 2)
+[INFO] [collector] B0BS1QCFHX: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BS1QCFHX/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BS1QCFHX/B0BS1QCFHX_p1.html
+[INFO] [collector] B0BS1QCFHX: page 1 review blocks: 0
+[INFO] [collector] B0BS1QCFHX: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BS1QCFHX: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CQKMWNHQ: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CQKMWNHQ/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CQKMWNHQ/B0CQKMWNHQ_p1.html
+[INFO] [collector] B0CQKMWNHQ: page 1 review blocks: 0
+[INFO] [collector] B0CQKMWNHQ: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CQKMWNHQ: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CT9SBWC9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CT9SBWC9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CT9SBWC9/B0CT9SBWC9_p1.html
+[INFO] [collector] B0CT9SBWC9: page 1 review blocks: 0
+[INFO] [collector] B0CT9SBWC9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CT9SBWC9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DP8WJ5BN: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DP8WJ5BN/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DP8WJ5BN/B0DP8WJ5BN_p1.html
+[INFO] [collector] B0DP8WJ5BN: page 1 review blocks: 0
+[INFO] [collector] B0DP8WJ5BN: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DP8WJ5BN: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09S8XP2J2: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09S8XP2J2/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B09S8XP2J2/B09S8XP2J2_p1.html
+[INFO] [collector] B09S8XP2J2: page 1 review blocks: 0
+[INFO] [collector] B09S8XP2J2: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09S8XP2J2: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C6KFZC9Z: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C6KFZC9Z/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0C6KFZC9Z/B0C6KFZC9Z_p1.html
+[INFO] [collector] B0C6KFZC9Z: page 1 review blocks: 0
+[INFO] [collector] B0C6KFZC9Z: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C6KFZC9Z: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CTB1BM3P: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CTB1BM3P/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CTB1BM3P/B0CTB1BM3P_p1.html
+[INFO] [collector] B0CTB1BM3P: page 1 review blocks: 0
+[INFO] [collector] B0CTB1BM3P: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CTB1BM3P: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DMP36MVC: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DMP36MVC/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DMP36MVC/B0DMP36MVC_p1.html
+[INFO] [collector] B0DMP36MVC: page 1 review blocks: 0
+[INFO] [collector] B0DMP36MVC: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DMP36MVC: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BH4HYM6C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BH4HYM6C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p1.html
+[INFO] [collector] B0BH4HYM6C: page 1 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p2.html
+[INFO] [collector] B0BH4HYM6C: page 2 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p3.html
+[INFO] [collector] B0BH4HYM6C: page 3 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p4.html
+[INFO] [collector] B0BH4HYM6C: page 4 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p5.html
+[INFO] [collector] B0BH4HYM6C: page 5 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p6.html
+[INFO] [collector] B0BH4HYM6C: page 6 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p7.html
+[INFO] [collector] B0BH4HYM6C: page 7 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p8.html
+[INFO] [collector] B0BH4HYM6C: page 8 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p9.html
+[INFO] [collector] B0BH4HYM6C: page 9 review blocks: 0
+[ℹ] [B0BH4HYM6C] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BH4HYM6C/B0BH4HYM6C_p10.html
+[INFO] [collector] B0BH4HYM6C: page 10 review blocks: 0
+[ℹ] [B0BH4HYM6C] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010513f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001051373b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000104c61050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000104ca8410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000104ce9604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000104c9c0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000105103b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000105106d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x00000001050e4e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001051075cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x00000001050d659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001051269f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000105126b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000105137000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0BH4HYM6C: collected 100 reviews (pages visited: 10)
+[INFO] [collector] B0CMFXR4W5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CMFXR4W5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CMFXR4W5/B0CMFXR4W5_p1.html
+[INFO] [collector] B0CMFXR4W5: page 1 review blocks: 0
+[INFO] [collector] B0CMFXR4W5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CMFXR4W5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D4Z9C562: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D4Z9C562/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0D4Z9C562/B0D4Z9C562_p1.html
+[INFO] [collector] B0D4Z9C562: page 1 review blocks: 0
+[INFO] [collector] B0D4Z9C562: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D4Z9C562: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B085899TQ9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B085899TQ9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B085899TQ9/B085899TQ9_p1.html
+[INFO] [collector] B085899TQ9: page 1 review blocks: 0
+[INFO] [collector] B085899TQ9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B085899TQ9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BJSFSNKT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BJSFSNKT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BJSFSNKT/B0BJSFSNKT_p1.html
+[INFO] [collector] B0BJSFSNKT: page 1 review blocks: 0
+[INFO] [collector] B0BJSFSNKT: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BJSFSNKT: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CVX9PSL9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CVX9PSL9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9PSL9/B0CVX9PSL9_p1.html
+[INFO] [collector] B0CVX9PSL9: page 1 review blocks: 0
+[INFO] [collector] B0CVX9PSL9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CVX9PSL9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B07Z8HNKKT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07Z8HNKKT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p1.html
+[INFO] [collector] B07Z8HNKKT: page 1 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p2.html
+[INFO] [collector] B07Z8HNKKT: page 2 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p3.html
+[INFO] [collector] B07Z8HNKKT: page 3 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p4.html
+[INFO] [collector] B07Z8HNKKT: page 4 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p5.html
+[INFO] [collector] B07Z8HNKKT: page 5 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p6.html
+[INFO] [collector] B07Z8HNKKT: page 6 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p7.html
+[INFO] [collector] B07Z8HNKKT: page 7 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p8.html
+[INFO] [collector] B07Z8HNKKT: page 8 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p9.html
+[INFO] [collector] B07Z8HNKKT: page 9 review blocks: 0
+[ℹ] [B07Z8HNKKT] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07Z8HNKKT/B07Z8HNKKT_p10.html
+[INFO] [collector] B07Z8HNKKT: page 10 review blocks: 0
+[ℹ] [B07Z8HNKKT] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010513f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001051373b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000104c61050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000104ca8410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000104ce9604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000104c9c0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000105103b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000105106d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x00000001050e4e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001051075cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x00000001050d659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001051269f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000105126b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000105137000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B07Z8HNKKT: collected 100 reviews (pages visited: 10)
+[INFO] [collector] B0DPK22VCQ: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DPK22VCQ/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK22VCQ/B0DPK22VCQ_p1.html
+[INFO] [collector] B0DPK22VCQ: page 1 review blocks: 0
+[INFO] [collector] B0DPK22VCQ: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DPK22VCQ: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D2D75VNY: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D2D75VNY/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0D2D75VNY/B0D2D75VNY_p1.html
+[INFO] [collector] B0D2D75VNY: page 1 review blocks: 0
+[INFO] [collector] B0D2D75VNY: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D2D75VNY: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0C8PSMPTH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0C8PSMPTH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0C8PSMPTH/B0C8PSMPTH_p1.html
+[INFO] [collector] B0C8PSMPTH: page 1 review blocks: 0
+[INFO] [collector] B0C8PSMPTH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0C8PSMPTH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D5Y2SG6P: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D5Y2SG6P/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0D5Y2SG6P/B0D5Y2SG6P_p1.html
+[INFO] [collector] B0D5Y2SG6P: page 1 review blocks: 0
+[INFO] [collector] B0D5Y2SG6P: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D5Y2SG6P: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B00NG57H4S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B00NG57H4S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B00NG57H4S/B00NG57H4S_p1.html
+[INFO] [collector] B00NG57H4S: page 1 review blocks: 0
+[INFO] [collector] B00NG57H4S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B00NG57H4S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CRTYZG5C: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CRTYZG5C/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CRTYZG5C/B0CRTYZG5C_p1.html
+[INFO] [collector] B0CRTYZG5C: page 1 review blocks: 0
+[INFO] [collector] B0CRTYZG5C: page 1 has no reviews newer than 2025-09-19; stopping by date
+[SUCCESS] [collector] B0CRTYZG5C: collected 2 reviews (pages visited: 1)
+[INFO] [collector] B0CT6C579K: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CT6C579K/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CT6C579K/B0CT6C579K_p1.html
+[INFO] [collector] B0CT6C579K: page 1 review blocks: 0
+[INFO] [collector] B0CT6C579K: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CT6C579K: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B5VHRX7F: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B5VHRX7F/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0B5VHRX7F/B0B5VHRX7F_p1.html
+[INFO] [collector] B0B5VHRX7F: page 1 review blocks: 0
+[INFO] [collector] B0B5VHRX7F: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B5VHRX7F: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09NBVS84T: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09NBVS84T/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B09NBVS84T/B09NBVS84T_p1.html
+[INFO] [collector] B09NBVS84T: page 1 review blocks: 0
+[INFO] [collector] B09NBVS84T: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09NBVS84T: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FJ8RXV1K: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FJ8RXV1K/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0FJ8RXV1K/B0FJ8RXV1K_p1.html
+[INFO] [collector] B0FJ8RXV1K: page 1 review blocks: 0
+[INFO] [collector] B0FJ8RXV1K: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FJ8RXV1K: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FHWF8GC5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FHWF8GC5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0FHWF8GC5/B0FHWF8GC5_p1.html
+[INFO] [collector] B0FHWF8GC5: page 1 review blocks: 0
+[INFO] [collector] B0FHWF8GC5: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FHWF8GC5: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DHX142GP: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DHX142GP/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DHX142GP/B0DHX142GP_p1.html
+[INFO] [collector] B0DHX142GP: page 1 review blocks: 0
+[INFO] [collector] B0DHX142GP: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DHX142GP: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CZPGX972: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CZPGX972/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CZPGX972/B0CZPGX972_p1.html
+[INFO] [collector] B0CZPGX972: page 1 review blocks: 0
+[INFO] [collector] B0CZPGX972: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CZPGX972: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CBLKS51N: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CBLKS51N/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CBLKS51N/B0CBLKS51N_p1.html
+[INFO] [collector] B0CBLKS51N: page 1 review blocks: 0
+[INFO] [collector] B0CBLKS51N: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CBLKS51N: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0BTJ9WHL9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0BTJ9WHL9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0BTJ9WHL9/B0BTJ9WHL9_p1.html
+[INFO] [collector] B0BTJ9WHL9: page 1 review blocks: 0
+[INFO] [collector] B0BTJ9WHL9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0BTJ9WHL9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CBLLJTTN: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CBLLJTTN/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CBLLJTTN/B0CBLLJTTN_p1.html
+[INFO] [collector] B0CBLLJTTN: page 1 review blocks: 0
+[INFO] [collector] B0CBLLJTTN: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0CBLLJTTN: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0F21S7DT5: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0F21S7DT5/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0F21S7DT5/B0F21S7DT5_p1.html
+[INFO] [collector] B0F21S7DT5: page 1 review blocks: 0
+[ℹ] [B0F21S7DT5] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0F21S7DT5/B0F21S7DT5_p2.html
+[INFO] [collector] B0F21S7DT5: page 2 review blocks: 0
+[INFO] [collector] B0F21S7DT5: no new reviews on page 2; stopping early
+[SUCCESS] [collector] B0F21S7DT5: collected 1 reviews (pages visited: 2)
+[INFO] [collector] B087JWTWF9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B087JWTWF9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B087JWTWF9/B087JWTWF9_p1.html
+[INFO] [collector] B087JWTWF9: page 1 review blocks: 0
+[INFO] [collector] B087JWTWF9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B087JWTWF9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0863TXGM3: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0863TXGM3/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0863TXGM3/B0863TXGM3_p1.html
+[INFO] [collector] B0863TXGM3: page 1 review blocks: 0
+[INFO] [collector] B0863TXGM3: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0863TXGM3: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B08TMTFR6B: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B08TMTFR6B/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B08TMTFR6B/B08TMTFR6B_p1.html
+[INFO] [collector] B08TMTFR6B: page 1 review blocks: 0
+[INFO] [collector] B08TMTFR6B: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B08TMTFR6B: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0FB2VCQG1: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0FB2VCQG1/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0FB2VCQG1/B0FB2VCQG1_p1.html
+[INFO] [collector] B0FB2VCQG1: page 1 review blocks: 0
+[INFO] [collector] B0FB2VCQG1: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0FB2VCQG1: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DZHC7YSY: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DZHC7YSY/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DZHC7YSY/B0DZHC7YSY_p1.html
+[INFO] [collector] B0DZHC7YSY: page 1 review blocks: 0
+[INFO] [collector] B0DZHC7YSY: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DZHC7YSY: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DPK2LN3G: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DPK2LN3G/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK2LN3G/B0DPK2LN3G_p1.html
+[INFO] [collector] B0DPK2LN3G: page 1 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK2LN3G/B0DPK2LN3G_p2.html
+[INFO] [collector] B0DPK2LN3G: page 2 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK2LN3G/B0DPK2LN3G_p3.html
+[INFO] [collector] B0DPK2LN3G: page 3 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK2LN3G/B0DPK2LN3G_p4.html
+[INFO] [collector] B0DPK2LN3G: page 4 review blocks: 0
+[ℹ] [B0DPK2LN3G] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DPK2LN3G/B0DPK2LN3G_p5.html
+[INFO] [collector] B0DPK2LN3G: page 5 review blocks: 0
+[ℹ] [B0DPK2LN3G] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010513f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001051373b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000104c61050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000104ca8410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000104ce9604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000104c9c0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000105103b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000105106d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x00000001050e4e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001051075cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x00000001050d659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001051269f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000105126b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000105137000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0DPK2LN3G: collected 49 reviews (pages visited: 5)
+[INFO] [collector] B094NC89P9: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B094NC89P9/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B094NC89P9/B094NC89P9_p1.html
+[INFO] [collector] B094NC89P9: page 1 review blocks: 0
+[INFO] [collector] B094NC89P9: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B094NC89P9: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0CVX9YTDL: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0CVX9YTDL/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9YTDL/B0CVX9YTDL_p1.html
+[INFO] [collector] B0CVX9YTDL: page 1 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9YTDL/B0CVX9YTDL_p2.html
+[INFO] [collector] B0CVX9YTDL: page 2 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9YTDL/B0CVX9YTDL_p3.html
+[INFO] [collector] B0CVX9YTDL: page 3 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9YTDL/B0CVX9YTDL_p4.html
+[INFO] [collector] B0CVX9YTDL: page 4 review blocks: 0
+[ℹ] [B0CVX9YTDL] Clicked next page.
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0CVX9YTDL/B0CVX9YTDL_p5.html
+[INFO] [collector] B0CVX9YTDL: page 5 review blocks: 0
+[ℹ] [B0CVX9YTDL] Failed to click 'Next': Message: 
+Stacktrace:
+0   chromedriver                        0x000000010513f418 cxxbridge1$str$ptr + 2882044
+1   chromedriver                        0x00000001051373b4 cxxbridge1$str$ptr + 2849176
+2   chromedriver                        0x0000000104c61050 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 73436
+3   chromedriver                        0x0000000104ca8410 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 365212
+4   chromedriver                        0x0000000104ce9604 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 631952
+5   chromedriver                        0x0000000104c9c0d0 _RNvCslE4myv9Sbr3_7___rustc35___rust_no_alloc_shim_is_unstable_v2 + 315228
+6   chromedriver                        0x0000000105103b08 cxxbridge1$str$ptr + 2638060
+7   chromedriver                        0x0000000105106d20 cxxbridge1$str$ptr + 2650884
+8   chromedriver                        0x00000001050e4e58 cxxbridge1$str$ptr + 2511932
+9   chromedriver                        0x00000001051075cc cxxbridge1$str$ptr + 2653104
+10  chromedriver                        0x00000001050d659c cxxbridge1$str$ptr + 2452352
+11  chromedriver                        0x00000001051269f0 cxxbridge1$str$ptr + 2781140
+12  chromedriver                        0x0000000105126b70 cxxbridge1$str$ptr + 2781524
+13  chromedriver                        0x0000000105137000 cxxbridge1$str$ptr + 2848228
+14  libsystem_pthread.dylib             0x000000019e0bfc0c _pthread_start + 136
+15  libsystem_pthread.dylib             0x000000019e0bab80 thread_start + 8
+
+[SUCCESS] [collector] B0CVX9YTDL: collected 47 reviews (pages visited: 5)
+[INFO] [collector] B07K2676W7: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B07K2676W7/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B07K2676W7/B07K2676W7_p1.html
+[INFO] [collector] B07K2676W7: page 1 review blocks: 0
+[INFO] [collector] B07K2676W7: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B07K2676W7: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B09XS7JWHH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B09XS7JWHH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B09XS7JWHH/B09XS7JWHH_p1.html
+[INFO] [collector] B09XS7JWHH: page 1 review blocks: 0
+[INFO] [collector] B09XS7JWHH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B09XS7JWHH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DFYFW1HW: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DFYFW1HW/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DFYFW1HW/B0DFYFW1HW_p1.html
+[INFO] [collector] B0DFYFW1HW: page 1 review blocks: 0
+[INFO] [collector] B0DFYFW1HW: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DFYFW1HW: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0DCN52TQH: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0DCN52TQH/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0DCN52TQH/B0DCN52TQH_p1.html
+[INFO] [collector] B0DCN52TQH: page 1 review blocks: 0
+[INFO] [collector] B0DCN52TQH: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0DCN52TQH: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0B7WKH98S: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0B7WKH98S/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0B7WKH98S/B0B7WKH98S_p1.html
+[INFO] [collector] B0B7WKH98S: page 1 review blocks: 0
+[INFO] [collector] B0B7WKH98S: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0B7WKH98S: collected 0 reviews (pages visited: 1)
+[INFO] [collector] B0D4ZC4XMT: starting (market=US)
+[ℹ] [nav] Navigating to reviews URL: https://amazon.com/product-reviews/B0D4ZC4XMT/?sortBy=recent&pageNumber=1
+[SUCCESS] [→] Saved HTML: /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/20250920_250920_1354__Wireless_Headphones_created20250920/Raw/reviews/20250920_150502/B0D4ZC4XMT/B0D4ZC4XMT_p1.html
+[INFO] [collector] B0D4ZC4XMT: page 1 review blocks: 0
+[INFO] [collector] B0D4ZC4XMT: no new reviews on page 1; stopping early
+[SUCCESS] [collector] B0D4ZC4XMT: collected 0 reviews (pages visited: 1)
+[SUCCESS] [collector] snapshots saved: 63
+[SUCCESS] [collector] reviews saved: 301
+[INFO] [✓] Collected 301 reviews.
+[SUCCESS] [LOG] Reviews collected and saved for 301 entries
+[SUCCESS] [auto] done '250920_1354__Wireless_Headphones': rows=301 new=301 dup=586 snaps=63

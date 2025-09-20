@@ -1,52 +1,59 @@
-from datetime import datetime
-from pathlib import Path
-
 import pandas as pd
+from core.collection_io import collection_csv
+from core.log import print_error, print_info, print_success
 
 
 class SessionState:
     def __init__(self):
         self.df_asin = None
+        self.df_asins = None
         self.df_reviews = None
         self.df_snapshot = None
         self.collection_id = None
         self.collection_path = None
+        self.created_date = None
+        self.last_snapshot_date = None
+        self.latest_snapshot_file = None
+        self.latest_reviews_file = None
+        self.marketplace = None
 
     def load_collection(self, collection_id: str = None):
-        from core.collection_io import (
-            list_collections,  # Импортировать здесь, чтобы избежать циклического импорта
-        )
+        from core.collection_io import list_collections
+        from core.collection_io import load_collection as io_load_collection
+        from core.collection_io import parse_collection_dirname
 
+        # Interactive selection if not provided
         if collection_id is None:
-            print("[ℹ] No collection loaded. Select from saved collections:")
+            print_info("No collection loaded. Select from saved collections:")
             collections = list_collections()
             if not collections:
-                print("[!] No available collections.")
+                print_error("No available collections.")
                 return
             for idx, name in enumerate(collections, 1):
                 print(f"{idx}) {name}")
             choice = input("Enter collection number (or press Enter to cancel): ").strip()
             if not choice.isdigit() or not (1 <= int(choice) <= len(collections)):
-                print("[✖] Invalid selection.")
+                print_error("Invalid selection.")
                 return
-            collection_id = collections[int(choice) - 1]
+            selected = collections[int(choice) - 1]
+            # selected is a folder name in new format; extract cid
+            try:
+                parts = parse_collection_dirname(selected)
+                collection_id = parts["cid"]
+            except Exception:
+                # fallback: assume provided is the cid
+                collection_id = selected
 
-        collection_id = collection_id.replace(".csv", "")
-        path = Path("collections") / collection_id
-        if path.exists() and not path.is_dir():
-            path.unlink()
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-        asin_file = next(path.glob(f"{collection_id}.csv"), None)
-        print(f"[DEBUG] Looking for ASIN file at: {asin_file}")
-        if asin_file.exists():
-            print(f"[DEBUG] ASIN file found. Loading collection: {collection_id}")
-            self.df_asin = pd.read_csv(asin_file)
-            self.collection_id = collection_id
-            self.collection_path = path
+        # Delegate to IO (new format only)
+        io_load_collection(collection_id, self)
+
+        collection_file = collection_csv(self.collection_path)
+        if collection_file.exists():
+            self.df_asins = pd.read_csv(collection_file)
+            self.marketplace = self.get_marketplace()
+            print_success(f"Loaded ASINs: {collection_file.name} ({len(self.df_asins)} rows)")
         else:
-            print(f"[DEBUG] ASIN file not found at: {asin_file}")
-            print(f"[!] ASIN file not found for collection: {collection_id}")
+            print_error("ASIN file not found.")
 
     def load_full_context(self, collection_id: str):
         self.load_collection(collection_id)
@@ -54,20 +61,33 @@ class SessionState:
 
     def load_reviews_and_snapshot(self):
         if not self.collection_path:
-            print("[!] No collection path set.")
+            print_error("No collection path set.")
             return
-        reviews_file = max(self.collection_path.glob("*__reviews.csv"), default=None)
-        snapshot_file = max(self.collection_path.glob("*__snapshot.csv"), default=None)
-        if reviews_file and reviews_file.exists():
+        from core.collection_io import reviews_csv, snapshot_csv
+
+        reviews_file = reviews_csv(self.collection_path)
+        snapshot_file = snapshot_csv(self.collection_path)
+
+        if reviews_file.exists():
             self.df_reviews = pd.read_csv(reviews_file)
-            print(f"[+] Loaded reviews: {reviews_file.name}")
+            self.latest_reviews_file = reviews_file
+            print_success(f"Loaded reviews: {reviews_file.name} ({len(self.df_reviews)} rows)")
         else:
-            print("[!] Reviews file not found.")
-        if snapshot_file and snapshot_file.exists():
+            print_error("Reviews file not found.")
+
+        if snapshot_file.exists():
             self.df_snapshot = pd.read_csv(snapshot_file)
-            print(f"[+] Loaded snapshot: {snapshot_file.name}")
+            self.latest_snapshot_file = snapshot_file
+            print_success(f"Loaded snapshot: {snapshot_file.name} ({len(self.df_snapshot)} rows)")
+            if "captured_at" in self.df_snapshot.columns:
+                try:
+                    self.last_snapshot_date = max(
+                        pd.to_datetime(self.df_snapshot["captured_at"]).dt.strftime("%Y%m%d")
+                    )
+                except Exception:
+                    self.last_snapshot_date = None
         else:
-            print("[!] Snapshot file not found.")
+            print_error("Snapshot file not found.")
 
     def has_reviews(self):
         return hasattr(self, "df_reviews") and self.df_reviews is not None
@@ -77,7 +97,7 @@ class SessionState:
 
     def is_collection_loaded(self):
         return (
-            self.df_asin is not None
+            self.df_asins is not None
             and self.collection_path is not None
             and self.collection_path.exists()
             and self.collection_path.is_dir()
@@ -96,44 +116,34 @@ class SessionState:
             self.collection_path.mkdir(parents=True, exist_ok=True)
 
     def list_available_collections(self):
-        data_dir = Path("collections")
-        if not data_dir.exists():
-            print("[No collections found]")
-        else:
-            collections = [
-                d.name for d in data_dir.iterdir() if d.is_dir() and (d / "asins.csv").exists()
-            ]
-            if not collections:
-                print("[No valid collections found]")
-            else:
-                for idx, name in enumerate(collections, 1):
-                    print(f"{idx}) {name}")
+        from core.collection_io import list_collections
+
+        cols = list_collections()
+        if not cols:
+            print_info("No collections found")
+            return
+        for idx, name in enumerate(cols, 1):
+            print(f"{idx}) {name}")
 
     def get_marketplace(self):
-        if self.df_asin is not None and "country" in self.df_asin.columns:
-            return self.df_asin["country"].iloc[0]
+        if self.df_asins is not None and "country" in self.df_asins.columns:
+            return self.df_asins["country"].iloc[0]
         else:
             return "com"
 
     def save(self):
-        if self.df_asin is not None:
-            asin_path = self.collection_path / "asins.csv"
-            self.df_asin.to_csv(asin_path, index=False)
-        if hasattr(self, "df_reviews") and self.df_reviews is not None:
-            timestamp = datetime.now().strftime("%y%m%d_%H%M")
-            reviews_filename = f"{timestamp}__{self.collection_id}__reviews.csv"
-            reviews_path = self.collection_path / reviews_filename
-            self.df_reviews.to_csv(reviews_path, index=False)
-        if hasattr(self, "df_snapshot") and self.df_snapshot is not None:
-            timestamp = datetime.now().strftime("%y%m%d_%H%M")
-            snapshot_filename = f"{timestamp}__{self.collection_id}__snapshot.csv"
-            snapshot_path = self.collection_path / snapshot_filename
-            self.df_snapshot.to_csv(snapshot_path, index=False)
+        from core.collection_io import save_snapshot
+
+        if self.df_asins is not None and self.collection_path:
+            out = collection_csv(self.collection_path)
+            self.df_asins.to_csv(out, index=False)
+        if getattr(self, "df_snapshot", None) is not None and self.collection_path is not None:
+            save_snapshot(self, self.df_snapshot, overwrite_today=True)
 
     def __str__(self):
         return (
             f"Session(collection_id={self.collection_id}, "
-            f"has_asins={self.df_asin is not None}, "
+            f"has_asins={self.df_asins is not None}, "
             f"has_reviews={self.has_reviews()}, "
             f"has_snapshot={self.has_snapshot()})"
         )

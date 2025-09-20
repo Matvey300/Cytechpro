@@ -1,17 +1,17 @@
 # api/serpapi.py
 # SerpApi integration for Amazon keyword → category extraction
 
-import os
 from typing import List, Optional
 
 import requests
+from core.env_check import ENV_VARS
 from core.marketplaces import MARKETPLACES
 from core.synonyms import SYNONYMS
 
 
 def get_serpapi_key() -> Optional[str]:
     """Retrieve SerpApi key from environment."""
-    key = os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
+    key = ENV_VARS.get("SERPAPI_KEY") or ENV_VARS.get("SERP_API_KEY")
     return key.strip() if key else None
 
 

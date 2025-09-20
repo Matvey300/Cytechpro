@@ -42,3 +42,46 @@ class Session:
 
     def __str__(self):
         return f"Session(collection_id={self.collection_id}, ASINs={len(self.df_asin) if self.df_asin is not None else 0})"
+
+
+# --------------------------------------------------------------------
+# Helpers for loading data in the new DATA/ collection structure
+# --------------------------------------------------------------------
+
+
+def load_asins(collection_id: str) -> pd.DataFrame:
+    """Load ASIN list from <collection_id>_ASIN.csv"""
+    path = Path("DATA") / collection_id / f"{collection_id}_ASIN.csv"
+    if not path.exists():
+        raise FileNotFoundError(f"ASIN file not found: {path}")
+    return pd.read_csv(path)
+
+
+def load_master_reviews(collection_id: str) -> pd.DataFrame:
+    """Load master reviews (append-only) from <collection_id>__reviews.csv"""
+    path = Path("DATA") / collection_id / f"{collection_id}__reviews.csv"
+    if not path.exists():
+        raise FileNotFoundError(f"Master reviews file not found: {path}")
+    return pd.read_csv(path)
+
+
+def load_latest_snapshot(collection_id: str) -> pd.DataFrame:
+    """Load snapshot by reading LATEST.txt and returning that file"""
+    base = Path("DATA") / collection_id
+    latest_file = base / "LATEST.txt"
+    if not latest_file.exists():
+        raise FileNotFoundError(f"LATEST.txt not found in {base}")
+    ts = latest_file.read_text().strip()
+    snap_path = base / f"{ts}__{collection_id}__snapshot.csv"
+    if not snap_path.exists():
+        raise FileNotFoundError(f"Snapshot file not found: {snap_path}")
+    return pd.read_csv(snap_path)
+
+
+# --------------------------------------------------------------------
+# Logging helper
+# --------------------------------------------------------------------
+
+
+def print_info(msg: str):
+    print(f"[ℹ] {msg}")

@@ -1,0 +1,15 @@
+2025/09/20-18:05:05.962 18284db Reusing MANIFEST /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/MANIFEST-000001
+2025/09/20-18:05:06.000 18284db Recovering log #181
+2025/09/20-18:05:06.005 18284db Reusing old log /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/000181.log 
+2025/09/20-18:08:07.015 18284db Level-0 table #184: started
+2025/09/20-18:08:07.023 18284db Level-0 table #184: 27724 bytes OK
+2025/09/20-18:08:07.038 18284db Delete type=0 #181
+2025/09/20-18:08:07.041 18284db Compacting 4@0 + 1@1 files
+2025/09/20-18:08:07.047 18284db Generated table #185@0: 2847 keys, 73403 bytes
+2025/09/20-18:08:07.047 18284db Compacted 4@0 + 1@1 files => 73403 bytes
+2025/09/20-18:08:07.049 18284db compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/09/20-18:08:07.049 18284db Delete type=2 #175
+2025/09/20-18:08:07.049 18284db Delete type=2 #173
+2025/09/20-18:08:07.049 18284db Delete type=2 #180
+2025/09/20-18:08:07.050 18284db Delete type=2 #184
+2025/09/20-18:08:07.050 18284db Delete type=2 #178
