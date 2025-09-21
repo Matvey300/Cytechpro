@@ -1,10 +1,11 @@
 # analytics/review_authenticity.py
 
-import pandas as pd
 import os
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
-import numpy as np
+
 
 def analyze_review_authenticity(collection_id: str, data_dir: str = "Out"):
     """
@@ -39,34 +40,34 @@ def analyze_review_authenticity(collection_id: str, data_dir: str = "Out"):
 
     results = []
 
-    for asin in df['asin'].unique():
-        df_asin = df[df['asin'] == asin]
+    for asin in df["asin"].unique():
+        df_asin = df[df["asin"] == asin]
         if len(df_asin) < 10:
             continue
 
         score = 0
 
         # Rule 1: Abnormally high % of short reviews
-        short_ratio = (df_asin['review_text'].fillna('').str.len() < 20).mean()
+        short_ratio = (df_asin["review_text"].fillna("").str.len() < 20).mean()
         if short_ratio > 0.4:
             score += 1
 
         # Rule 2: High % of reviews with same length (possible duplication)
-        lengths = df_asin['review_text'].fillna('').str.len()
+        lengths = df_asin["review_text"].fillna("").str.len()
         mode_len = lengths.mode().iloc[0]
         same_len_ratio = (lengths == mode_len).mean()
         if same_len_ratio > 0.3:
             score += 1
 
         # Rule 3: Timing bursts (many reviews in few days)
-        df_asin['date'] = pd.to_datetime(df_asin['date'], errors='coerce')
-        date_counts = df_asin['date'].value_counts()
+        df_asin["date"] = pd.to_datetime(df_asin["date"], errors="coerce")
+        date_counts = df_asin["date"].value_counts()
         if date_counts.max() > len(df_asin) * 0.25:
             score += 1
 
         # Rule 4: Abnormally low % of verified purchases
-        if 'verified' in df_asin.columns:
-            verified_ratio = df_asin['verified'].astype(str).str.lower().eq("true").mean()
+        if "verified" in df_asin.columns:
+            verified_ratio = df_asin["verified"].astype(str).str.lower().eq("true").mean()
             if verified_ratio < 0.5:
                 score += 1
 
@@ -75,26 +76,27 @@ def analyze_review_authenticity(collection_id: str, data_dir: str = "Out"):
             df_sent = sentiment_df[sentiment_df["asin"] == asin]
             merged = df_sent.merge(df_asin[["review_id", "rating"]], on="review_id", how="inner")
             if not merged.empty:
-                merged['diff'] = abs(merged['sentiment_score'] - merged['rating'])
-                mismatch_ratio = (merged['diff'] > 2).mean()
+                merged["diff"] = abs(merged["sentiment_score"] - merged["rating"])
+                mismatch_ratio = (merged["diff"] > 2).mean()
                 if mismatch_ratio > 0.3:
                     score += 1
 
-        results.append({
-            "asin": asin,
-            "suspicion_score": score
-        })
+        results.append({"asin": asin, "suspicion_score": score})
 
     df_score = pd.DataFrame(results)
     df_score.to_csv(os.path.join(base_path, "trustworthiness_scores.csv"), index=False)
 
     # Visualize
     plt.figure(figsize=(10, 6))
-    sns.barplot(data=df_score.sort_values("suspicion_score", ascending=False),
-                x="asin", y="suspicion_score", palette="Reds_d")
+    sns.barplot(
+        data=df_score.sort_values("suspicion_score", ascending=False),
+        x="asin",
+        y="suspicion_score",
+        palette="Reds_d",
+    )
     plt.title("Review Authenticity Risk Score (0 = High Trust, 5 = Highly Suspicious)")
     plt.ylabel("Suspicion Score")
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 
     out_path = os.path.join(output_path, "trustworthiness_curve.png")

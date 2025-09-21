@@ -1,0 +1,8 @@
+pandas
+beautifulsoup4
+selenium
+dateparser
+lxml
+openpyxl
+pytest
+ruff

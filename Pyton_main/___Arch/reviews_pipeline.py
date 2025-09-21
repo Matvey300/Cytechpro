@@ -6,17 +6,17 @@ from __future__ import annotations
 import json
 from hashlib import sha1
 from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
 # Selenium-based collector (we do not touch this file per agreement)
 from amazon_review_collector import collect_reviews
 
-
 # -----------------------------
 # CSV & checkpoint utilities
 # -----------------------------
+
 
 def _atomic_write_csv(path: Path, df: pd.DataFrame) -> None:
     """Atomic write to avoid partial files on crash."""
@@ -24,6 +24,7 @@ def _atomic_write_csv(path: Path, df: pd.DataFrame) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     df.to_csv(tmp, index=False)
     tmp.replace(path)
+
 
 def _stable_row_key(row: pd.Series) -> str:
     """
@@ -40,9 +41,10 @@ def _stable_row_key(row: pd.Series) -> str:
     date_full = str(row.get("review_date_raw", ""))
     rating = str(row.get("rating", ""))
     title = (str(row.get("title", "")) or "").strip()
-    body  = (str(row.get("body", ""))  or "").strip()
+    body = (str(row.get("body", "")) or "").strip()
     payload = f"{asin}|{date_full}|{rating}|{title}|{body}"
     return f"{asin}|SHA1-{sha1(payload.encode('utf-8', 'ignore')).hexdigest()}"
+
 
 def _tag_near_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -53,8 +55,11 @@ def _tag_near_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return df
 
-    def _canon(s): return " ".join(str(s or "").lower().split())
-    def _h(s):    return sha1(_canon(s)[:200].encode("utf-8", "ignore")).hexdigest()
+    def _canon(s):
+        return " ".join(str(s or "").lower().split())
+
+    def _h(s):
+        return sha1(_canon(s)[:200].encode("utf-8", "ignore")).hexdigest()
 
     def _floor_min_safe(s):
         try:
@@ -67,6 +72,7 @@ def _tag_near_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     df["near_dup_min_bucket"] = df["review_date_raw"].map(_floor_min_safe)
     df["content_hash_200"] = (df["title"].fillna("") + " | " + df["body"].fillna("")).map(_h)
     return df
+
 
 def _append_and_dedupe(out_csv: Path, batch: pd.DataFrame) -> int:
     """
@@ -89,8 +95,10 @@ def _append_and_dedupe(out_csv: Path, batch: pd.DataFrame) -> int:
     _atomic_write_csv(out_csv, df)
     return len(df) - before
 
+
 def _state_path(out_dir: Path) -> Path:
     return out_dir / "checkpoint.json"
+
 
 def load_checkpoint(out_dir: Path) -> Dict:
     """Load per-ASIN last-seen state."""
@@ -102,6 +110,7 @@ def load_checkpoint(out_dir: Path) -> Dict:
             return {}
     return {}
 
+
 def save_checkpoint(out_dir: Path, state: Dict) -> None:
     p = _state_path(out_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -111,6 +120,7 @@ def save_checkpoint(out_dir: Path, state: Dict) -> None:
 # -----------------------------
 # Public pipeline
 # -----------------------------
+
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
@@ -150,7 +160,7 @@ def collect_reviews_for_asins(
         """Called by the collector after EACH page is parsed."""
         if page_df is None:
             return
-        page_df = _tag_near_duplicates(page_df)   # mark, do not drop
+        page_df = _tag_near_duplicates(page_df)  # mark, do not drop
         added = _append_and_dedupe(reviews_csv, page_df)
         total_rows = 0
         if reviews_csv.exists():

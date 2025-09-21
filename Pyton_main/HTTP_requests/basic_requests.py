@@ -1,11 +1,12 @@
 import requests
-print (requests)
+
+print(requests)
 # requests.get
 # requests.post
 # requests.put
 # requests.patch
 # requests.delete
-# url = 'https://httpbin.org/post/' 
+# url = 'https://httpbin.org/post/'
 # body = {
 #     'key1' : 12,
 #     'key2' : 'hello',
@@ -13,14 +14,14 @@ print (requests)
 # }
 # responce = requests.get(url, json=body)
 # print (responce.json())
-url = 'https://official-joke-api.appspot.com/jokes/random'
-urlw = 'http://api.weatherapi.com/v1'
+url = "https://official-joke-api.appspot.com/jokes/random"
+urlw = "http://api.weatherapi.com/v1"
 
 # # # Q1
 # while True:
 #     response = requests.get(url).json()
 #     print (response)
-#     setup = response['setup'] 
+#     setup = response['setup']
 #     punchline = response['punchline']
 #     if 'banana' in str(setup) or 'banana' in str(punchline):
 #         print (response['setup'])
@@ -28,7 +29,7 @@ urlw = 'http://api.weatherapi.com/v1'
 #         break
 
 # i = 1
-# ratings = []  
+# ratings = []
 
 # while i <= 10:
 #     response = requests.get(url).json()
@@ -82,21 +83,20 @@ urlw = 'http://api.weatherapi.com/v1'
 #         long_jokes.append ({'id': joke_id, 'setup': setup, 'punchline': punchline})
 
 
-
 # for r in long_jokes:
 #     print(f"Joke ID {r['id']}: rating {r['rating']}")
 
-API_KEY = 'f5619756d1a94a3796b150247251207'
-city = 'Moscow'
-date = '2025-06-07'
+API_KEY = "f5619756d1a94a3796b150247251207"
+city = "Moscow"
+date = "2025-06-07"
 
-urlw = 'http://api.weatherapi.com/v1/history.json'
+urlw = "http://api.weatherapi.com/v1/history.json"
 
 
 params = {
-    'key': API_KEY,
-    'q': city,
-    'dt': date
+    "key": API_KEY,
+    "q": city,
+    "dt": date,
     # 'lang': 'en'  # можно заменить на 'ru' для русского языка
 }
 
@@ -104,16 +104,15 @@ response = requests.get(urlw, params=params)
 
 if response.status_code == 200:
     data = response.json()
-    day_data = data['forecast']['forecastday'][0]['day']
+    day_data = data["forecast"]["forecastday"][0]["day"]
 
+    location = data["location"]["name"]
+    country = data["location"]["country"]
 
-    location = data['location']['name']
-    country = data['location']['country']
-
-    temp_c = day_data['avgtemp_c']
-    max_temp = day_data['maxtemp_c']
-    min_temp = day_data['mintemp_c']
-    condition = day_data['condition']['text']
+    temp_c = day_data["avgtemp_c"]
+    max_temp = day_data["maxtemp_c"]
+    min_temp = day_data["mintemp_c"]
+    condition = day_data["condition"]["text"]
 
     print(f"\n📅 Weather in {city} on {date}:")
     print(f"   Avg Temp: {day_data['avgtemp_c']}°C")
@@ -122,7 +121,3 @@ if response.status_code == 200:
     print(f"   Condition: {day_data['condition']['text']}")
 else:
     print(f"❌ Error: {response.status_code} — {response.text}")
-
-
-
-

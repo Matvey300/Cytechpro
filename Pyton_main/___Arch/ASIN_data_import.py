@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 import requests
@@ -16,14 +16,19 @@ AMZ_DOMAIN = {"US": "amazon.com", "UK": "amazon.co.uk"}
 # Internal helpers
 # ----------------------------
 
+
 def _serpapi_key() -> Optional[str]:
     k = os.getenv("SERPAPI_KEY") or os.getenv("SERP_API_KEY")
     return k.strip() if k else None
 
+
 def _amazon_domain(region: str) -> str:
     return AMZ_DOMAIN.get((region or "US").upper(), AMZ_DOMAIN["US"])
 
-def _serpapi_search_page(query: str, region: str, page: int = 1, timeout: int = 20) -> Optional[Dict]:
+
+def _serpapi_search_page(
+    query: str, region: str, page: int = 1, timeout: int = 20
+) -> Optional[Dict]:
     """
     Calls SerpApi Amazon engine for a single page of results.
     IMPORTANT: for Amazon engine the keyword parameter is 'k', not 'q'.
@@ -49,6 +54,7 @@ def _serpapi_search_page(query: str, region: str, page: int = 1, timeout: int = 
     except Exception:
         return None
 
+
 def _extract_asins(data: Dict) -> List[str]:
     """
     Extract ASINs from SerpApi response.
@@ -57,7 +63,7 @@ def _extract_asins(data: Dict) -> List[str]:
     asins: List[str] = []
     if not isinstance(data, dict):
         return asins
-    for item in (data.get("organic_results") or []):
+    for item in data.get("organic_results") or []:
         asin = item.get("asin")
         if asin:
             asins.append(str(asin).strip())
@@ -70,11 +76,19 @@ def _extract_asins(data: Dict) -> List[str]:
             out.append(a)
     return out
 
+
 # ----------------------------
 # Public API expected by app.py
 # ----------------------------
 
-def collect_asins(category_path: str, region: str = "US", top_k: int = 100, max_pages: int = 10, sleep_sec: float = 1.0) -> pd.DataFrame:
+
+def collect_asins(
+    category_path: str,
+    region: str = "US",
+    top_k: int = 100,
+    max_pages: int = 10,
+    sleep_sec: float = 1.0,
+) -> pd.DataFrame:
     """
     Collect up to top_k unique ASINs for the given category_path by querying SerpApi Amazon search.
     We use the human-readable 'category_path' as the search phrase (works robustly enough for MVP).
@@ -109,7 +123,10 @@ def collect_asins(category_path: str, region: str = "US", top_k: int = 100, max_
     df["category_path"] = str(category_path)
     return df
 
-def collect_asins_for_categories(categories: List[str], region: str = "US", top_k: int = 100) -> pd.DataFrame:
+
+def collect_asins_for_categories(
+    categories: List[str], region: str = "US", top_k: int = 100
+) -> pd.DataFrame:
     """
     Convenience helper: collect ASINs for multiple categories and concat.
     """
@@ -128,12 +145,14 @@ def collect_asins_for_categories(categories: List[str], region: str = "US", top_
     all_df = all_df.drop_duplicates(subset=["asin"], keep="first")
     return all_df
 
+
 # ----------------------------
 # CLI (optional quick test)
 # ----------------------------
 
 if __name__ == "__main__":
     import sys as _sys
+
     if len(_sys.argv) < 2:
         print("Usage: python ASIN_data_import.py 'Category Path' [US|UK] [top_k]")
         _sys.exit(1)

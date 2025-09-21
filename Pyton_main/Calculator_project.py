@@ -1,8 +1,9 @@
 import os
 
-MATH_STR = ['(', ')', '+', '-', '*', '/']
-PRIOR_MATH = ['*', '/']
+MATH_STR = ["(", ")", "+", "-", "*", "/"]
+PRIOR_MATH = ["*", "/"]
 RESULTS_FILE = "results.txt"
+
 
 def show_menu():
     while True:
@@ -15,17 +16,18 @@ def show_menu():
 
         choice = input("Select an option: ").strip().lower()
 
-        if choice == '1' or choice == 'basic':
+        if choice == "1" or choice == "basic":
             basic_calculator()
-        elif choice == '2' or choice == 'smart':
+        elif choice == "2" or choice == "smart":
             smart_calculator()
-        elif choice == '3' and os.path.exists(RESULTS_FILE):
+        elif choice == "3" and os.path.exists(RESULTS_FILE):
             recall_previous_results()
-        elif choice == 'exit':
+        elif choice == "exit":
             print("Goodbye!")
             return
         else:
             print("Invalid selection. Please choose a valid option.")
+
 
 def write_result_to_file(expression, result):
     """
@@ -36,6 +38,7 @@ def write_result_to_file(expression, result):
             f.write(f"{expression} = {result}\n")
     except Exception as e:
         print(f"Error writing to results file: {e}")
+
 
 def recall_previous_results():
     """
@@ -52,23 +55,24 @@ def recall_previous_results():
     except Exception as e:
         print(f"Error reading results file: {e}")
 
+
 def basic_calculator():
     print("\n--- Basic Calculator ---")
     try:
         num1 = float(input("Enter first number: "))
         op = input("Enter operation (+, -, *, /): ").strip()
-        if op not in ['+', '-', '*', '/']:
+        if op not in ["+", "-", "*", "/"]:
             print("Invalid operator.")
             return
         num2 = float(input("Enter second number: "))
 
-        if op == '+':
+        if op == "+":
             result = num1 + num2
-        elif op == '-':
+        elif op == "-":
             result = num1 - num2
-        elif op == '*':
+        elif op == "*":
             result = num1 * num2
-        elif op == '/':
+        elif op == "/":
             if num2 == 0:
                 print("Error: Division by zero.")
                 return
@@ -85,24 +89,26 @@ def basic_calculator():
     except Exception as e:
         print(f"Unexpected error: {e}")
 
+
 def find_matching_bracket(tokens, start):
     count = 1
     for i in range(start + 1, len(tokens)):
-        if tokens[i] == '(':
+        if tokens[i] == "(":
             count += 1
-        elif tokens[i] == ')':
+        elif tokens[i] == ")":
             count -= 1
         if count == 0:
             return i
     return -1
 
+
 def tokenize(s):
     tokens = []
     i = 0
     while i < len(s):
-        if s[i].isdigit() or s[i] == '.':
+        if s[i].isdigit() or s[i] == ".":
             j = i
-            while j < len(s) and (s[j].isdigit() or s[j] == '.'):
+            while j < len(s) and (s[j].isdigit() or s[j] == "."):
                 j += 1
             try:
                 tokens.append(float(s[i:j]))
@@ -113,30 +119,32 @@ def tokenize(s):
         elif s[i] in MATH_STR:
             tokens.append(s[i])
             i += 1
-        elif s[i] == ' ':
+        elif s[i] == " ":
             i += 1
         else:
             print(f"Invalid character encountered: {s[i]}")
             return None
     return tokens
 
+
 def solve_brackets(tokens):
     i = 0
     while i < len(tokens):
-        if tokens[i] == '(':
+        if tokens[i] == "(":
             j = find_matching_bracket(tokens, i)
             if j == -1:
                 print("Error: Unmatched parentheses.")
                 return None
-            inner_tokens = tokens[i + 1:j]
+            inner_tokens = tokens[i + 1 : j]
             solved_value = calculate(solve_brackets(inner_tokens))
             if solved_value is None:
                 return None
-            tokens = tokens[:i] + [solved_value] + tokens[j + 1:]
+            tokens = tokens[:i] + [solved_value] + tokens[j + 1 :]
             i = 0
         else:
             i += 1
     return tokens
+
 
 def calculate(tokens):
     if tokens is None:
@@ -148,29 +156,29 @@ def calculate(tokens):
                 op = tokens[i]
                 a = tokens[i - 1]
                 b = tokens[i + 1]
-                if op == '*':
+                if op == "*":
                     result = a * b
-                elif op == '/':
+                elif op == "/":
                     if b == 0:
                         print("Error: Division by zero.")
                         return None
                     result = a / b
-                tokens = tokens[:i - 1] + [result] + tokens[i + 2:]
+                tokens = tokens[: i - 1] + [result] + tokens[i + 2 :]
                 i = 0
             else:
                 i += 1
 
         i = 0
         while i < len(tokens):
-            if tokens[i] in ['+', '-']:
+            if tokens[i] in ["+", "-"]:
                 op = tokens[i]
                 a = tokens[i - 1]
                 b = tokens[i + 1]
-                if op == '+':
+                if op == "+":
                     result = a + b
-                elif op == '-':
+                elif op == "-":
                     result = a - b
-                tokens = tokens[:i - 1] + [result] + tokens[i + 2:]
+                tokens = tokens[: i - 1] + [result] + tokens[i + 2 :]
                 i = 0
             else:
                 i += 1
@@ -184,6 +192,7 @@ def calculate(tokens):
     except (IndexError, TypeError) as e:
         print(f"Error during calculation: {e}")
         return None
+
 
 def smart_calculator():
     print("\n--- Smart Calculator ---")
@@ -212,5 +221,6 @@ def smart_calculator():
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
 
 show_menu()

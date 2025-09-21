@@ -1,7 +1,8 @@
-import requests
-import pandas as pd
-import time
 import os
+import time
+
+import pandas as pd
+import requests
 
 API_KEY = "6888b22c09c987d9f10c066e"
 REVIEWS_PER_ASIN = 20
@@ -10,6 +11,7 @@ OUTPUT_FILE = "DATA/reviews_test.csv"
 
 # Ensure DATA directory exists
 os.makedirs("DATA", exist_ok=True)
+
 
 def fetch_reviews(asin, country="us", max_reviews=20):
     url = (
@@ -25,21 +27,24 @@ def fetch_reviews(asin, country="us", max_reviews=20):
     reviews = []
 
     for review in data[:max_reviews]:
-        reviews.append({
-            "asin": asin,
-            "review_date": review.get("review_date"),
-            "rating": review.get("rating"),
-            "title": review.get("title"),
-            "content": review.get("content"),
-            "author": review.get("author")
-        })
+        reviews.append(
+            {
+                "asin": asin,
+                "review_date": review.get("review_date"),
+                "rating": review.get("rating"),
+                "title": review.get("title"),
+                "content": review.get("content"),
+                "author": review.get("author"),
+            }
+        )
 
     return reviews
+
 
 # Load 2 ASINs (US only)
 df_asins = pd.read_csv(INPUT_FILE)
 df_asins = df_asins[df_asins["country"] == "com"]
-test_asins  = ["B08WM3LMJF", "B09FT58QQP"]
+test_asins = ["B08WM3LMJF", "B09FT58QQP"]
 
 
 # Collect reviews

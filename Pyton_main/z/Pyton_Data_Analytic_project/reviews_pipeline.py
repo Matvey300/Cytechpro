@@ -1,26 +1,25 @@
 import os
 import time
-import json
-import pandas as pd
-import requests
 from pathlib import Path
 from typing import List, Tuple
 
+import pandas as pd
+import requests
 from core.env_check import check_required_env_vars
+
 check_required_env_vars()
 
-HEADERS = {
-    "Accept": "application/json"
-}
+HEADERS = {"Accept": "application/json"}
 
 BASE_URL = "https://api.scrapingdog.com/amazon/reviews"
+
 
 def collect_reviews_for_asins(
     df_asin: pd.DataFrame,
     max_reviews_per_asin: int,
     marketplace: str,
     out_dir: Path,
-    collection_id: str
+    collection_id: str,
 ) -> Tuple[pd.DataFrame, dict]:
 
     api_key = os.getenv("SCRAPINGDOG_API_KEY")
@@ -46,7 +45,7 @@ def collect_reviews_for_asins(
                 "type": "review",
                 "amazon_domain": f"amazon.{marketplace.lower()}",
                 "asin": asin,
-                "page": page
+                "page": page,
             }
 
             try:
@@ -89,7 +88,9 @@ def collect_reviews_for_asins(
 
     if out_path.exists():
         existing = pd.read_csv(out_path)
-        df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(subset=["id", "asin"])
+        df_reviews = pd.concat([existing, df_reviews], ignore_index=True).drop_duplicates(
+            subset=["id", "asin"]
+        )
 
     df_reviews.to_csv(out_path, index=False)
     return df_reviews, per_cat_counts

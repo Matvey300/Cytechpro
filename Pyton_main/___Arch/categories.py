@@ -1,6 +1,6 @@
-
 import os
 from typing import List
+
 
 def choose_marketplace(supported: List[str]) -> str:
     """Interactive chooser for marketplace."""
@@ -10,6 +10,7 @@ def choose_marketplace(supported: List[str]) -> str:
         if val in supported:
             return val
         print("Invalid input, please enter US or UK.")
+
 
 def _mock_categories(keyword: str) -> List[str]:
     """Fallback categories when SerpApi is not configured yet."""
@@ -22,6 +23,7 @@ def _mock_categories(keyword: str) -> List[str]:
         ]
     return [f"Generic > {keyword.title()}"]
 
+
 def search_categories_by_keyword(keyword: str, marketplace: str) -> List[str]:
     """Returns list of category paths by keyword.
     NOTE: For MVP we keep a mock implementation. You can switch to SerpApi
@@ -32,6 +34,7 @@ def search_categories_by_keyword(keyword: str, marketplace: str) -> List[str]:
         return _mock_categories(keyword)
     # TODO: implement real SerpApi flow here (optional for MVP)
     return _mock_categories(keyword)
+
 
 def multi_select_categories(candidates: List[str]) -> List[str]:
     """Simple multi-select prompt."""
@@ -49,7 +52,7 @@ def multi_select_categories(candidates: List[str]) -> List[str]:
         if token.isdigit():
             idx = int(token)
             if 1 <= idx <= len(candidates):
-                out.append(candidates[idx-1])
+                out.append(candidates[idx - 1])
     # Detail level -2: keep last 2 nodes
     clean = []
     for p in out:

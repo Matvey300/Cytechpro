@@ -1,8 +1,10 @@
 # actions/reviews.py
 
 from pathlib import Path
+
 from core.session_state import SessionState
 from reviews_pipeline import collect_reviews_for_asins
+
 
 def run_review_collection(session: SessionState):
     """
@@ -27,7 +29,7 @@ def run_review_collection(session: SessionState):
         max_reviews_per_asin=500,
         marketplace=marketplace,
         out_dir=out_dir,
-        collection_id=collection_id
+        collection_id=collection_id,
     )
 
     print(f"\n[✓] Total reviews collected: {len(df_reviews)}")

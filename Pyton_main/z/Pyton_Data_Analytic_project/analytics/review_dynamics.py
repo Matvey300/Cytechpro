@@ -1,9 +1,10 @@
 # analytics/review_dynamics.py
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
 
 def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
     """
@@ -32,7 +33,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         print("[WARN] No snapshot data found.")
         return
 
-    asin_list = df_snapshots['asin'].unique()
+    asin_list = df_snapshots["asin"].unique()
 
     # Load sentiment data if available
     try:
@@ -43,7 +44,7 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         has_sentiment = False
 
     for asin in asin_list:
-        df_asin = df_snapshots[df_snapshots['asin'] == asin].sort_values("date")
+        df_asin = df_snapshots[df_snapshots["asin"] == asin].sort_values("date")
 
         if len(df_asin) < 2:
             continue
@@ -57,7 +58,12 @@ def plot_review_dynamics(collection_id: str, data_dir: str = "Out"):
         if has_sentiment:
             df_sent_asin = df_sentiments[df_sentiments["asin"] == asin].sort_values("date")
             if not df_sent_asin.empty:
-                plt.plot(df_sent_asin["date"], df_sent_asin["sentiment_score"], marker="x", label="Sentiment")
+                plt.plot(
+                    df_sent_asin["date"],
+                    df_sent_asin["sentiment_score"],
+                    marker="x",
+                    label="Sentiment",
+                )
 
         plt.title(f"ASIN: {asin} — Review Dynamics")
         plt.xlabel("Date")

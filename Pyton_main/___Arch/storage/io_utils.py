@@ -4,13 +4,14 @@ Utility functions for saving and loading collections and review data.
 All file I/O helpers live here.
 """
 
-from pathlib import Path
-from datetime import datetime
 import re
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 
-
 # ---------- Helpers for naming / directories ----------
+
 
 def slugify(text: str, max_len: int = 40) -> str:
     """
@@ -42,6 +43,7 @@ def new_out_dir_for_collection(root: Path, collection_id: str) -> Path:
 
 # ---------- Saving & loading DataFrames ----------
 
+
 def save_df_csv(df: pd.DataFrame, path: Path) -> None:
     """
     Save DataFrame to CSV with UTF-8 BOM for Excel compatibility.
@@ -61,6 +63,7 @@ def load_df_csv(path: Path) -> pd.DataFrame:
 
 
 # ---------- Listing saved collections ----------
+
 
 def list_saved_collections(root: Path) -> list[Path]:
     """

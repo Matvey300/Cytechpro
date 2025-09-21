@@ -1,24 +1,22 @@
-import requests
-import pandas as pd
-import time
 import os
+import time
+
+import pandas as pd
+import requests
 
 # Scrapingdog API Key
 API_KEY = "6888b22c09c987d9f10c066e"
 
 # Search configuration
 SEARCH_TERM = "bluetooth headphones"
-COUNTRY_DOMAINS = {
-    "us": "com",
-    "uk": "co.uk",
-    "de": "de"
-}
+COUNTRY_DOMAINS = {"us": "com", "uk": "co.uk", "de": "de"}
 PAGES_PER_COUNTRY = 5
 
 # Output configuration
 OUTPUT_FOLDER = "DATA"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, "search_results.csv")
+
 
 def extract_asin_from_url(url):
     try:
@@ -27,6 +25,7 @@ def extract_asin_from_url(url):
             return parts[1].split("/")[0]
     except:
         return None
+
 
 def fetch_search_results(search_term, domain, page):
     query = search_term.replace(" ", "+")
@@ -50,15 +49,18 @@ def fetch_search_results(search_term, domain, page):
 
         asin = extract_asin_from_url(product.get("url", ""))
         if asin:
-            items.append({
-                "asin": asin,
-                "title": product.get("title"),
-                "rating": product.get("stars"),
-                "review_count": product.get("total_reviews"),
-                "country": domain
-            })
+            items.append(
+                {
+                    "asin": asin,
+                    "title": product.get("title"),
+                    "rating": product.get("stars"),
+                    "review_count": product.get("total_reviews"),
+                    "country": domain,
+                }
+            )
 
     return items
+
 
 # Main scraping loop
 all_results = []
@@ -82,7 +84,7 @@ if df.empty:
 
 # Clean and sort
 df = df.drop_duplicates(subset="asin")
-df["review_count"] = pd.to_numeric(df["review_count"].str.replace(",", ""), errors='coerce')
+df["review_count"] = pd.to_numeric(df["review_count"].str.replace(",", ""), errors="coerce")
 df = df.sort_values(by="review_count", ascending=False)
 
 # Save top 100 to file

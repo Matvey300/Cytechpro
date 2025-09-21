@@ -2,10 +2,11 @@
 
 import os
 import time
-import requests
-import pandas as pd
-from typing import List, Dict
 from pathlib import Path
+from typing import Dict, List
+
+import pandas as pd
+import requests
 
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 SCRAPINGDOG_API_KEY = os.getenv("SCRAPINGDOG_API_KEY")
@@ -23,7 +24,7 @@ def fetch_amazon_categories(keyword: str, marketplace: str = "com") -> List[str]
         "api_key": SERP_API_KEY,
         "amazon_domain": f"amazon.{marketplace}",
         "type": "search",
-        "q": keyword
+        "q": keyword,
     }
 
     try:
@@ -41,7 +42,9 @@ def fetch_amazon_categories(keyword: str, marketplace: str = "com") -> List[str]
         return []
 
 
-def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, max_pages: int = 5) -> List[Dict]:
+def fetch_asins_in_category(
+    category_path: str, keyword: str, marketplace: str, max_pages: int = 5
+) -> List[Dict]:
     if not SCRAPINGDOG_API_KEY:
         raise RuntimeError("Missing SCRAPINGDOG_API_KEY")
 
@@ -53,7 +56,7 @@ def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, 
             "amazon_domain": f"amazon.{marketplace}",
             "query": keyword,
             "page": page,
-            "category": category_path
+            "category": category_path,
         }
 
         try:
@@ -66,14 +69,16 @@ def fetch_asins_in_category(category_path: str, keyword: str, marketplace: str, 
 
                 asin = extract_asin_from_url(item.get("url", ""))
                 if asin:
-                    results.append({
-                        "asin": asin,
-                        "title": item.get("title"),
-                        "rating": item.get("stars"),
-                        "review_count": item.get("total_reviews"),
-                        "category_path": category_path,
-                        "country": marketplace
-                    })
+                    results.append(
+                        {
+                            "asin": asin,
+                            "title": item.get("title"),
+                            "rating": item.get("stars"),
+                            "review_count": item.get("total_reviews"),
+                            "category_path": category_path,
+                            "country": marketplace,
+                        }
+                    )
 
             time.sleep(1.5)
         except Exception as e:

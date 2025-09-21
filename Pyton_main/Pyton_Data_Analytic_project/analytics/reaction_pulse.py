@@ -1,11 +1,30 @@
 # analytics/reaction_pulse.py
 
-import pandas as pd
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
+# === Module Status ===
+# 📁 Module: analytics/reaction_pulse
+# 📅 Last Reviewed: 2025-09-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: Matvey
+# 📝 Notes:
+# - Replace print with print_info
+# - Standardize fallback/error outputs
+# - Consider extracting plotting logic
+# =====================
 
-def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_multiplier: float = 3.0):
+# analytics/reaction_pulse.py
+
+import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from core.session_state import print_info
+from textblob import TextBlob
+
+
+def detect_review_spikes(
+    collection_id: str, data_dir: str = "Out", min_spike_multiplier: float = 3.0
+):
     """
     Identifies ASINs with sharp review activity bursts (sudden spikes).
 
@@ -24,11 +43,20 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
     try:
         df = pd.read_csv(reviews_file)
     except FileNotFoundError:
-        print(f"[ERROR] Reviews file not found: {reviews_file}")
+        print_info(f"[ERROR] Reviews file not found: {reviews_file}")
         return
 
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date"])
+    # Use captured_at if available
+    if "captured_at" in df.columns:
+        df["captured_at"] = pd.to_datetime(df["captured_at"], errors="coerce")
+        df = df.dropna(subset=["captured_at"])
+        df["date"] = df["captured_at"].dt.date
+    elif "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df = df.dropna(subset=["date"])
+    else:
+        print_info("[ERROR] No captured_at or date column available in reviews.csv")
+        return
 
     result_rows = []
     spike_plot_data = []
@@ -46,13 +74,17 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
         spikes = daily_counts[daily_counts["review_count"] > spike_threshold]
 
         for _, row in spikes.iterrows():
-            result_rows.append({
-                "asin": asin,
-                "date": row["date"],
-                "review_count": row["review_count"],
-                "median_baseline": median_reviews,
-                "multiplier": row["review_count"] / median_reviews if median_reviews > 0 else None
-            })
+            result_rows.append(
+                {
+                    "asin": asin,
+                    "date": row["date"],
+                    "review_count": row["review_count"],
+                    "median_baseline": median_reviews,
+                    "multiplier": (
+                        row["review_count"] / median_reviews if median_reviews > 0 else None
+                    ),
+                }
+            )
 
         if not spikes.empty:
             daily_counts["is_spike"] = daily_counts["review_count"] > spike_threshold
@@ -69,7 +101,9 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
         plt.figure(figsize=(12, 6))
         sns.lineplot(data=all_data, x="date", y="review_count", hue="asin", alpha=0.5)
         spike_points = all_data[all_data["is_spike"]]
-        plt.scatter(spike_points["date"], spike_points["review_count"], color="red", s=50, label="Spike")
+        plt.scatter(
+            spike_points["date"], spike_points["review_count"], color="red", s=50, label="Spike"
+        )
         plt.title("Detected Review Activity Spikes")
         plt.xlabel("Date")
         plt.ylabel("Review Count")
@@ -77,33 +111,29 @@ def detect_review_spikes(collection_id: str, data_dir: str = "Out", min_spike_mu
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "review_spikes_curve.png"))
         plt.close()
-
-        print("[INFO] Spike analysis complete. Plot and spike CSV saved.")
+        print_info("[INFO] Spike analysis complete. Plot and spike CSV saved.")
     else:
+        print_info("[INFO] No spikes detected across ASINs.")
 
-        print("[INFO] No spikes detected across ASINs.")
-
-
-# --- Sentiment analysis placeholder ---
-from textblob import TextBlob
 
 def run_sentiment_analysis(df_reviews):
     def compute_sentiment(text):
         try:
             return TextBlob(str(text)).sentiment.polarity
-        except Exception:
+        except Exception as e:
+            print_info(f"[!] Sentiment analysis error: {e}")
             return 0.0
 
     if "review_text" not in df_reviews.columns:
-        print("[!] Missing 'review_text' column. Cannot compute sentiment.")
+        print_info("[!] Missing 'review_text' column. Cannot compute sentiment.")
         return df_reviews
 
-    print("[DEBUG] Количество отзывов по ASIN (до анализа):")
-    print(df_reviews["asin"].value_counts())
+    print_info("[DEBUG] Количество отзывов по ASIN (до анализа):")
+    print_info(df_reviews["asin"].value_counts())
 
     df_reviews["sentiment"] = df_reviews["review_text"].apply(compute_sentiment)
-    print(f"[+] Sentiment scores computed for {len(df_reviews)} reviews.")
-    print("[DEBUG] Пропуски по sentiment:", df_reviews["sentiment"].isna().sum())
-    print("[DEBUG] Примеры значений sentiment:")
-    print(df_reviews["sentiment"].describe())
+    print_info(f"[+] Sentiment scores computed for {len(df_reviews)} reviews.")
+    print_info("[DEBUG] Пропуски по sentiment:", df_reviews["sentiment"].isna().sum())
+    print_info("[DEBUG] Примеры значений sentiment:")
+    print_info(df_reviews["sentiment"].describe())
     return df_reviews

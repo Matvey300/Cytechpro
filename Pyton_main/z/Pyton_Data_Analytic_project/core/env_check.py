@@ -3,10 +3,8 @@
 import os
 import sys
 
-REQUIRED_ENV_VARS = [
-    "SCRAPINGDOG_API_KEY",
-    "SERPAPI_KEY"
-]
+REQUIRED_ENV_VARS = ["SCRAPINGDOG_API_KEY", "SERPAPI_KEY"]
+
 
 def check_required_env_vars() -> None:
     """Print warnings and stop execution if env vars are missing (used in modules)."""
@@ -28,15 +26,16 @@ def validate_environment() -> None:
     """Raise exception if env vars are missing (used in app startup)."""
     missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
     if missing:
-        raise RuntimeError(
-            f"Missing required environment variables: {', '.join(missing)}"
-        )
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
+
+
 def get_env_or_raise(var_name: str) -> str:
     """Get environment variable or raise error if missing."""
     value = os.getenv(var_name)
     if not value:
         raise RuntimeError(f"[❌] Missing required env variable: {var_name}")
     return value
+
 
 def ensure_env_ready() -> None:
     """

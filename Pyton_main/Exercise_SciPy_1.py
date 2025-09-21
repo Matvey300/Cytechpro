@@ -1,9 +1,8 @@
-
-import numpy as np 
+import numpy as np
 import pandas as pd
 import scipy as sc
 
-df = pd.read_csv('/Users/Matvej1/Downloads/penguins.csv')
+df = pd.read_csv("/Users/Matvej1/Downloads/penguins.csv")
 print(df.head())
 ALPHA = 0.05
 
@@ -21,7 +20,6 @@ ALPHA = 0.05
 # bill_depth = df.bill_depth_mm.drop()
 
 
-
 # t_stat, p_val = sc.stats.pearsonr(bill_depth, bill_length, )
 # if p_val < ALPHA:
 #     print("Reject the H0, bill length and the bill depth are significantly correlated")
@@ -29,10 +27,9 @@ ALPHA = 0.05
 #     print("I dont have enough evidence to say the t")
 
 
-
 # TEST 4 Is species distribution independent of *island*? (Chi-square)
 
-contingency_table = pd.crosstab(df["species"], df['island'])
+contingency_table = pd.crosstab(df["species"], df["island"])
 chi2_stat, p_value, dof, expected = sc.stats.chi2_contingency(contingency_table)
 
 print(contingency_table)
@@ -42,8 +39,9 @@ print(p_value)
 print(dof)
 print(expected)
 
+
 def carmers_v(chi2, n, k, r):
-    return np.sqrt(chi2 / (n * (min(k,r)-1)))
+    return np.sqrt(chi2 / (n * (min(k, r) - 1)))
 
 
 v = carmers_v(chi2_stat, df.shape[0], *contingency_table.shape)

@@ -1,8 +1,4 @@
-
-import rumpy
-import time 
-import sys
-import numpy as np 
+import numpy as np
 import pandas as pd
 
 # data = {
@@ -21,19 +17,19 @@ import pandas as pd
 # print(my_series)
 # print ('-'*60)
 
-my_panda = pd.DataFrame(np.random.randint(1,10, size=(5,3)), columns = ['A', 'B', 'C'])
+my_panda = pd.DataFrame(np.random.randint(1, 10, size=(5, 3)), columns=["A", "B", "C"])
 print(my_panda)
-                       
+
 # print ('-'*80)
 
 # my_panda = pd.DataFrame(np.random.randint(2,5, size=(5,3)), columns = ['Nina', 'Vera', 'Sara'])
 # print(my_panda)
-                       
+
 # print ('-'*80)
 
 # my_panda = pd.DataFrame(np.random.randint(2,5, size=(5,3)), columns = ['Nina', 'Vera', 'Sara'], index = ['Geo', 'Phi', 'Math', 'Lit', 'Che'])
 # print(my_panda)
-                       
+
 # print ('-'*80)
 
 # my_new_panda = my_panda.loc[my_panda['Vera'] > 3, 'Vera']
@@ -50,16 +46,13 @@ print(my_panda)
 # # new_df=table.loc[(table['a']>80) & (table['b']>80) & (table['c']>80)]
 # # new_df=table.loc[((table[['a','b','c']] >80).all(axis=1)),['a','b','c']]
 # # df_high_score = table.loc[table.gt(80).all(axis = 1)]
- 
+
 # print(my_new_panda)
 # print ('-'*80)
 
-sales_data = pd.DataFrame({
-    'Product': ['A', 'B', 'C', 'A', 'B'],
-    'Price': [10, 20, 15, 12, 18]
-})
+sales_data = pd.DataFrame({"Product": ["A", "B", "C", "A", "B"], "Price": [10, 20, 15, 12, 18]})
 
-rev = sales_data['Price'].sum()
+rev = sales_data["Price"].sum()
 print(rev)
 
-sales_data.to_csv('sales_data.csv', index=1)
+sales_data.to_csv("sales_data.csv", index=1)

@@ -1,17 +1,26 @@
-# analytics/daily.py
+# === Module Status ===
+# 📁 Module: analytics/daily
+# 📅 Last Reviewed: 2025-09-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: Matvey
+# 📝 Notes:
+# - Replace print with print_info
+# - Make snapshot path injectable for testing
+# =====================
 
-import os
+import re
 import time
-import json
-import pandas as pd
-from pathlib import Path
-from typing import List, Optional
-from bs4 import BeautifulSoup
-
-from core.auth_amazon import get_chrome_driver_with_profile
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
-from core.env_check import get_env_or_raise
+import pandas as pd
+from bs4 import BeautifulSoup
+from core.auth_amazon import get_chrome_driver_with_profile
+from core.env_check import ENV_VARS, get_chrome_profile_env, get_env_or_raise
+from core.session_state import print_info
+
+# analytics/daily.py
 
 
 def extract_amazon_metrics(html: str) -> dict:
@@ -53,7 +62,6 @@ def extract_amazon_metrics(html: str) -> dict:
     # BSR can look like "#3,214 in Electronics (See Top 100)"
     bsr_rank = None
     if bsr_text:
-        import re
         match = re.search(r"#([\d,]+)", bsr_text)
         if match:
             bsr_rank = parse_number(match.group(1))
@@ -66,46 +74,76 @@ def extract_amazon_metrics(html: str) -> dict:
     }
 
 
-def run_daily_screening(df_asin: pd.DataFrame, out_dir: Path):
+def run_daily_screening(session, base_path: Optional[Path] = None):
+    """Scrape price/rating/review_count/BSR for session's ASINs and append to snapshot.csv.
+    Uses a single Selenium session; saves Raw HTML+PNG for reproducibility.
     """
-    For each ASIN in df_asin, scrape current rating / price / review count / BSR
-    and store results in daily_snapshots.csv inside collection folder.
-    """
+    from core.collection_io import collection_csv
+
+    if getattr(session, "collection_path", None) is None:
+        print_info("❌ No active collection. Load or create a collection first.")
+        return
+
+    out_dir = Path(base_path or session.collection_path)
+
+    df_asin = getattr(session, "df_asin", None)
+    if df_asin is None or "asin" not in getattr(df_asin, "columns", []):
+        try:
+            df_asin = pd.read_csv(collection_csv(session.collection_path))
+            session.df_asin = df_asin
+        except Exception as e:
+            print_info(f"❌ Failed to load ASIN collection: {e}")
+            return
+
+    # Start Selenium with the configured user profile
     user_data_dir = get_env_or_raise("CHROME_USER_DATA_DIR")
-    profile_dir = os.getenv("CHROME_PROFILE", "Profile 2")
+    profile_dir = get_chrome_profile_env()
     driver = get_chrome_driver_with_profile(user_data_dir, profile_dir)
 
     snapshot_rows = []
-    utc_now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    captured_at = datetime.utcnow().isoformat(timespec="seconds")
+    raw_dir = out_dir / "Raw" / "snapshots" / captured_at.replace(":", "")
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    domain = ENV_VARS.get("DEFAULT_MARKETPLACE", "com")
 
     for asin in df_asin["asin"]:
-        url = f"https://www.amazon.com/dp/{asin}"
+        url = f"https://www.amazon.{domain}/dp/{asin}"
         try:
             driver.get(url)
-            time.sleep(3)  # give time to load
+            time.sleep(3)  # allow product page to render
+
+            raw_html_path = raw_dir / f"{asin}.html"
+            raw_png_path = raw_dir / f"{asin}.png"
+            with open(raw_html_path, "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            driver.save_screenshot(str(raw_png_path))
 
             metrics = extract_amazon_metrics(driver.page_source)
-            row = {
-                "asin": asin,
-                "timestamp_utc": utc_now,
-                **metrics
-            }
+            row = {"asin": asin, "captured_at": captured_at, **metrics}
             snapshot_rows.append(row)
-            print(f"[✓] {asin} → {metrics}")
+            print_info(f"[✓] {asin} → {metrics}")
         except Exception as e:
-            print(f"[!] Failed to extract metrics for {asin}: {e}")
+            print_info(f"[!] Failed to extract metrics for {asin}: {e}")
 
-    driver.quit()
+    try:
+        driver.quit()
+    except Exception as e:
+        print_info(f"[WARN] Failed to quit driver: {e}")
 
     if not snapshot_rows:
-        print("[WARN] No snapshots collected.")
+        print_info("[WARN] No snapshots collected.")
         return
 
     snap_df = pd.DataFrame(snapshot_rows)
-    out_path = out_dir / "daily_snapshots.csv"
+    out_path = out_dir / "snapshot.csv"
     if out_path.exists():
         existing = pd.read_csv(out_path)
         snap_df = pd.concat([existing, snap_df], ignore_index=True)
+        if {"asin", "captured_at"}.issubset(snap_df.columns):
+            snap_df = snap_df.drop_duplicates(subset=["asin", "captured_at"], keep="first")
+        else:
+            snap_df = snap_df.drop_duplicates(keep="first")
 
     snap_df.to_csv(out_path, index=False)
-    print(f"[INFO] Daily snapshot saved to {out_path}")
+    print_info(f"[INFO] Daily snapshot saved to {out_path}")

@@ -1,13 +1,15 @@
 import os
 import subprocess
 
+
 def run_git_command(command):
     """Запуск git-команды и возврат результата."""
     try:
         result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return result.decode('utf-8').strip()
+        return result.decode("utf-8").strip()
     except subprocess.CalledProcessError as e:
         return f"Ошибка: {e.output.decode('utf-8').strip()}"
+
 
 def check_git_status():
     print("=== Проверка состояния Git-репозитория ===\n")
@@ -52,6 +54,7 @@ def check_git_status():
             print(f"  → Нужно выполнить: git pull origin {branch}")
     else:
         print("  Не удалось проверить синхронизацию с remote.")
+
 
 if __name__ == "__main__":
     check_git_status()

@@ -1,16 +1,53 @@
-from textblob import TextBlob
+from typing import Dict
+
+import numpy as np
 import pandas as pd
-from core.collection_io import load_collection
+from core.collection_io import list_collections
+from core.collection_io import load_collection as io_load_collection
+from core.collection_io import parse_collection_dirname
+from core.session_state import SessionState
+from matplotlib.patches import Patch
+from textblob import TextBlob
+
+
+def _asin_title_map(session: SessionState) -> Dict[str, str]:
+    """Best-effort map ASIN -> product title from snapshot (preferred) or collection list."""
+    mapping: Dict[str, str] = {}
+    try:
+        snap = getattr(session, "df_snapshot", None)
+        if (
+            snap is not None
+            and not snap.empty
+            and "asin" in snap.columns
+            and "title" in snap.columns
+        ):
+            for _, r in snap.dropna(subset=["asin", "title"]).iterrows():
+                mapping[str(r["asin"])] = str(r["title"]).strip()
+    except Exception:
+        pass
+    try:
+        ca = getattr(session, "df_asins", None)
+        if ca is not None and not ca.empty and "asin" in ca.columns and "title" in ca.columns:
+            for _, r in ca.dropna(subset=["asin", "title"]).iterrows():
+                mapping.setdefault(str(r["asin"]), str(r["title"]).strip())
+    except Exception:
+        pass
+    return mapping
+
+
+def _short_label(asin: str, title_map: Dict[str, str], max_len: int = 28) -> str:
+    title = title_map.get(str(asin))
+    if not title:
+        return f"ASIN: {asin}"
+    title = title.strip()
+    return title if len(title) <= max_len else (title[: max_len - 3] + "...")
+
 
 def main_menu():
-    print("1. Option One")
-    print("2. Option Two")
-    print("3. Option Three")
-    print("4. Option Four")
-    print("5. Option Five")
-    print("6. Option Six")
-    print("7. Analyze Review Authenticity (Trustworthiness)")
-    print("8. View flagged reviews (authcheck)")
+    print("1) Analyze Review Authenticity (Trustworthiness)")
+    print("2) View flagged reviews (auth_flag)")
+    print("0) Exit")
+
 
 def main():
     while True:
@@ -18,60 +55,54 @@ def main():
         choice = input("Enter your choice: ").strip()
 
         if choice == "1":
-            # handle option 1
-            pass
-        elif choice == "2":
-            # handle option 2
-            pass
-        elif choice == "3":
-            # handle option 3
-            pass
-        elif choice == "4":
-            # handle option 4
-            pass
-        elif choice == "5":
-            # handle option 5
-            pass
-        elif choice == "6":
-            # handle option 6
-            pass
-        elif choice == "7":
-            from analytics.review_authenticity import analyze_review_authenticity
-            from core.collection_io import list_collections
-            print("\nAvailable collections:")
-            collections = list_collections()
-            for i, name in enumerate(collections, 1):
-                print(f"{i}) {name}")
-            selected = input("Select collection number: ").strip()
-            try:
-                index = int(selected) - 1
-                if 0 <= index < len(collections):
-                    collection_id = collections[index]
-                    analyze_review_authenticity(collection_id)
-                else:
-                    print("[!] Invalid selection.")
-            except ValueError:
-                print("[!] Invalid input.")
-        elif choice == "8":
-            from core.collection_io import list_collections, load_collection
-            print("\nAvailable flagged collections:")
-            collections = [c for c in list_collections() if c.startswith("authcheck__") and c.endswith("__reviews.csv")]
-            if not collections:
-                print("[!] No flagged collections found.")
+            # Pick collection and run authenticity analysis
+            cols = list_collections()
+            if not cols:
+                print("[!] No collections found.")
                 continue
-            for i, name in enumerate(collections, 1):
+            for i, name in enumerate(cols, 1):
                 print(f"{i}) {name}")
             selected = input("Select collection number: ").strip()
             try:
-                index = int(selected) - 1
-                if 0 <= index < len(collections):
-                    collection_id = collections[index]
-                    explore_flagged_reviews(collection_id)
-                else:
+                idx = int(selected) - 1
+                if not (0 <= idx < len(cols)):
                     print("[!] Invalid selection.")
+                    continue
             except ValueError:
                 print("[!] Invalid input.")
-        elif choice.lower() in ("q", "quit", "exit"):
+                continue
+            parts = parse_collection_dirname(cols[idx])
+            cid = parts["cid"]
+            session = SessionState()
+            io_load_collection(cid, session)
+            session.load_reviews_and_snapshot()
+            analyze_review_authenticity(session)
+
+        elif choice == "2":
+            # Pick collection and explore flagged reviews
+            cols = list_collections()
+            if not cols:
+                print("[!] No collections found.")
+                continue
+            for i, name in enumerate(cols, 1):
+                print(f"{i}) {name}")
+            selected = input("Select collection number: ").strip()
+            try:
+                idx = int(selected) - 1
+                if not (0 <= idx < len(cols)):
+                    print("[!] Invalid selection.")
+                    continue
+            except ValueError:
+                print("[!] Invalid input.")
+                continue
+            parts = parse_collection_dirname(cols[idx])
+            cid = parts["cid"]
+            session = SessionState()
+            io_load_collection(cid, session)
+            session.load_reviews_and_snapshot()
+            explore_flagged_reviews(session)
+
+        elif choice == "0":
             print("Exiting.")
             break
         else:
@@ -87,12 +118,13 @@ def analyze_review_authenticity(session):
     3. Duplicate review content across the dataset.
     """
     from collections import defaultdict
-    from core.collection_io import save_collection
 
     import matplotlib.pyplot as plt
-    import seaborn as sns
 
     df = session.df_reviews
+    if df is None or len(getattr(df, "columns", [])) == 0:
+        session.load_reviews_and_snapshot()
+        df = session.df_reviews
     df = compute_sentiment(df)
     df = df.rename(columns={"review_rating": "rating"})
     if df is None or df.empty:
@@ -103,11 +135,22 @@ def analyze_review_authenticity(session):
     print(f"\n[🔍] Authenticity analysis for collection: {collection_id}")
 
     print(f"[DEBUG] ASINs in dataset: {df['asin'].nunique()}")
+    print(f"[DEBUG] Length thresholds: short<= {q10:.0f} | long>= {q90:.0f} chars")
 
-    # Step 1: Length-based heuristics
-    df["text_length"] = df["review_text"].astype(str).apply(len)
-    too_short = df["text_length"] < 20
-    too_long = df["text_length"] > 1000
+    # Step 1: Length-based heuristics (deciles on non-empty reviews)
+    df["text_length"] = df["review_text"].astype(str).str.strip().str.len()
+    nonzero = df.loc[df["text_length"] > 0, "text_length"]
+    if not nonzero.empty:
+        q10 = np.nanpercentile(nonzero, 10)
+        q90 = np.nanpercentile(nonzero, 90)
+        if not np.isfinite(q10):
+            q10 = 20
+        if not np.isfinite(q90):
+            q90 = max(100, float(nonzero.max()))
+    else:
+        q10, q90 = 20, 1000
+    too_short = df["text_length"] <= q10
+    too_long = df["text_length"] >= q90
 
     # Step 2: High review frequency per ASIN per day
     df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
@@ -142,7 +185,6 @@ def analyze_review_authenticity(session):
     print(f" - Hyperactive reviewers: {(hyperactive_flags != '').sum()}")
     print(f"\n[ℹ️] Total flagged reviews: {(df['auth_flag'] != '').sum()}")
 
-    
     print("\n[✅] Authenticity check completed.")
 
     print("\n[📊] Running sentiment-based NPS analysis...")
@@ -151,7 +193,9 @@ def analyze_review_authenticity(session):
     if nps_df.empty:
         print("[⚠] NPS analysis could not be performed.")
     else:
-        top_asins_nps = nps_df[nps_df["n_reviews"] >= 5].sort_values(by="nps", ascending=False).head(5)
+        top_asins_nps = (
+            nps_df[nps_df["n_reviews"] >= 5].sort_values(by="nps", ascending=False).head(5)
+        )
         if len(top_asins_nps) < 5:
             print(f"[⚠] Only {len(top_asins_nps)} ASINs qualified for NPS analysis.")
         print(nps_df[["asin", "nps"]].to_string(index=False))
@@ -163,16 +207,25 @@ def analyze_review_authenticity(session):
         if len(top_asins_nps) == 1:
             axes = [axes]
 
+        title_map = _asin_title_map(session)
         for ax, (_, row) in zip(axes, top_asins_nps.iterrows()):
             asin = row["asin"]
             sizes = [row["promoter_pct"], row["passive_pct"], row["detractor_pct"]]
             labels = ["Promoter", "Passive", "Detractor"]
             colors = ["mediumseagreen", "gold", "tomato"]
             ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
-            ax.set_title(f"ASIN: {asin}\n({int(row['n_reviews'])} reviews)", fontsize=12)
+            ax.set_title(
+                f"{_short_label(asin, title_map)}\n({int(row['n_reviews'])} reviews)", fontsize=12
+            )
 
         plt.suptitle("NPS Composition for Top 5 ASINs (≥10 reviews)", fontsize=16)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        legend_elems = [
+            Patch(facecolor="mediumseagreen", label="Promoter"),
+            Patch(facecolor="gold", label="Passive"),
+            Patch(facecolor="tomato", label="Detractor"),
+        ]
+        fig.legend(handles=legend_elems, loc="upper right")
         plt.show()
 
     # --- Sentiment analysis and visualization ---
@@ -186,21 +239,30 @@ def analyze_review_authenticity(session):
     top_sentiment_asins = sentiment_summary.head(5)
 
     sentiment_dist = df[df["asin"].isin(top_sentiment_asins["asin"])]
-    sentiment_dist = sentiment_dist.groupby(["asin", "sentiment_label"]).size().unstack(fill_value=0)
+    sentiment_dist = (
+        sentiment_dist.groupby(["asin", "sentiment_label"]).size().unstack(fill_value=0)
+    )
 
     fig, axes = plt.subplots(1, len(top_sentiment_asins), figsize=(6 * len(top_sentiment_asins), 6))
     if len(top_sentiment_asins) == 1:
         axes = [axes]
 
+    title_map = _asin_title_map(session)
     for ax, asin in zip(axes, top_sentiment_asins["asin"]):
         sizes = sentiment_dist.loc[asin].values
         labels = sentiment_dist.columns.tolist()
         colors = ["mediumseagreen", "gold", "tomato"]
         ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
-        ax.set_title(f"ASIN: {asin}", fontsize=12)
+        ax.set_title(_short_label(asin, title_map), fontsize=12)
 
-    plt.suptitle("Sentiment Composition for Top 5 ASINs (≥10 reviews)", fontsize=16)
+    plt.suptitle("Sentiment Composition for Top 5 ASINs (>=10 reviews)", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    legend_elems = [
+        Patch(facecolor="mediumseagreen", label="positive"),
+        Patch(facecolor="gold", label="neutral"),
+        Patch(facecolor="tomato", label="negative"),
+    ]
+    plt.legend(handles=legend_elems, loc="upper right")
     plt.show()
 
     # --- Pie charts for top 5 ASINs with most flags ---
@@ -215,13 +277,14 @@ def analyze_review_authenticity(session):
         "long": "orange",
         "high_volume": "red",
         "duplicate": "purple",
-        "hyperactive_author": "green"
+        "hyperactive_author": "green",
     }
 
     fig, axes = plt.subplots(1, len(top_asins), figsize=(6 * len(top_asins), 6))
     if len(top_asins) == 1:
         axes = [axes]  # Ensure iterable if only one ASIN
 
+    title_map = _asin_title_map(session)
     for ax, asin in zip(axes, top_asins):
         asin_flags = exploded[exploded["asin"] == asin]["auth_flag_list"].value_counts()
         labels = asin_flags.index
@@ -230,10 +293,12 @@ def analyze_review_authenticity(session):
 
         ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=140)
         total_flags = asin_flags.sum()
-        ax.set_title(f"ASIN: {asin} ({total_flags} flags)", fontsize=12)
+        ax.set_title(f"{_short_label(asin, title_map)} ({total_flags} flags)", fontsize=12)
 
     plt.suptitle("Flag Composition for Top 5 ASINs", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    legend_elems = [Patch(facecolor=c, label=k) for k, c in flag_colors.items()]
+    plt.legend(handles=legend_elems, loc="upper right")
     plt.show()
 
     # --- Comparison summary ---
@@ -243,6 +308,7 @@ def analyze_review_authenticity(session):
     print(f"\n[📊] Shared ASINs in Top-5 NPS & Sentiment: {nps_asins & sentiment_asins}")
     print(f"[📊] NPS-only Top: {nps_asins - sentiment_asins}")
     print(f"[📊] Sentiment-only Top: {sentiment_asins - nps_asins}")
+
 
 def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> pd.Series:
     """
@@ -258,47 +324,60 @@ def flag_hyperactive_reviewers(df: pd.DataFrame, threshold_per_day: int = 3) -> 
     active_pairs = counts[counts > threshold_per_day].index
 
     return df.apply(
-        lambda row: "hyperactive_author"
-        if (row["review_author"], row["review_date"]) in active_pairs
-        else "",
-        axis=1
+        lambda row: (
+            "hyperactive_author"
+            if (row["review_author"], row["review_date"]) in active_pairs
+            else ""
+        ),
+        axis=1,
     )
 
-def explore_flagged_reviews(collection_id):
-    """
-    Позволяет пользователю просмотреть отзывы с флагами и отфильтровать их по типу.
-    """
-    df = load_collection(collection_id)
+
+def explore_flagged_reviews(session: SessionState):
+    """Interactive view of flagged reviews (auth_flag) for the loaded session."""
+    if getattr(session, "df_reviews", None) is None:
+        session.load_reviews_and_snapshot()
+    df = session.df_reviews
+    if df is None or df.empty:
+        print("[!] No reviews loaded for this collection.")
+        return
     if "auth_flag" not in df.columns:
-        print("[!] No 'auth_flag' column found in dataset.")
+        print("[!] No 'auth_flag' column found in reviews.")
         return
 
-    print(f"\n[📂] Reviewing flagged collection: {collection_id}")
+    print(f"\n[📂] Reviewing flagged reviews for: {session.collection_id}")
     all_flags = df["auth_flag"].str.split(",", expand=True).stack().value_counts()
+    if all_flags.empty:
+        print("[i] No flags present.")
+        return
     print("Available flags and counts:")
     for flag, count in all_flags.items():
         print(f" - {flag}: {count}")
 
     flag_filter = input("Enter flag to filter by (or press Enter to view all): ").strip()
     if flag_filter:
-        filtered = df[df["auth_flag"].str.contains(flag_filter)]
+        filtered = df[df["auth_flag"].str.contains(flag_filter, na=False)]
         print(f"\nShowing {len(filtered)} reviews with flag '{flag_filter}':")
     else:
-        filtered = df[df["auth_flag"] != ""]
+        filtered = df[df["auth_flag"].astype(str) != ""]
         print(f"\nShowing all {len(filtered)} flagged reviews:")
 
-    for i, row in filtered.iterrows():
+    for _, row in filtered.iterrows():
         print(f"\nASIN: {row.get('asin', '')}")
         print(f"Date: {row.get('review_date', '')}")
-        print(f"Flags: {row['auth_flag']}")
-        print(f"Review: {row.get('review_text', '')[:300]}...")
+        print(f"Flags: {row.get('auth_flag', '')}")
+        print(f"Review: {str(row.get('review_text', ''))[:300]}...")
 
 
 # --- Wrapper function as requested ---
 def detect_suspicious_reviews(session):
-    return analyze_review_authenticity(session)
+    try:
+        if not callable(analyze_review_authenticity):
+            raise TypeError
+        analyze_review_authenticity(session)
+    except Exception as e:
+        print(f"[ERROR] Failed to call 'analyze_review_authenticity': {e}")
 
-import pandas as pd
 
 def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
     """
@@ -332,14 +411,19 @@ def compute_nps_per_asin(df_reviews: pd.DataFrame) -> pd.DataFrame:
     summary["passive_pct"] = (summary.get("passive", 0) / summary["n_reviews"]) * 100
     summary["nps"] = summary["promoter_pct"] - summary["detractor_pct"]
 
-    result = summary[["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]].reset_index()
+    result = summary[
+        ["n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]
+    ].reset_index()
     result = result.sort_values(by="nps", ascending=False)
     result = result[result["n_reviews"] >= 10]
 
     return result
 
+
 def compute_sentiment(df: pd.DataFrame) -> pd.DataFrame:
-    df["sentiment"] = df["review_text"].astype(str).apply(
-        lambda x: round(TextBlob(x).sentiment.polarity, 3) if x.strip() else 0.0
+    df["sentiment"] = (
+        df["review_text"]
+        .astype(str)
+        .apply(lambda x: round(TextBlob(x).sentiment.polarity, 3) if x.strip() else 0.0)
     )
     return df

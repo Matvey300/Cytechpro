@@ -1,5 +1,7 @@
 import os
+
 from core.asin_search import fetch_amazon_categories, fetch_asins_in_category
+
 
 def run_asin_search(session):
     keyword = input("Enter keyword to search categories (e.g., 'headphones'): ").strip()
@@ -32,7 +34,8 @@ def run_asin_search(session):
     df = pd.DataFrame(all_asins)
     session.df_asin = df
     print(f"[✅] Fetched {len(df)} ASINs and added to current session.")
-    
+
+
 def validate_environment():
     required_vars = ["SCRAPINGDOG_API_KEY", "SERPAPI_API_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]

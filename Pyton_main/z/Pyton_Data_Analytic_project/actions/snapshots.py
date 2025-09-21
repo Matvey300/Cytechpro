@@ -4,6 +4,7 @@
 from analytics.daily import run_daily_screening as run_snapshot_logic
 from core.session_state import SessionState
 
+
 def run_daily_screening(session: SessionState):
     """Trigger snapshot collection for current ASIN collection."""
     print("\n📸 Taking daily snapshot...")

@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        args: [--line-length=100]
+        exclude: |
+          (?x)(
+            ^Pyton_main/file\ 2\.py$|
+            ^Pyton_main/Exercise_Pandas_1\.py$
+          )
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --expand-star-imports
+
+  - repo: local
+    hooks:
+      - id: vulture-dead-code
+        name: vulture-dead-code
+        entry: vulture
+        language: system
+        pass_filenames: false
+        args:
+          - Pyton_main/Pyton_Data_Analytic_project
+          - --min-confidence
+          - '80'
+          - --exclude
+          - 'venv,.venv,.git,.vscode,.idea,DATA,Out,logs,archive'

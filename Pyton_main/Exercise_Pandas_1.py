@@ -1,9 +1,10 @@
 
-import rumpy
-import time 
 import sys
-import numpy as np 
+import time
+
+import numpy as np
 import pandas as pd
+import rumpy
 
 # data = {
 #     'names': ['Dor', 'sasi', 'moshe'],
