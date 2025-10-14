@@ -31,3 +31,7 @@ docs/RULES.md
 
 # Файлы ОС
 .DS_Store
+
+# Скрыть проектные документы
+Projections.md
+Project_charter.md
