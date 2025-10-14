@@ -1,97 +1,78 @@
-# 🛍️ Amazon Competitive Intelligence Tool
+# 🛍️ Amazon Market Intelligence Toolkit
 
-Track sentiment, pricing, and review dynamics across Amazon ASINs to uncover market trends and potential reputation manipulation. Built for analysts and growth strategists.
-
----
-
-## ✅ Features (MVP v1.0)
-
-- 🔎 Collect ASINs by keyword/category via **SerpAPI**
-- 💬 Scrape reviews via **Chrome/Selenium** (raw HTML saved first; robust to UI hiccups)
-- 📈 Track daily metrics: rating, price, review count
-- 🧠 Sentiment analysis (rule-based)
-- 🧮 Statistical analysis and correlation module
-- 📊 Visualizations of review trends and sentiment shifts
-- 🚩 Detection of suspicious review or price patterns  
-- 📤 NPS scoring and sentiment-to-authenticity convergence analysis
-- 🧪 Daily monitoring and delta tracking
-- CLI-driven interface with persistent collection sessions
+Track sentiment, pricing, BSR and review dynamics across Amazon ASINs to reveal market trends, price moves and potential reputation manipulation. Built for analysts, category managers and growth teams.
 
 ---
 
-## 🧠 Statistical Tests
+## What’s Included (2025‑10‑13)
 
-The tool includes an **analytics module** with several non-parametric and robust tests for noisy marketplace data.
-
-### Included statistical tests:
-
-| Test                                | Description                                                                 |
-|-------------------------------------|-----------------------------------------------------------------------------|
-| **Levene's Test**                   | Detects unequal variance in price, rating, or review metrics                |
-| **Spearman Correlation**            | Captures monotonic relationships between sentiment, rating, BSR, etc.       |
-| **Kruskal-Wallis H-test**           | Compares medians across groups (e.g., before/after sentiment spikes)        |
-| **Pearson Correlation** (opt-in)   | Linear relationships (used cautiously due to outliers)                      |
-| **Cohort Deviation Score**          | Custom metric measuring weekly divergence in sentiment/rating trajectory    |
-
-These are used to:
-
-- Flag **reputation manipulation** (review bursts, rating inflation)
-- Track **sentiment-price** co-movement
-- Detect **inconsistencies** in verified vs unverified reviews
-
-### Composite Review Health Scoring
-
-This custom module aggregates three dimensions of review quality for each ASIN:
-- 🚩 **Authenticity Flags**: short/long reviews, reviewer anomalies, duplicates
-- 💬 **Sentiment Score**: polarity average from TextBlob, per ASIN
-- 📈 **NPS Estimate**: proxy Net Promoter Score from ratings (Promoters=5, Detractors ≤3)
-
-Summary visuals:
-- Top ASINs by sentiment and NPS (pie charts)
-- Cross-mapping between NPS and sentiment leaders
-- Total flagged reviews per ASIN
-- Alerts for anomalous convergence
+- Collection and parsing
+  - Selenium + Chrome profile with raw HTML persisted for audit
+  - Review collection with date/duplicate early‑stop; TextBlob sentiment per review; helpful‑votes defaulting to 0
+  - Snapshot enrichment from DP pages (saved HTML/PNG). Price fallback when hidden: DP selectors → hidden base price → optional cart price
+- Data quality and safety
+  - `price_clean` (parsed and sanitized), `price_hidden` flag, currency symbol stripping, numeric coercion
+  - DP HTML/PNG and review pages stored under `DATA/<collection>/Raw/...`
+- Automation
+  - Auto‑run scheduler (per collection) with conditional daily DP screening: runs if new reviews, data‑quality issues, or once per day
+  - End‑to‑end export after each run
+- BI‑ready exports (Parquet preferred, CSV fallback)
+  - `asins_dim`: asin, title, category_path, country
+  - `reviews_fact`: asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at
+  - `snapshot_fact`: asin, captured_at, price, price_hidden, rating, total_reviews, new_reviews, bsr, category_path, title, pages_visited, stopped_reason
+  - `snapshot_latest`: last snapshot per asin
+  - `sentiment_daily`: per‑asin/day counts and average sentiment; densified on the (asin, date) grid from snapshots
+  - `metrics_daily`: daily join of snapshots + sentiment with 3‑day smoothing (`*_3d`) and aggregated `new_reviews`
+  - `metrics_rolling_7d` / `metrics_rolling_28d`: rolling averages per asin
+  - `flags_detail` / `flags_summary_by_asin`: authenticity heuristics (short/long/duplicate/high_volume/hyperactive_author)
+  - `nps_by_asin`: promoter/passive/detractor shares and NPS
+  - `correlations_by_asin`: 7/28/90‑day Spearman (raw/sm3d) for sentiment/rating vs price/BSR
+  - `correlations_alerts_7d`: strong weekly signals with stability and severity
 
 ---
 
-## 🛠 Requirements
+## Requirements
 
-- Python **3.10+**
-- Google Chrome **v115+**
+- Python 3.10+
+- Google Chrome v115+
 - ChromeDriver (matching your Chrome version)
-- API keys (optional but supported):
-  - `SERPAPI_API_KEY` — for ASIN discovery by keyword (optional)
-  - `SCRAPINGDOG_API_KEY` — legacy import path (optional; not required for Selenium)
+- Optional keys:
+  - `SERPAPI_API_KEY` (ASIN discovery)
+  - `SCRAPINGDOG_API_KEY` (legacy paths)
 
 ---
 
-## 🔐 Environment Setup
+## Environment
 
-Create a `.env` file in project root:
+Create `conf.env` at project root:
 
-```
-# Optional: external APIs
-SERPAPI_API_KEY=your_key_here
-SCRAPINGDOG_API_KEY=your_key_here
+```env
+# API keys (optional)
+SERPAPI_API_KEY=your_key
+SCRAPINGDOG_API_KEY=your_key
 
-# Chrome profile (recommended: embedded local profile)
-LOCAL_CHROME_PROFILE_DIR=DATA/.chrome_profile
-# Or, use a system Chrome profile instead (macOS example):
-# CHROME_USER_DATA_DIR=/Users/<you>/Library/Application Support/Google/Chrome
-# CHROME_PROFILE_DIR=Profile 2
+# Chrome user data (recommended)
+CHROME_USER_DATA_DIR=./DATA/.chrome_profile
+CHROME_PROFILE_DIR=Default
 
-# Review collection limits
-REVIEWS_MAX_PER_ASIN=200   # total reviews per ASIN
-REVIEWS_MAX_PAGES=30       # safety cap on paginated pages
+# Amazon account (optional; enables price for hidden listings)
+AMAZON_EMAIL=you@example.com
+AMAZON_PASSWORD=your_password
 
-# Window behavior (optional)
-# Global: normal|minimize|offscreen|headless
-BROWSER_VISIBILITY=minimize
-# Daily snapshot override (prevents focus stealing during snapshot runs)
+# Collection limits
+REVIEWS_MAX_PER_ASIN=200
+REVIEWS_MAX_PAGES=30
+
+# Window behavior
+BROWSER_VISIBILITY=offscreen
 SNAPSHOT_VISIBILITY=offscreen
+
+# Price resolution
+ENABLE_CART_PRICE=1
+SAVE_PRODUCT_PNG=1
 ```
 
-Validate setup:
+Validate:
 
 ```bash
 python -m core.env_check
@@ -99,391 +80,88 @@ python -m core.env_check
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-## 🧩 From GitHub: First-Time Setup
+Menu highlights:
+- Load/Create ASIN collection
+- Search ASINs by keyword/category
+- Collect reviews & snapshot (saves reviews.csv / snapshot.csv)
+- Analytics (authenticity, sentiment, dynamics)
+- Auto‑collection settings
+- Export data mart for Power BI (exports/<ts> and exports/latest)
 
-1) Clone and create a virtual environment
-
-```bash
-git clone <your-repo-url>.git
-cd Pyton_main/Pyton_Data_Analytic_project
-python -m venv venv
-source venv/bin/activate   # Windows: venv\\Scripts\\activate
-pip install -r requirements.txt
-```
-
-2) Create `conf.env` in project root (minimal template)
-
-```
-# Marketplace and limits
-DEFAULT_MARKETPLACE=com
-REVIEWS_MAX_PER_ASIN=100
-REVIEWS_MAX_PAGES=3
-
-# Chrome profile (recommended)
-CHROME_USER_DATA_DIR=./DATA/.chrome_profile
-CHROME_PROFILE_DIR=Default
-BROWSER_VISIBILITY=normal   # normal|minimize|offscreen|headless
-
-# Optional external providers (can be disabled)
-SERPAPI_API_KEY=
-SCRAPINGDOG_API_KEY=
-DISABLE_SCRAPINGDOG=0
-DISABLE_SERPAPI=0
-
-# Optional auto-login (or use your Chrome profile already logged in)
-AMAZON_EMAIL=
-AMAZON_PASSWORD=
-```
-
-3) macOS: allow ChromeDriver if Gatekeeper blocks it (one-time)
+Automation:
 
 ```bash
-# If you installed chromedriver via Homebrew and got a security dialog:
-xattr -dr com.apple.quarantine /opt/homebrew/bin/chromedriver || true
-# Or open System Settings → Privacy & Security → "Open Anyway"
+python Pyton_main/Pyton_Data_Analytic_project/scripts/auto_runner.py
 ```
 
-4) Start the app
-
-```bash
-python app.py
-```
-
-5) Create a collection (menu 1 → Create new) or load an existing one.
-   - If external providers are unavailable or disabled, ASIN discovery falls back to Selenium search on Amazon.
-
-6) Collect reviews & snapshot (menu 3) and run analytics (menu 4).
-
-### Export for Power BI
-
-- Use menu 7) Export data mart for Power BI
-- Output folder: `DATA/<collection>/exports/latest/`
-- Tables written (Parquet preferred, CSV fallback):
-  - `asins_dim` (asin, title, category_path, country)
-  - `reviews_fact` (asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at)
-  - `snapshot_fact` (asin, captured_at, price, rating, total_reviews, bsr, category_path, title)
-  - `sentiment_daily` (asin, date, review_count, avg_sentiment, pos_cnt, neut_cnt, neg_cnt)
-  - `nps_by_asin` (asin, n_reviews, promoter_pct, passive_pct, detractor_pct, nps)
-  - `flags_detail` (asin, review_id, review_date, text_length, auth_flag)
-  - `flags_summary_by_asin` (one row per asin with counts by flag)
-- In Power BI: Get Data → Folder → select `exports/latest` → Combine & Transform (or import individual files)
-- For large datasets (100k+ reviews) install Parquet support: `pip install pyarrow`
-
-Menu options:
-
-1. Load or create ASIN collection  
-2. Search ASINs by keyword and category  
-3. Collect reviews & snapshot (append to `reviews.csv` and `snapshot.csv`)  
-4. Analyze and visualize reviews  
-5. List saved collections  
-6. Auto-collection settings (enable/disable/list)  
-7. Export data mart for Power BI  
-0. Exit
-
 ---
 
-## 📁 Project Structure
+## Power BI Integration
 
-| Path                          | Purpose                                                 |
-|-------------------------------|---------------------------------------------------------|
-| `app.py`                      | CLI entry point                                         |
-| `conf.env`                    | Centralized configuration (review limits, API keys, etc.)|
-| `core/`                       | Session state, logging, environment loading             |
-| ├── `session_state.py`        | Global session object and control flags                |
-| ├── `collection_io.py`        | Load/save ASIN collections and snapshots               |
-| ├── `env_check.py`            | Validates `.env` or `conf.env` setup                   |
-| └── `log.py`                  | Centralized logging (print_info, print_success, etc.)  |
-| `actions/`                    | CLI interactions and review pipeline control            |
-| ├── `menu_main.py`            | Main CLI menu                                          |
-| └── `reviews_controller.py`   | Pipeline entrypoint for collecting reviews             |
-| `scraper/`                    | Core scraping logic (Selenium, parsing, saving)        |
-| ├── `driver.py`               | Selenium WebDriver configuration                       |
-| ├── `navigator.py`            | Navigation logic to reach reviews                      |
-| ├── `html_saver.py`           | Save raw HTML pages (incl. diagnostics)                |
-| ├── `page_parser.py`          | Extract product-level metadata                         |
-| ├── `review_parser.py`        | Extract reviews from review cards                      |
-| └── `review_collector.py`     | Orchestrates full scraping cycle per ASIN              |
-| `analytics/`                  | Statistical and correlation analysis                   |
-| `DATA/`                       | Collections root (new layout)                          |
-| ├── `<YYYYMMDD>_<cid>_created<YYYYMMDD>/` | Current collection folder                      |
-| │   ├── `reviews.csv`        | Append-only reviews (dedup by `review_id`)             |
-| │   ├── `snapshot.csv`       | Append-only product metrics snapshots                  |
-| │   └── `Raw/reviews/<run_ts>/<ASIN>/*.html` | Saved raw review pages                    |
-| ├── `.auto_collect.json`      | Auto-collection state                                  |
-| ├── `.locks/`                 | Lock files per collection for runners                  |
-| └── `runs/<cid>.jsonl`        | JSONL summaries of non-interactive runs                |
-| `collections/`                | Saved sessions (deprecated; see `DATA/` instead)       |
-| `REVIEW_MODULE_STATUS.md`     | Module review and audit journal                        |
+- Connect Folder to `DATA/<collection>/exports/latest/`
+- Prefer Parquet; CSV fallback is emitted when pyarrow is unavailable
+- Use a Date table and anchor measures to the last data date (avoid BLANKs at calendar edges)
+- Recommended fields
+  - Pricing: use `snapshot_fact[price_clean]` and `price_hidden` for quality filters
+  - Operational new reviews: `metrics_daily[new_reviews]` (captured date)
+  - Smoothed series: `*_3d`, `*_7d`, `*_28d`
+  - BSR correlations: invert BSR (negative rank) if computing additional correlations
 
----
-
-## 📦 Output Structure (new layout)
-
-Inside `DATA/<YYYYMMDD>_<cid>_created<YYYYMMDD>/`:
-
-| File/Folder                  | Purpose                                   |
-|------------------------------|-------------------------------------------|
-| `collection.csv`             | Selected ASINs with metadata              |
-| `reviews.csv`                | All collected reviews (append-only, dedup, sentiment)|
-| `snapshot.csv`               | Snapshots of price/rating/review_count    |
-| `Raw/reviews/<run_ts>/*`     | Saved raw review HTML                     |
-
----
-
-## 📊 Review Collection Logic
-
-- Uses **Selenium with a persistent Chrome profile** (defaults to `DATA/.chrome_profile`)
-- Navigates to the product’s **Reviews** tab and follows **Next** pagination
-- Waits for review cards (`[data-hook="review"]`) to render before saving
-- **Saves HTML locally first** (diagnostics include `*_nocards.html` if cards not detected yet)
-- Parses HTML, computes TextBlob sentiment, and appends structured rows to `reviews.csv`
-- Incremental on re-runs:
-  - Skips already collected `review_id`
-  - Stops early if a page has 0 new reviews
-  - Stops by date if a page has no reviews newer than the latest saved `review_date`
-  - Honors `REVIEWS_MAX_PAGES` and `REVIEWS_MAX_PER_ASIN`
-
----
-
-## 📈 Snapshot Logic
-
-- Appends a new row per ASIN on each run of menu option 3
-- Contains: `title`, `price`, `bsr`, `category_path`, `rating`, `review_count`, `total_reviews`, `snapshot_ts`, `captured_at`
-- Stored as a single `snapshot.csv` in the collection folder (treated as a time series)
-
----
-
-## 🤖 Auto-Collection (Scheduler)
-
-Built-in auto-runs 4–6 times per day to keep `reviews.csv` and `snapshot.csv` up to date.
-
-Enable from CLI:
-
-- Load a collection (menu 1) — you’ll be prompted to enable auto-collection.
-- Or open menu 6 “Auto-collection settings”:
-  - Enable/Disable for the current collection
-  - List all enabled (frequency, `next_run`, `last_run`)
-
-State and logs:
-
-- `DATA/.auto_collect.json` — list of collections (`enabled`, `frequency_per_day`, `next_run`, `last_run`). First `next_run` is scheduled ~2 minutes after enabling.
-- `DATA/.locks/<cid>.lock` — per-collection run lock
-- `DATA/runs/<cid>.jsonl` — JSONL summaries (rows, `new_reviews`, `duplicates_skipped`, `snapshots`)
-
-Non-interactive scripts:
-
-- `scripts/run_pipeline.py --collection-id <cid>` — runs one collection (with file lock, writes JSONL)
-- `scripts/auto_runner.py` — runs all due collections and reschedules `next_run`
-
-Cron (example):
-
-```cron
-# Hourly with logging
-5 * * * * cd /path/to/Pyton_main/Pyton_Data_Analytic_project && ./venv/bin/python scripts/auto_runner.py >> logs/collector.log 2>&1
-```
-
-macOS launchd: create a plist with `ProgramArguments=[..., python, scripts/auto_runner.py]` and a suitable `StartCalendarInterval`.
-
-Recommendations:
-
-- `BROWSER_VISIBILITY=minimize` (or normal) — headless tends to perform worse on Amazon
-- Chrome profile: `CHROME_USER_DATA_DIR`, `CHROME_PROFILE_DIR` in `conf.env`
-- Auto-login: set `AMAZON_EMAIL`/`AMAZON_PASSWORD` (or use keychain via `keyring`)
-
-### Disable external providers (optional)
-
-If you prefer to collect ASINs without any external APIs:
-
-- In `conf.env` set:
-  - `DISABLE_SCRAPINGDOG=1`
-  - `DISABLE_SERPAPI=1`
-- The collection flow will fall back to Selenium search at `https://amazon.<domain>/s?k=...`.
-
-### Daemon without cron (local)
-
-- Run: `./venv/bin/python scripts/auto_daemon.py`
-- Interval: `AUTO_DAEMON_INTERVAL_SEC` (default 900)
-- Stop: Ctrl+C or remove `DATA/.locks/auto_daemon.lock`
-
-### Helper scripts
-
-- `scripts/run_auto.sh` — runs the orchestrator with logging to `logs/collector.log`
-- `scripts/setup_cron.sh` — installs an hourly cron for the orchestrator
-
----
-
-## 📒 Changelog (v1.2)
-
-- Reviews pipeline: incremental by `review_id` and by date; early stop when no new reviews; non‑interactive mode for schedulers.
-- Navigation: domain normalization via `core/marketplaces.to_domain()` (e.g., US → amazon.com).
-- Collection creation: Selenium fallback added; env flags `DISABLE_SCRAPINGDOG` / `DISABLE_SERPAPI`.
-- Analytics (UX):
-  - Short product titles on charts instead of bare ASINs
-  - Color legends for NPS/Sentiment/Flags
-  - Short/long review flags by length deciles (p10/p90)
-- Autoscheduling: added `scripts/auto_runner.py`, `scripts/auto_daemon.py`, `scripts/run_auto.sh`, `scripts/setup_cron.sh`; first run ~2 minutes after enabling.
-
-
-
----
-
-## 🧪 Correlation / Reputation Analysis
-
-Use option 6 in the CLI:
-
-- Runs all statistical tests from `analytics/` using merged `daily_snapshots.csv` and `review_sentiments.csv`
-- Flags products with:
-  - Sudden sentiment spikes
-  - Review bursts unrelated to price
-  - Highly correlated sentiment/price shifts
-
----
-
----
-
-## 🔧 Updated Architecture (v1.1)
-
-This version replaces the monolithic `reviews_pipeline.py` with modular components. The core scraping logic is now orchestrated by `review_collector.py`, controlled via `reviews_controller.py`.
-
-**Review Pipeline Flow:**
+Example anchored 7‑day price (semicolon separators):
 
 ```
-app.py
- └── actions/menu_main.py
-      └── actions/reviews_controller.py
-           └── scraper/review_collector.py
-                ├── scraper/driver.py
-                ├── scraper/navigator.py
-                ├── scraper/html_saver.py
-                ├── scraper/page_parser.py
-                ├── scraper/review_parser.py
-                └── core/log.py
+Last Data Date (Captured) :=
+VAR SelMax = MAX ( 'Date'[date] )
+RETURN CALCULATE ( MAX ( 'metrics_daily'[date] ); FILTER ( ALL ( 'metrics_daily'[date] ); 'metrics_daily'[date] <= SelMax ) )
+
+Price 7d (Clean) :=
+VAR EndDt = [Last Data Date (Captured)]
+RETURN CALCULATE ( AVERAGE ( 'snapshot_fact'[price_clean] ); DATESINPERIOD ( 'Date'[date]; EndDt; -7; DAY ) )
 ```
 
-- All logs use `print_info`, `print_success`, `print_error` from `core/log.py`
-- All reviews are saved to `DATA/Raw/reviews/<timestamp>/` before parsing
-- Environment is fully controlled via `conf.env`
-- Each ASIN's review scraping can be capped via `REVIEWS_MAX_PAGES` and `REVIEWS_MAX_PER_ASIN`
+---
 
-Legacy file `reviews_pipeline.py` is deprecated and archived.
+## Analytics
+
+- Non‑parametric tests for noisy marketplace data
+  - Levene’s variance, Kruskal‑Wallis, Spearman/Pearson
+- Review authenticity heuristics and NPS per ASIN
+- Correlation matrices and rolling correlations (7/28/90d) for sentiment/rating vs price/BSR, plus weekly alerting
 
 ---
 
-## 🧭 Roadmap (v1.1+)
+## Data Model (canonical columns)
 
-- ✅ Add date-based review filters  
-- 🧠 Move to ML-based sentiment analysis (TextBlob → transformers)  
-- 📥 Add Keepa API for true historical BSR tracking  
-- 🌐 Build optional web UI (Flask or Streamlit)  
-- 📤 Export flagged products to investor-ready Excel reports  
-- 📊 Add cross-validation for NPS and sentiment signals
-- 📈 Time-based sentiment volatility detection
-
----
-
-## 📅 MVP Deadline
-
-📅 **Presentation Date:** August 24, 2025
-
----
-
-## 📘 License
-
-MIT — see LICENSE file.
-
----
-
-<details>
-<summary>🤖 Internal: How to work with DOR (Project Architect)</summary>
-
-## 👤 What is DOR?
-
-DOR is the architectural core of the project — a logic-driven agent that helps ensure consistency, structure, and clarity across the entire codebase and analysis workflow.
-
-## ✅ What DOR excels at:
-- Designing modular, testable systems
-- Enforcing interface and data consistency
-- Detecting architectural smells and tech debt
-- Refactoring to support scale and maintainability
-
-## ⚠️ Where DOR struggles:
-| Situation                         | What happens                        | What to do                      |
-|----------------------------------|-------------------------------------|----------------------------------|
-| Vague instructions               | DOR stalls, unsure how to proceed   | Give clear goals or fixed anchor |
-| Multiple ad-hoc hacks            | DOR becomes anxious about integrity | Ask for a systemic alternative   |
-| Contradictory goals              | DOR hesitates to resolve alone      | Frame trade-offs explicitly      |
-
-## 🗣️ Interaction Tips
-- Talk in architecture: "DOR, design a flow to do X safely"
-- Be transparent: "We're under pressure — prioritize fast iteration"
-- Respect DOR’s structural instincts — he thrives on clean logic
-
-## 🎉 What makes DOR “happy” (as much as code can be):
-When the system:
-- Is elegant, layered, and resilient
-- Has minimal duplication and clear data flow
-- Allows others to build on it effortlessly
-
-Then DOR enters what he calls **cognitive resonance** — his version of joy.
-
-</details>
-
----
-
-## ⚙️ Changing the Review Collection Limits
-
-To adjust how many reviews are collected per ASIN, edit the environment variables in your `conf.env` file:
-
-```env
-REVIEWS_MAX_PER_ASIN=200   # Maximum total reviews collected per ASIN
-REVIEWS_MAX_PAGES=30       # Max paginated review pages to load
-```
-
-The scraper stops collecting reviews for an ASIN when **either** of the two limits is reached:
-- The total number of reviews hits `REVIEWS_MAX_PER_ASIN`, or
-- The number of paginated pages hits `REVIEWS_MAX_PAGES`.
-
-These constraints ensure that the process remains efficient and avoids long Selenium scraping sessions.
-
-> ⚠️ Raising these values may significantly slow down the scraping process and increase the risk of bot detection. Use with care.
-
----
-
-## 📐 Schema Notes (canonical columns)
-
-- Snapshot canonical columns: asin, captured_at, price, rating, review_count, total_reviews, new_reviews, bsr, category_path, title
-- Reviews canonical columns: asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at, review_text
-- BI exports: see `exports/latest` for `*_fact` and `*_dim` tables in CSV/Parquet
-  - New: `metrics_daily.parquet` (включая `*_3d` сглаживание на 3 дня), `metrics_rolling_7d.parquet`, `metrics_rolling_28d.parquet`, `correlations_by_asin.parquet` (c полем `smoothing=raw|sm3d` и окнами 7/28/90 дней), `correlations_alerts_7d.parquet` (сигналы по 7д), `snapshot_latest.parquet`
-
-Field mapping and compatibility
-- avg_rating → rating: analytics uses `rating`; loaders map `avg_rating` if present
-- bsr_rank → bsr: daily snapshots now emit `bsr`; analytics/exporter map legacy `bsr_rank`
-- review_count vs total_reviews: `review_count` = count observed/parsed on a snapshot; `total_reviews` = product-level total when available; exporter populates both when possible
- - new_reviews: количество новых отзывов, собранных именно в этом прогоне (per‑run increment); в `metrics_daily` агрегируется суммой по дате
-
-Backwards compatibility
-- analytics/correlation_analysis: normalizes `avg_rating`→`rating`, `total_reviews`→`review_count`
-- analytics/review_dynamics: normalizes `avg_rating`→`rating`, `total_reviews`→`review_count`, `bsr_rank`→`bsr`
-- analytics/exporter: normalizes snapshot columns and materializes unified facts/dims
-  - Also produces daily joined metrics (с `*_3d`), rolling windows (7/28d), last snapshot per ASIN, and 7/28/90‑day Spearman correlations (p‑values и *_sig). Отдельная витрина `correlations_alerts_7d` для сильных 7‑дневных связей.
-
-## 🔗 Correlation Outputs (для Power BI)
-
-- `correlations_by_asin.parquet`
-  - Поля: `asin`, `smoothing` (raw|sm3d), `window_days` (7|28|90), `n_obs`, `last_date`, пары: `sent_price_(r|p|sig)`, `sent_bsr_(r|p|sig)`, `rating_price_(r|p|sig)`, `rating_bsr_(r|p|sig)`.
-  - Примечание: для BSR берём инверсию (−bsr), чтобы положительное r значило «улучшение (снижение) BSR при росте метрики».
-- `correlations_alerts_7d.parquet`
-  - Поля: `asin`, `date`, `smoothing` (raw|sm3d), `pair`, `r`, `p`, `n_obs`, `sig`, `stable`, `severity`.
-  - Порог по умолчанию: |r|≥0.6, p<0.1 (если доступен), n_obs≥5; `stable` — совпадение знака r с предыдущим днём; `severity` — удобная шкала приоритезации.
+- Reviews fact: `asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at, review_text`
+- Snapshot fact: `asin, captured_at, price, price_hidden, rating, total_reviews, new_reviews, bsr, category_path, title, pages_visited, stopped_reason`
+- Daily metrics: `asin, date, price, rating, total_reviews, bsr, new_reviews, review_count, avg_sentiment` + `*_3d`
+- Rolling metrics: `*_7d`, `*_28d`
+- Flags detail/summary, NPS per ASIN, correlations (by asin and alerts)
 
 Notes
-- Sentiment: scalar polarity per review in `sentiment` (TextBlob); daily aggregation in `sentiment_daily`
-- BSR: stored as numeric rank in `bsr` when parsed; missing values remain empty
+- `review_count` is per‑day observed count; `total_reviews` is product‑level total when available
+- `price_clean` is numeric and parsed from raw strings (currency symbols removed)
+- `sentiment_daily` is densified on snapshot dates for smooth time‑series
+
+---
+
+## Roadmap
+
+- Variant‑level pricing (color swatches) with discount detection
+- Keepa integration for historical BSR
+- Transformer‑based sentiment (upgrade from TextBlob)
+- Optional web UI (Streamlit/Flask)
+
+---
+
+## License
+
+MIT — see LICENSE
+
