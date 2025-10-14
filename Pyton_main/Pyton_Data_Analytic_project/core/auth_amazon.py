@@ -102,7 +102,13 @@ def build_chrome_driver_with_profile() -> WebDriver:
     apply_chrome_profile_options(opts)
     _apply_visibility_options_to_options(opts)
     opts.add_argument("--disable-notifications")
-    opts.add_argument("--start-maximized")
+    # Start maximized only in normal mode to avoid focus stealing flashes
+    try:
+        mode = (ENV_VARS.get("BROWSER_VISIBILITY") or "normal").lower()
+    except Exception:
+        mode = "normal"
+    if mode == "normal":
+        opts.add_argument("--start-maximized")
     # Stability flags to avoid DevToolsActivePort and automation detection issues
     opts.add_argument("--no-first-run")
     opts.add_argument("--no-default-browser-check")
@@ -112,6 +118,8 @@ def build_chrome_driver_with_profile() -> WebDriver:
     opts.add_argument("--remote-allow-origins=*")
     # note: 'detach' experimental option removed (unsupported by current ChromeDriver)
     driver = webdriver.Chrome(options=opts)
+    # Apply post-launch minimize/offscreen handling
+    _apply_visibility_post_create(driver)
     return driver
 
 
@@ -127,7 +135,7 @@ def _apply_visibility_options_to_options(options) -> None:
       - normal    : default, visible window
     Always add flags to reduce background throttling.
     """
-    mode = ENV_VARS.get("BROWSER_VISIBILITY", "normal").lower()
+    mode = (ENV_VARS.get("BROWSER_VISIBILITY") or "offscreen").lower()
     if mode == "headless":
         options.add_argument("--headless=new")  # modern headless mode
     # Reduce throttling when window is backgrounded/minimized
@@ -143,7 +151,7 @@ def _apply_visibility_post_create(driver) -> None:
       - offscreen: move window outside visible area (macOS friendly)
       - normal   : do nothing
     """
-    mode = ENV_VARS.get("BROWSER_VISIBILITY", "normal").lower()
+    mode = (ENV_VARS.get("BROWSER_VISIBILITY") or "offscreen").lower()
     try:
         if mode == "minimize":
             driver.minimize_window()
@@ -301,7 +309,13 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
 
     _apply_visibility_options_to_options(options)
     options.add_argument("--disable-notifications")
-    options.add_argument("--start-maximized")
+    # Avoid start-maximized unless explicitly normal to reduce focus stealing
+    try:
+        mode = (ENV_VARS.get("BROWSER_VISIBILITY") or "normal").lower()
+    except Exception:
+        mode = "normal"
+    if mode == "normal":
+        options.add_argument("--start-maximized")
     # Stability flags to avoid DevToolsActivePort and automation detection issues
     options.add_argument("--no-first-run")
     options.add_argument("--no-default-browser-check")
@@ -338,6 +352,8 @@ def get_chrome_driver_with_profile(user_data_dir: str, profile_dir: str) -> WebD
         open_amazon_home(driver)
         resolve_amazon_interstitials(driver)
 
+    # Apply post-launch minimize/offscreen, if configured
+    _apply_visibility_post_create(driver)
     print("[🟢] Chrome started with user profile (single-session mode)")
     return driver
 

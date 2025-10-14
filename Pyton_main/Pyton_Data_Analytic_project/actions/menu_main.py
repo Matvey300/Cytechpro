@@ -54,6 +54,7 @@ def run_main_menu(session):
         print("4) Analyze and visualize reviews")
         print("5) List saved collections")
         print("6) Auto-collection settings")
+        print("7) Export data mart for Power BI")
         print("0) Exit")
 
         choice = input(" > Enter choice: ").strip()
@@ -135,6 +136,7 @@ def run_main_menu(session):
                 continue
 
             try:
+                from analytics.new_reviews_viz import plot_new_reviews
                 from analytics.reaction_pulse import run_sentiment_analysis
                 from analytics.review_authenticity import detect_suspicious_reviews
             except Exception:
@@ -144,12 +146,23 @@ def run_main_menu(session):
             try:
                 detect_suspicious_reviews(session)
                 run_sentiment_analysis(session.df_reviews)
+                # Plot daily new_reviews dynamics and overview
+                plot_new_reviews(session)
             except Exception as e:
                 print(f"[!] Analytics failed: {e}")
         elif choice == "5":
             session.list_available_collections()
         elif choice == "6":
             auto_menu(session)
+        elif choice == "7":
+            # Export curated tables for BI consumption (Parquet preferred, CSV fallback)
+            try:
+                from analytics.exporter import export_for_bi
+
+                out = export_for_bi(session)
+                print(f"[✓] Export completed. Connect Power BI to folder: {out}")
+            except Exception as e:
+                print(f"[!] Export failed: {e}")
         elif choice == "0":
             print("Exiting...")
             break

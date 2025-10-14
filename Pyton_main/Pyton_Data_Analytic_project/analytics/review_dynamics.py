@@ -23,6 +23,14 @@ def print_info(msg: str):
 
 def load_snapshot_df(session):
     df = session.df_snapshot.copy()
+    # Normalize column names to canonical set
+    if "rating" not in df.columns and "avg_rating" in df.columns:
+        df["rating"] = df["avg_rating"]
+    if "review_count" not in df.columns and "total_reviews" in df.columns:
+        df["review_count"] = df["total_reviews"]
+    if "bsr" not in df.columns and "bsr_rank" in df.columns:
+        df["bsr"] = df["bsr_rank"]
+
     if "captured_at" in df.columns:
         df["captured_at"] = pd.to_datetime(df["captured_at"], errors="coerce")
         df = df.dropna(subset=["captured_at"])
@@ -50,8 +58,13 @@ def plot_dynamics_for_asin(asin, df_snapshot, df_sentiments, output_dir):
         return
 
     plt.figure(figsize=(10, 6))
-    plt.plot(df_asin["date"], df_asin["avg_rating"], marker="o", label="Average Rating")
-    plt.plot(df_asin["date"], df_asin["review_count"], marker="s", label="Review Count")
+    # Use canonical 'rating'; fall back to 'avg_rating' if present
+    rating_series = df_asin["rating"] if "rating" in df_asin.columns else df_asin.get("avg_rating")
+    if rating_series is not None:
+        plt.plot(df_asin["date"], rating_series, marker="o", label="Rating")
+    # Review count (supports fallback already in load_snapshot_df)
+    if "review_count" in df_asin.columns:
+        plt.plot(df_asin["date"], df_asin["review_count"], marker="s", label="Review Count")
 
     if "price" in df_asin.columns:
         plt.plot(df_asin["date"], df_asin["price"], marker="^", label="Price")

@@ -1,0 +1,22 @@
+2025/10/13-23:01:53.199 4160ff5 Reusing MANIFEST /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2025/10/13-23:01:53.201 4160ff5 Recovering log #817
+2025/10/13-23:01:53.202 4160ff5 Level-0 table #819: started
+2025/10/13-23:01:53.209 4160ff5 Level-0 table #819: 75959 bytes OK
+2025/10/13-23:01:53.214 4160ff5 Delete type=0 #817
+2025/10/13-23:03:53.869 4160ff8 Level-0 table #822: started
+2025/10/13-23:03:53.872 4160ff8 Level-0 table #822: 67387 bytes OK
+2025/10/13-23:03:53.874 4160ff8 Delete type=0 #820
+2025/10/13-23:03:53.874 4160ff8 Compacting 4@0 + 2@1 files
+2025/10/13-23:03:53.898 4160ff8 Generated table #823@0: 64461 keys, 2113258 bytes
+2025/10/13-23:03:53.908 4160ff8 Generated table #824@0: 14272 keys, 489758 bytes
+2025/10/13-23:03:53.908 4160ff8 Compacted 4@0 + 2@1 files => 2603016 bytes
+2025/10/13-23:03:53.910 4160ff8 compacted to: files[ 0 2 1 0 0 0 0 ]
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #822
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #819
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #816
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #813
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #810
+2025/10/13-23:03:53.910 4160ff8 Delete type=2 #811
+2025/10/13-23:04:53.870 4160ff8 Level-0 table #826: started
+2025/10/13-23:04:53.871 4160ff8 Level-0 table #826: 65906 bytes OK
+2025/10/13-23:04:53.875 4160ff8 Delete type=0 #821

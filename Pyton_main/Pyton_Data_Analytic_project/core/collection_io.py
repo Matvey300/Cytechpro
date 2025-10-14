@@ -72,6 +72,9 @@ def save_snapshot(session, df_snapshot: pd.DataFrame, overwrite_today: bool = Tr
     If the file doesn't exist yet, it will be created. A `captured_at` timestamp column is ensured.
     Deduplication key: (asin, captured_at) when both columns exist; otherwise full-row dedup.
     """
+    # Parameter kept for backward compatibility; logic always overwrites per-day rows via dedup.
+    # Reference to appease linters since behavior is intentional.
+    _ = overwrite_today
     snap_date = _today_yyyymmdd()
     cur_dir = getattr(session, "collection_path", None)
     if cur_dir is None:
@@ -116,6 +119,8 @@ def save_reviews(
     Ensures a `captured_at` column; performs best-effort dedup.
     Primary dedup key preference order: review_id, else (asin, review_date, rating, title, body), else full-row.
     """
+    # Parameter retained for compatibility; current pipeline sets captured_at explicitly.
+    _ = use_snapshot_date_by_default
     # Ensures captured_at, deduplicates reviews and appends to reviews.csv
     cur_dir = getattr(session, "collection_path", None)
     if cur_dir is None:

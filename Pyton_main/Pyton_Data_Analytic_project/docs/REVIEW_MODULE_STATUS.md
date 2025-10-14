@@ -5,6 +5,17 @@ This document tracks the QA and architectural status of all key modules involved
 ---
 
 - 2025‑09‑15: Planned fix for critical CLI boot error — misaligned import of `print_info` from outdated `session_state` in `review_collector` and other modules; migration to `core.session` required — Dora
+- 2025‑09‑20: Updated `scraper/product_info.py` — broadened BSR regex variants and added `#SalesRank` fallback to restore snapshot BSR capture — Assistant
+- 2025‑09‑20: Updated `scraper/review_collector.py` — computes TextBlob sentiment per review before persistence to `reviews.csv`; logs failures — Assistant
+- 2025‑10‑06: Normalized analytics schema: use `rating` (was `avg_rating`) and `bsr` (was `bsr_rank` in daily); added compatibility bridges in `analytics/correlation_analysis.py`, `analytics/review_dynamics.py`, and `analytics/exporter.py`; ensured exporter maps `review_count/total_reviews` consistently — Assistant
+- 2025‑10‑06: Added BI-ready dynamics and correlations in `analytics/exporter.py`: outputs `metrics_daily`, `metrics_rolling_7d`, `correlations_by_asin` (90‑day Spearman for sentiment/rating vs price/BSR) — Assistant
+- 2025‑10‑06: Extended exporter with 3‑day smoothing and alerts: `metrics_daily` now includes `*_3d`; `correlations_by_asin` adds `smoothing=raw|sm3d` and windows 7/28/90; added `correlations_alerts_7d` (thresholds: |r|≥0.6, p<0.1, n_obs≥5, stability check) — Assistant
+- 2025‑10‑13: Exporter now forcibly reloads session data from disk to prevent stale exports; added densification of `sentiment_daily` by `(asin,date)` grid from snapshots; coerced numerics for `snapshot_fact` and `metrics_daily` (incl. `new_reviews`) — Assistant
+- 2025‑10‑13: `actions/reviews_controller` refreshes session in‑memory frames after collection to align with on‑disk state (prevents missing rows in `reviews_fact` and lagging flags) — Assistant
+- 2025‑10‑13: Improved price capture: `scraper/product_info.py` scopes selectors to product header; `scraper/review_collector.py` now enriches from product DP page if price missing or shows “Click to see price” — Assistant
+- 2025‑10‑13: Added broader DP price selectors and explicit Selenium waits for price blocks; reduced false positives from carousels; fallback limited to DP price containers — Assistant
+- 2025‑10‑13: Strengthened DP review_count extraction: prefer `#acrCustomerReviewText` / `acr-total-review-count` selectors; fallback to robust "global ratings" regex over full page; avoid tiny spurious matches — Assistant
+- 2025‑10‑13: Review collector now logs into Amazon (if creds set) before DP enrich; also saves DP HTML/PNG to `Raw/snapshots/<run_ts>/<asin>_dp.*` for audit and parser tuning — Assistant
 ## ✅ Legend
 
 | Status | Meaning                          |
@@ -22,9 +33,9 @@ This document tracks the QA and architectural status of all key modules involved
 |----------------------------------|--------|--------------------------------------------------|-------|
 | `analytics/review_authenticity` | 🟢     | 2025‑09‑15                                       | Dora  |
 | `analytics/reaction_pulse`      | 🟢     | 2025‑09‑15                                       | Dora  |
-| `analytics/correlation_analysis`| 🟢     | 2025‑09‑15 (finalized, doc cleanup, Dora owner) | Matvey |
-| `analytics/daily`               | 🟢     | 2025‑09‑15 (snapshot path injectable, print_info used, Dora reviewed) | Matvey |
-| `analytics/review_dynamics`     | 🟢     | 2025‑09‑15                                       | Dora  |
+| `analytics/correlation_analysis`| 🟢     | 2025‑10‑06 (schema normalization rating/total_reviews) | Matvey |
+| `analytics/daily`               | 🟢     | 2025‑10‑06 (BSR key unified: `bsr` instead of `bsr_rank`) | Matvey |
+| `analytics/review_dynamics`     | 🟢     | 2025‑10‑06 (fallbacks: avg_rating→rating, total_reviews→review_count, bsr_rank→bsr) | Dora  |
 | `core/collection_io`            | 🟢     | 2025‑09‑17 (print_info validated, structure reviewed, CLI-confirmed) | Dora |
 | `core/session_state`            | 🟢     | 2025‑09‑15 (print_info relocated from analytics) | Dora  |
 | `core/env_check`                | 🟢     | 2025‑09‑17 (env var MAX_REVIEWS_PER_ASIN fallback added, CLI warning logged)                 | Dora  |
@@ -32,10 +43,10 @@ This document tracks the QA and architectural status of all key modules involved
 | `actions/reviews_controller`   | 🟢     | 2025‑09‑17 (import of get_reviews_max_per_asin() applied, print_info validated, CLI OK) | Dora  |
 | `scraper/page_parser`           | 🟢     | 2025‑09‑17 (finalized, full structural review, CLI-ready, Dora) | Dora  |
 | `scraper/html_saver`            | 🟢     | 2025‑09‑17 (revalidated after import error, function `save_review_pages` confirmed, CLI-tested) | Dora  |
-| `scraper/product_info`          | 🟢     | 2025‑09‑17                                     | Matvey |
+| `scraper/product_info`          | 🟢     | 2025‑09‑20 (BSR patterns expanded; SalesRank fallback) | Matvey |
 | `scraper/review_parser`         | 🟢     | 2025‑09‑16 (None check added, print_info used, finalized, CLI-verified) | Matvey |
 | `scraper/review_parser`         | 🟢     | 2025‑09‑18 (selector widened: [data-hook='review'] li/div + cmps-review fallback) | Matvey |
-| `scraper/review_collector.py`  | 🟢     | 2025‑09‑18 (controller-aligned interface; pagination + persistence fixed) | Matvey |
+| `scraper/review_collector.py`  | 🟢     | 2025‑09‑20 (sentiment persisted to reviews; TextBlob integration) | Matvey |
 | `scraper/navigator`             | 🟢     | 2025‑09‑17 (function `open_reviews_page` restored, interface normalized, CLI-tested) | Matvey |
 | `core/marketplaces`             | 🟢     | 2025‑09‑19 (added to_domain() normalizer to map US/com/amazon.com → full domain) | Kot |
 | `scraper/driver`                | 🟢     | 2025‑09‑17 (get_driver renamed to init_driver)  | Matvey |

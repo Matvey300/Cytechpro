@@ -135,7 +135,6 @@ def analyze_review_authenticity(session):
     print(f"\n[🔍] Authenticity analysis for collection: {collection_id}")
 
     print(f"[DEBUG] ASINs in dataset: {df['asin'].nunique()}")
-    print(f"[DEBUG] Length thresholds: short<= {q10:.0f} | long>= {q90:.0f} chars")
 
     # Step 1: Length-based heuristics (deciles on non-empty reviews)
     df["text_length"] = df["review_text"].astype(str).str.strip().str.len()
@@ -149,6 +148,7 @@ def analyze_review_authenticity(session):
             q90 = max(100, float(nonzero.max()))
     else:
         q10, q90 = 20, 1000
+    print(f"[DEBUG] Length thresholds: short<= {q10:.0f} | long>= {q90:.0f} chars")
     too_short = df["text_length"] <= q10
     too_long = df["text_length"] >= q90
 

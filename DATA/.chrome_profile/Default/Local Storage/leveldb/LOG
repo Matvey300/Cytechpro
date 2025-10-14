@@ -1,0 +1,6 @@
+2025/10/11-16:33:46.296 14e38f9 Reusing MANIFEST /Users/Matvej1/CyberPro/DATA/.chrome_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2025/10/11-16:33:46.304 14e38f9 Recovering log #7
+2025/10/11-16:33:46.304 14e38f9 Reusing old log /Users/Matvej1/CyberPro/DATA/.chrome_profile/Default/Local Storage/leveldb/000007.log 
+2025/10/14-00:50:38.985 14e38fc Level-0 table #11: started
+2025/10/14-00:50:39.024 14e38fc Level-0 table #11: 19030 bytes OK
+2025/10/14-00:50:39.029 14e38fc Delete type=0 #7

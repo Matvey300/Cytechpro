@@ -18,6 +18,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from core.auth_amazon import get_chrome_driver_with_profile
 from core.env_check import ENV_VARS, get_chrome_profile_env, get_env_or_raise
+from core.marketplaces import to_domain
 from core.session_state import print_info
 
 # analytics/daily.py
@@ -60,17 +61,17 @@ def extract_amazon_metrics(html: str) -> dict:
     price = parse_number(price_text.replace("$", "") if price_text else None)
 
     # BSR can look like "#3,214 in Electronics (See Top 100)"
-    bsr_rank = None
+    bsr = None
     if bsr_text:
         match = re.search(r"#([\d,]+)", bsr_text)
         if match:
-            bsr_rank = parse_number(match.group(1))
+            bsr = parse_number(match.group(1))
 
     return {
         "rating": rating,
         "review_count": review_count,
         "price": price,
-        "bsr_rank": bsr_rank,
+        "bsr": bsr,
     }
 
 
@@ -100,15 +101,29 @@ def run_daily_screening(session, base_path: Optional[Path] = None):
     profile_dir = get_chrome_profile_env()
     driver = get_chrome_driver_with_profile(user_data_dir, profile_dir)
 
+    # Snapshot-specific visibility override to avoid focus stealing
+    # Use SNAPSHOT_VISIBILITY env if set; default to 'offscreen' for daily runs
+    snap_mode = (ENV_VARS.get("SNAPSHOT_VISIBILITY") or "offscreen").lower()
+    try:
+        if snap_mode == "minimize":
+            driver.minimize_window()
+        elif snap_mode == "offscreen":
+            driver.set_window_position(-2000, 0)
+            driver.set_window_size(1280, 800)
+        # headless requires pre-launch flag; warn but continue
+    except Exception:
+        pass
+
     snapshot_rows = []
     captured_at = datetime.utcnow().isoformat(timespec="seconds")
     raw_dir = out_dir / "Raw" / "snapshots" / captured_at.replace(":", "")
     raw_dir.mkdir(parents=True, exist_ok=True)
 
-    domain = ENV_VARS.get("DEFAULT_MARKETPLACE", "com")
+    # Normalize marketplace to a full domain (e.g., 'US' → 'amazon.com', 'com' → 'amazon.com')
+    domain = to_domain(ENV_VARS.get("DEFAULT_MARKETPLACE", "com"))
 
     for asin in df_asin["asin"]:
-        url = f"https://www.amazon.{domain}/dp/{asin}"
+        url = f"https://{domain}/dp/{asin}"
         try:
             driver.get(url)
             time.sleep(3)  # allow product page to render

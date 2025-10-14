@@ -36,8 +36,15 @@ def compute_correlation_matrix(daily_snapshots: pd.DataFrame, output_dir: str):
             daily_snapshots["captured_at"], errors="coerce"
         )
 
+    # Normalize expected column names for robustness
+    # Align to canonical names used across snapshot/export: rating, review_count, price, bsr
+    if "rating" not in daily_snapshots.columns and "avg_rating" in daily_snapshots.columns:
+        daily_snapshots["rating"] = daily_snapshots["avg_rating"]
+    if "review_count" not in daily_snapshots.columns and "total_reviews" in daily_snapshots.columns:
+        daily_snapshots["review_count"] = daily_snapshots["total_reviews"]
+
     # Filter only numeric columns relevant to analysis
-    columns_to_check = ["avg_rating", "review_count", "price", "bsr"]
+    columns_to_check = ["rating", "review_count", "price", "bsr"]
 
     # Aggregate by day (mean values per asin/day or global average per day)
     if "captured_at" in daily_snapshots.columns:

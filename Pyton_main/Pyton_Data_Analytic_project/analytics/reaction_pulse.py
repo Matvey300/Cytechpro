@@ -129,11 +129,20 @@ def run_sentiment_analysis(df_reviews):
         return df_reviews
 
     print_info("[DEBUG] Количество отзывов по ASIN (до анализа):")
-    print_info(df_reviews["asin"].value_counts())
+    try:
+        print_info(str(df_reviews["asin"].value_counts()))
+    except Exception:
+        pass
 
     df_reviews["sentiment"] = df_reviews["review_text"].apply(compute_sentiment)
     print_info(f"[+] Sentiment scores computed for {len(df_reviews)} reviews.")
-    print_info("[DEBUG] Пропуски по sentiment:", df_reviews["sentiment"].isna().sum())
+    try:
+        print_info(f"[DEBUG] Пропуски по sentiment: {int(df_reviews['sentiment'].isna().sum())}")
+    except Exception:
+        pass
     print_info("[DEBUG] Примеры значений sentiment:")
-    print_info(df_reviews["sentiment"].describe())
+    try:
+        print_info(str(df_reviews["sentiment"].describe()))
+    except Exception:
+        pass
     return df_reviews

@@ -47,6 +47,15 @@ def run_review_pipeline(session, max_reviews_per_asin=None, *, interactive: bool
         interactive=interactive,
     )
 
+    # Refresh in-memory session frames to avoid stale exports
+    try:
+        if df_reviews is not None and len(getattr(df_reviews, "columns", [])):
+            session.df_reviews = df_reviews
+        # Ensure snapshot is reloaded from disk (save_snapshot writes to file)
+        session.load_reviews_and_snapshot()
+    except Exception:
+        pass
+
     print_info(f"[✓] Collected {len(df_reviews)} reviews.")
     print_success(f"[LOG] Reviews collected and saved for {len(df_reviews)} entries")
 

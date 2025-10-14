@@ -1,0 +1,61 @@
+2025/10/13-23:01:53.335 4160ff5 Reusing MANIFEST /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/MANIFEST-000001
+2025/10/13-23:01:53.335 4160ff5 Recovering log #2713
+2025/10/13-23:01:53.336 4160ff5 Level-0 table #2716: started
+2025/10/13-23:01:53.338 4160ff5 Level-0 table #2716: 30060 bytes OK
+2025/10/13-23:01:53.338 4160ff5 Recovering log #2715
+2025/10/13-23:01:53.338 4160ff5 Reusing old log /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/002715.log 
+2025/10/13-23:01:53.339 4160ff5 Delete type=0 #2713
+2025/10/13-23:01:53.341 4160ff8 Compacting 4@0 + 1@1 files
+2025/10/13-23:01:53.363 4160ff8 Generated table #2717@0: 46679 keys, 1068880 bytes
+2025/10/13-23:01:53.363 4160ff8 Compacted 4@0 + 1@1 files => 1068880 bytes
+2025/10/13-23:01:53.363 4160ff8 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/10/13-23:01:53.364 4160ff8 Delete type=2 #2714
+2025/10/13-23:01:53.364 4160ff8 Delete type=2 #2716
+2025/10/13-23:01:53.364 4160ff8 Delete type=2 #2712
+2025/10/13-23:01:53.364 4160ff8 Delete type=2 #2710
+2025/10/13-23:01:53.364 4160ff8 Delete type=2 #2708
+2025/10/13-23:02:07.276 4160ff8 Level-0 table #2719: started
+2025/10/13-23:02:07.291 4160ff8 Level-0 table #2719: 21840 bytes OK
+2025/10/13-23:02:07.295 4160ff8 Delete type=0 #2715
+2025/10/13-23:02:56.042 4160ff8 Level-0 table #2721: started
+2025/10/13-23:02:56.047 4160ff8 Level-0 table #2721: 26544 bytes OK
+2025/10/13-23:02:56.049 4160ff8 Delete type=0 #2718
+2025/10/13-23:03:44.896 4160ff8 Level-0 table #2723: started
+2025/10/13-23:03:44.912 4160ff8 Level-0 table #2723: 27032 bytes OK
+2025/10/13-23:03:44.917 4160ff8 Delete type=0 #2720
+2025/10/13-23:03:55.807 4160ff8 Level-0 table #2725: started
+2025/10/13-23:03:55.814 4160ff8 Level-0 table #2725: 28583 bytes OK
+2025/10/13-23:03:55.816 4160ff8 Delete type=0 #2722
+2025/10/13-23:03:55.826 4160ff8 Compacting 4@0 + 1@1 files
+2025/10/13-23:03:55.853 4160ff8 Generated table #2726@0: 46798 keys, 879147 bytes
+2025/10/13-23:03:55.853 4160ff8 Compacted 4@0 + 1@1 files => 879147 bytes
+2025/10/13-23:03:55.854 4160ff8 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/10/13-23:03:55.855 4160ff8 Delete type=2 #2717
+2025/10/13-23:03:55.855 4160ff8 Delete type=2 #2721
+2025/10/13-23:03:55.855 4160ff8 Delete type=2 #2723
+2025/10/13-23:03:55.855 4160ff8 Delete type=2 #2725
+2025/10/13-23:03:55.855 4160ff8 Delete type=2 #2719
+2025/10/13-23:04:07.218 4160ff8 Level-0 table #2728: started
+2025/10/13-23:04:07.227 4160ff8 Level-0 table #2728: 30195 bytes OK
+2025/10/13-23:04:07.236 4160ff8 Delete type=0 #2724
+2025/10/13-23:04:18.240 4160ff8 Level-0 table #2730: started
+2025/10/13-23:04:18.246 4160ff8 Level-0 table #2730: 29146 bytes OK
+2025/10/13-23:04:18.253 4160ff8 Delete type=0 #2727
+2025/10/13-23:04:29.072 4160ff8 Level-0 table #2732: started
+2025/10/13-23:04:29.082 4160ff8 Level-0 table #2732: 29116 bytes OK
+2025/10/13-23:04:29.094 4160ff8 Delete type=0 #2729
+2025/10/13-23:04:40.175 4160ff8 Level-0 table #2734: started
+2025/10/13-23:04:40.181 4160ff8 Level-0 table #2734: 28917 bytes OK
+2025/10/13-23:04:40.184 4160ff8 Delete type=0 #2731
+2025/10/13-23:04:40.191 4160ff8 Compacting 4@0 + 1@1 files
+2025/10/13-23:04:40.217 4160ff8 Generated table #2735@0: 46918 keys, 993070 bytes
+2025/10/13-23:04:40.217 4160ff8 Compacted 4@0 + 1@1 files => 993070 bytes
+2025/10/13-23:04:40.219 4160ff8 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/10/13-23:04:40.221 4160ff8 Delete type=2 #2728
+2025/10/13-23:04:40.221 4160ff8 Delete type=2 #2734
+2025/10/13-23:04:40.221 4160ff8 Delete type=2 #2726
+2025/10/13-23:04:40.221 4160ff8 Delete type=2 #2732
+2025/10/13-23:04:40.221 4160ff8 Delete type=2 #2730
+2025/10/13-23:04:50.857 4160ff8 Level-0 table #2737: started
+2025/10/13-23:04:50.864 4160ff8 Level-0 table #2737: 29939 bytes OK
+2025/10/13-23:04:50.867 4160ff8 Delete type=0 #2733

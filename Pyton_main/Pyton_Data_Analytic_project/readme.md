@@ -83,6 +83,12 @@ LOCAL_CHROME_PROFILE_DIR=DATA/.chrome_profile
 # Review collection limits
 REVIEWS_MAX_PER_ASIN=200   # total reviews per ASIN
 REVIEWS_MAX_PAGES=30       # safety cap on paginated pages
+
+# Window behavior (optional)
+# Global: normal|minimize|offscreen|headless
+BROWSER_VISIBILITY=minimize
+# Daily snapshot override (prevents focus stealing during snapshot runs)
+SNAPSHOT_VISIBILITY=offscreen
 ```
 
 Validate setup:
@@ -155,6 +161,21 @@ python app.py
 
 6) Collect reviews & snapshot (menu 3) and run analytics (menu 4).
 
+### Export for Power BI
+
+- Use menu 7) Export data mart for Power BI
+- Output folder: `DATA/<collection>/exports/latest/`
+- Tables written (Parquet preferred, CSV fallback):
+  - `asins_dim` (asin, title, category_path, country)
+  - `reviews_fact` (asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at)
+  - `snapshot_fact` (asin, captured_at, price, rating, total_reviews, bsr, category_path, title)
+  - `sentiment_daily` (asin, date, review_count, avg_sentiment, pos_cnt, neut_cnt, neg_cnt)
+  - `nps_by_asin` (asin, n_reviews, promoter_pct, passive_pct, detractor_pct, nps)
+  - `flags_detail` (asin, review_id, review_date, text_length, auth_flag)
+  - `flags_summary_by_asin` (one row per asin with counts by flag)
+- In Power BI: Get Data → Folder → select `exports/latest` → Combine & Transform (or import individual files)
+- For large datasets (100k+ reviews) install Parquet support: `pip install pyarrow`
+
 Menu options:
 
 1. Load or create ASIN collection  
@@ -163,6 +184,7 @@ Menu options:
 4. Analyze and visualize reviews  
 5. List saved collections  
 6. Auto-collection settings (enable/disable/list)  
+7. Export data mart for Power BI  
 0. Exit
 
 ---
@@ -209,7 +231,7 @@ Inside `DATA/<YYYYMMDD>_<cid>_created<YYYYMMDD>/`:
 | File/Folder                  | Purpose                                   |
 |------------------------------|-------------------------------------------|
 | `collection.csv`             | Selected ASINs with metadata              |
-| `reviews.csv`                | All collected reviews (append-only, dedup)|
+| `reviews.csv`                | All collected reviews (append-only, dedup, sentiment)|
 | `snapshot.csv`               | Snapshots of price/rating/review_count    |
 | `Raw/reviews/<run_ts>/*`     | Saved raw review HTML                     |
 
@@ -221,7 +243,7 @@ Inside `DATA/<YYYYMMDD>_<cid>_created<YYYYMMDD>/`:
 - Navigates to the product’s **Reviews** tab and follows **Next** pagination
 - Waits for review cards (`[data-hook="review"]`) to render before saving
 - **Saves HTML locally first** (diagnostics include `*_nocards.html` if cards not detected yet)
-- Parses HTML and appends structured rows to `reviews.csv`
+- Parses HTML, computes TextBlob sentiment, and appends structured rows to `reviews.csv`
 - Incremental on re-runs:
   - Skips already collected `review_id`
   - Stops early if a page has 0 new reviews
@@ -431,3 +453,37 @@ The scraper stops collecting reviews for an ASIN when **either** of the two limi
 These constraints ensure that the process remains efficient and avoids long Selenium scraping sessions.
 
 > ⚠️ Raising these values may significantly slow down the scraping process and increase the risk of bot detection. Use with care.
+
+---
+
+## 📐 Schema Notes (canonical columns)
+
+- Snapshot canonical columns: asin, captured_at, price, rating, review_count, total_reviews, new_reviews, bsr, category_path, title
+- Reviews canonical columns: asin, review_id, review_date, rating, sentiment, review_helpful_votes, captured_at, review_text
+- BI exports: see `exports/latest` for `*_fact` and `*_dim` tables in CSV/Parquet
+  - New: `metrics_daily.parquet` (включая `*_3d` сглаживание на 3 дня), `metrics_rolling_7d.parquet`, `metrics_rolling_28d.parquet`, `correlations_by_asin.parquet` (c полем `smoothing=raw|sm3d` и окнами 7/28/90 дней), `correlations_alerts_7d.parquet` (сигналы по 7д), `snapshot_latest.parquet`
+
+Field mapping and compatibility
+- avg_rating → rating: analytics uses `rating`; loaders map `avg_rating` if present
+- bsr_rank → bsr: daily snapshots now emit `bsr`; analytics/exporter map legacy `bsr_rank`
+- review_count vs total_reviews: `review_count` = count observed/parsed on a snapshot; `total_reviews` = product-level total when available; exporter populates both when possible
+ - new_reviews: количество новых отзывов, собранных именно в этом прогоне (per‑run increment); в `metrics_daily` агрегируется суммой по дате
+
+Backwards compatibility
+- analytics/correlation_analysis: normalizes `avg_rating`→`rating`, `total_reviews`→`review_count`
+- analytics/review_dynamics: normalizes `avg_rating`→`rating`, `total_reviews`→`review_count`, `bsr_rank`→`bsr`
+- analytics/exporter: normalizes snapshot columns and materializes unified facts/dims
+  - Also produces daily joined metrics (с `*_3d`), rolling windows (7/28d), last snapshot per ASIN, and 7/28/90‑day Spearman correlations (p‑values и *_sig). Отдельная витрина `correlations_alerts_7d` для сильных 7‑дневных связей.
+
+## 🔗 Correlation Outputs (для Power BI)
+
+- `correlations_by_asin.parquet`
+  - Поля: `asin`, `smoothing` (raw|sm3d), `window_days` (7|28|90), `n_obs`, `last_date`, пары: `sent_price_(r|p|sig)`, `sent_bsr_(r|p|sig)`, `rating_price_(r|p|sig)`, `rating_bsr_(r|p|sig)`.
+  - Примечание: для BSR берём инверсию (−bsr), чтобы положительное r значило «улучшение (снижение) BSR при росте метрики».
+- `correlations_alerts_7d.parquet`
+  - Поля: `asin`, `date`, `smoothing` (raw|sm3d), `pair`, `r`, `p`, `n_obs`, `sig`, `stable`, `severity`.
+  - Порог по умолчанию: |r|≥0.6, p<0.1 (если доступен), n_obs≥5; `stable` — совпадение знака r с предыдущим днём; `severity` — удобная шкала приоритезации.
+
+Notes
+- Sentiment: scalar polarity per review in `sentiment` (TextBlob); daily aggregation in `sentiment_daily`
+- BSR: stored as numeric rank in `bsr` when parsed; missing values remain empty

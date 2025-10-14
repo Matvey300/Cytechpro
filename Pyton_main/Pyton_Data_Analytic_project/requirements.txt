@@ -6,3 +6,8 @@ lxml
 openpyxl
 pytest
 ruff
+textblob
+matplotlib
+seaborn
+pyarrow
+scipy

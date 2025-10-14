@@ -71,23 +71,50 @@ def _process_reviews_page(
 from bs4 import BeautifulSoup
 
 
-def extract_total_reviews(soup: BeautifulSoup) -> int:
+def extract_total_reviews(soup: BeautifulSoup) -> int | None:
     """
-    Extract the total number of reviews from the product page soup.
+    Best-effort extraction of total reviews/ratings from a product's review context.
 
-    Args:
-        soup (BeautifulSoup): Parsed HTML of the product page.
-
-    Returns:
-        int: Total number of reviews found, or 0 if not found.
+    Supports both product page and reviews page structures.
+    Returns an integer count if detected; otherwise None.
     """
+    # 1) Reviews page: data-hook="total-review-count" ("10,132 global ratings")
     try:
-        review_text = soup.select_one("#acrCustomerReviewText")
-        if review_text:
-            text = review_text.get_text(strip=True)
-            # Example text: "1,234 ratings"
+        el = soup.select_one("[data-hook='total-review-count']")
+        if el:
+            text = el.get_text(" ", strip=True)
             digits = "".join(c for c in text if c.isdigit() or c == ",")
-            return int(digits.replace(",", ""))
+            if digits:
+                return int(digits.replace(",", ""))
     except Exception:
         pass
-    return 0
+
+    # 2) Product page: #acrCustomerReviewText ("1,234 ratings")
+    try:
+        el = soup.select_one("#acrCustomerReviewText")
+        if el:
+            text = el.get_text(" ", strip=True)
+            digits = "".join(c for c in text if c.isdigit() or c == ",")
+            if digits:
+                return int(digits.replace(",", ""))
+    except Exception:
+        pass
+
+    # 3) Reviews page: filter info section: "Showing 1-10 of 2,642 reviews"
+    try:
+        el = soup.select_one("[data-hook='cr-filter-info-review-rating-count']")
+        if el:
+            text = el.get_text(" ", strip=True)
+        else:
+            cont = soup.select_one("#filter-info-section")
+            text = cont.get_text(" ", strip=True) if cont else ""
+        if text:
+            import re
+
+            m = re.search(r"of\s+([\d,]+)\s+(reviews|ratings)", text, flags=re.IGNORECASE)
+            if m:
+                return int(m.group(1).replace(",", ""))
+    except Exception:
+        pass
+
+    return None

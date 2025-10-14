@@ -11,6 +11,7 @@ import requests
 from core.collection_io import collection_csv, save_collection
 from core.env_check import ENV_VARS, get_env, get_env_bool
 from core.log import print_error, print_info
+from core.marketplaces import to_domain
 from scraper.driver import init_driver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -180,7 +181,9 @@ def _selenium_fetch_asins(query: str, domain: str, pages: int = 2, limit: int = 
     out: list[dict] = []
     seen: set[str] = set()
     try:
-        url = f"https://www.amazon.{domain}/s?k={quote_plus(query)}"
+        # 'domain' may be a TLD (com) or already a full domain (amazon.com)
+        dom_full = to_domain(domain)
+        url = f"https://{dom_full}/s?k={quote_plus(query)}"
         print_info(f"[asin-fb] opening {url}")
         driver.get(url)
         WebDriverWait(driver, 12).until(EC.presence_of_element_located((By.ID, "search")))
@@ -242,7 +245,7 @@ def fetch_asins_in_category(
     api_key = None if disable_sd else get_env("SCRAPINGDOG_API_KEY")
     if not api_key:
         print("[!] SCRAPINGDOG_API_KEY not set; using SerpAPI fallback")
-        domain_full = f"amazon.{domain}"
+        domain_full = to_domain(domain)
         base_query = f"{keyword} {category}".strip()
         rows = (
             []
@@ -414,7 +417,9 @@ def run_asin_search(session):
     domain = get_env("DEFAULT_MARKETPLACE", "com")
     max_pages = int(get_env("ASIN_SEARCH_MAX_PAGES", "10"))
     max_per_category = int(get_env("ASIN_SEARCH_MAX_PER_CATEGORY", "200"))
-    print(f"[CFG] domain={domain}, max_pages={max_pages}, max_per_category={max_per_category}")
+    print(
+        f"[CFG] domain={domain} (normalized {to_domain(domain)}), max_pages={max_pages}, max_per_category={max_per_category}"
+    )
 
     all_asins: list[dict] = []
     seen_global: set[str] = set()

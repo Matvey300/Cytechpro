@@ -22,7 +22,7 @@ def start_amazon_browser_session(profile: str, user_data_dir: str):
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-    visibility = (ENV_VARS.get("BROWSER_VISIBILITY") or "normal").lower()
+    visibility = (ENV_VARS.get("BROWSER_VISIBILITY") or "offscreen").lower()
     if visibility in ("headless", "offscreen"):
         chrome_options.add_argument("--headless=new")
 
