@@ -1,4 +1,13 @@
-# core/env_check.py
+"""
+# === Module Header ===
+# 📁 Module: core/env_check.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Environment loading, validation, and helpers for configuration.
+# =====================
+"""
+
 from __future__ import annotations
 
 import os
@@ -137,6 +146,18 @@ def get_env(key: str, default: str | None = None) -> str | None:
     return val
 
 
+def get_env_or_raise(key: str) -> str:
+    """Return env var value or raise a clear error.
+
+    Used in non-interactive flows (e.g., cron) where missing configuration
+    should abort the specific step cleanly.
+    """
+    val = os.getenv(key)
+    if not val:
+        raise RuntimeError(f"Environment variable '{key}' is required but missing")
+    return val
+
+
 def get_env_bool(key: str, default: bool = False) -> bool:
     """Return boolean env (supports 1/0, true/false/yes/no)."""
     val = os.getenv(key)
@@ -158,6 +179,7 @@ __all__ = [
     "ENV_VARS",
     "get_reviews_max_per_asin",
     "get_env",
+    "get_env_or_raise",
     "get_env_bool",
     "print_info",
     "print_error",

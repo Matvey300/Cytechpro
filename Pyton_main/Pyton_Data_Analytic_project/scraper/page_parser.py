@@ -1,7 +1,7 @@
 # === Module Status ===
 # 📁 Module: scraper/page_parser
 # 📅 Last Reviewed: 2025-09-15
-# 🔧 Status: 🟠 Under Refactor
+# 🔧 Status: 🟢 Stable
 # 👤 Owner: Matvey
 # 📝 Notes:
 # - Replace print with print_info
@@ -118,3 +118,14 @@ def extract_total_reviews(soup: BeautifulSoup) -> int | None:
         pass
 
     return None
+
+
+"""
+# === Module Header ===
+# 📁 Module: scraper/page_parser.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: MatveyB
+# 📝 Summary: Parsing of product pages and common selectors.
+# =====================
+"""

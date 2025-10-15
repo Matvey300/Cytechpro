@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: core/session_state.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: In-memory session, loading of collections, reviews, and snapshots.
+# =====================
+"""
+
 import pandas as pd
 from core.collection_io import collection_csv
 from core.log import print_error, print_info, print_success

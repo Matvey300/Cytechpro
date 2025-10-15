@@ -115,3 +115,14 @@ def plot_review_dynamics(session):
 
     for asin in asin_list:
         plot_dynamics_for_asin(asin, df_snapshot, df_sentiments, output_dir)
+
+
+"""
+# === Module Header ===
+# 📁 Module: analytics/review_dynamics.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: MatveyB
+# 📝 Summary: Visualizations and metrics for review dynamics over time.
+# =====================
+"""

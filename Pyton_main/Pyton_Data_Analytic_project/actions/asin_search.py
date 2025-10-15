@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: actions/asin_search.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: ASIN search flow (keywords → categories → ASINs) and persistence.
+# =====================
+"""
+
 import json
 import re
 import time

@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: core/collection_io.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: IO helpers for collections: save/load snapshots, reviews, and folders.
+# =====================
+"""
+
 import re
 from pathlib import Path
 

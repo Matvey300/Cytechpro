@@ -16,3 +16,12 @@ try:
 except Exception as e:
     print(f"[ERROR] Failed to load category tree: {e}")
     CATEGORY_TREE = {}
+"""
+# === Module Header ===
+# 📁 Module: core/category_tree.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Utilities to handle category paths and hierarchy operations.
+# =====================
+"""

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""
+# === Module Header ===
+# 📁 Module: scripts/auto_runner.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Cron-friendly orchestrator: runs collection, screening, and export.
+# =====================
+"""
 import sys
 from datetime import datetime
 from pathlib import Path

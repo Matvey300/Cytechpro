@@ -96,3 +96,14 @@ def search_amazon_categories(keyword: str, marketplace: str) -> List[str]:
         print(f"[WARN] No matching categories found for keyword '{keyword}' on {marketplace}")
 
     return out
+
+
+"""
+# === Module Header ===
+# 📁 Module: api/serpapi.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Thin wrapper for SerpAPI requests and responses.
+# =====================
+"""

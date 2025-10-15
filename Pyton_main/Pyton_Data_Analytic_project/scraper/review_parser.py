@@ -1,3 +1,14 @@
+"""
+# === Module Header ===
+# 📁 Module: scraper/review_parser.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Extracts reviews from review pages (legacy and compact templates).
+# =====================
+"""
+
+
 def extract_reviews_from_html(soup, asin: str, marketplace: str, category_path: str) -> list[dict]:
     """Extract all reviews from a BeautifulSoup HTML page.
 

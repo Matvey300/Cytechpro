@@ -1,51 +1,15 @@
-2025/10/14-10:20:30.688 425cf6b Reusing MANIFEST /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/MANIFEST-000001
-2025/10/14-10:20:30.689 425cf6b Recovering log #2736
-2025/10/14-10:20:30.690 425cf6b Reusing old log /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/002736.log 
-2025/10/14-10:20:31.345 425cf6b Level-0 table #2740: started
-2025/10/14-10:20:31.353 425cf6b Level-0 table #2740: 19437 bytes OK
-2025/10/14-10:20:31.359 425cf6b Delete type=0 #2736
-2025/10/14-10:28:23.780 425cf6b Level-0 table #2742: started
-2025/10/14-10:28:23.784 425cf6b Level-0 table #2742: 23960 bytes OK
-2025/10/14-10:28:23.804 425cf6b Delete type=0 #2739
-2025/10/14-10:29:36.563 425cf6b Level-0 table #2744: started
-2025/10/14-10:29:36.567 425cf6b Level-0 table #2744: 23927 bytes OK
-2025/10/14-10:29:36.568 425cf6b Delete type=0 #2741
-2025/10/14-10:29:36.570 425cf6b Compacting 4@0 + 1@1 files
-2025/10/14-10:29:36.584 425cf6b Generated table #2745@0: 47035 keys, 823920 bytes
-2025/10/14-10:29:36.584 425cf6b Compacted 4@0 + 1@1 files => 823920 bytes
-2025/10/14-10:29:36.585 425cf6b compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/10/14-10:29:36.585 425cf6b Delete type=2 #2742
-2025/10/14-10:29:36.585 425cf6b Delete type=2 #2740
-2025/10/14-10:29:36.585 425cf6b Delete type=2 #2744
-2025/10/14-10:29:36.585 425cf6b Delete type=2 #2735
-2025/10/14-10:29:36.585 425cf6b Delete type=2 #2737
-2025/10/14-10:29:55.098 425cf6b Level-0 table #2747: started
-2025/10/14-10:29:55.101 425cf6b Level-0 table #2747: 33936 bytes OK
-2025/10/14-10:29:55.105 425cf6b Delete type=0 #2743
-2025/10/14-10:30:07.535 425cf6b Level-0 table #2749: started
-2025/10/14-10:30:07.561 425cf6b Level-0 table #2749: 23140 bytes OK
-2025/10/14-10:30:07.567 425cf6b Delete type=0 #2746
-2025/10/14-10:30:22.679 425cf6b Level-0 table #2751: started
-2025/10/14-10:30:22.695 425cf6b Level-0 table #2751: 22711 bytes OK
-2025/10/14-10:30:22.703 425cf6b Delete type=0 #2748
-2025/10/14-10:30:35.242 425cf6b Level-0 table #2753: started
-2025/10/14-10:30:35.250 425cf6b Level-0 table #2753: 28508 bytes OK
-2025/10/14-10:30:35.253 425cf6b Delete type=0 #2750
-2025/10/14-10:30:35.255 425cf6b Compacting 4@0 + 1@1 files
-2025/10/14-10:30:35.284 425cf6b Generated table #2754@0: 47152 keys, 918970 bytes
-2025/10/14-10:30:35.284 425cf6b Compacted 4@0 + 1@1 files => 918970 bytes
-2025/10/14-10:30:35.287 425cf6b compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/10/14-10:30:35.287 425cf6b Delete type=2 #2749
-2025/10/14-10:30:35.287 425cf6b Delete type=2 #2745
-2025/10/14-10:30:35.287 425cf6b Delete type=2 #2751
-2025/10/14-10:30:35.288 425cf6b Delete type=2 #2747
-2025/10/14-10:30:35.288 425cf6b Delete type=2 #2753
-2025/10/14-10:30:46.818 425cf6b Level-0 table #2756: started
-2025/10/14-10:30:46.823 425cf6b Level-0 table #2756: 22380 bytes OK
-2025/10/14-10:30:46.834 425cf6b Delete type=0 #2752
-2025/10/14-10:30:58.924 425cf6b Level-0 table #2758: started
-2025/10/14-10:30:58.949 425cf6b Level-0 table #2758: 23876 bytes OK
-2025/10/14-10:30:58.951 425cf6b Delete type=0 #2755
-2025/10/14-10:31:11.067 425cf68 Level-0 table #2760: started
-2025/10/14-10:31:11.085 425cf68 Level-0 table #2760: 22302 bytes OK
-2025/10/14-10:31:11.106 425cf68 Delete type=0 #2757
+2025/10/15-06:48:49.893 446b673 Reusing MANIFEST /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/MANIFEST-000001
+2025/10/15-06:48:49.899 446b673 Recovering log #2955
+2025/10/15-06:48:49.901 446b673 Reusing old log /Users/Matvej1/CyberPro/Pyton_main/Pyton_Data_Analytic_project/DATA/.chrome_profile/Default/Session Storage/002955.log 
+2025/10/15-06:51:51.788 446b673 Level-0 table #2959: started
+2025/10/15-06:51:51.803 446b673 Level-0 table #2959: 19877 bytes OK
+2025/10/15-06:51:51.814 446b673 Delete type=0 #2955
+2025/10/15-06:51:51.818 446b673 Compacting 4@0 + 1@1 files
+2025/10/15-06:51:51.846 446b673 Generated table #2960@0: 50318 keys, 846627 bytes
+2025/10/15-06:51:51.846 446b673 Compacted 4@0 + 1@1 files => 846627 bytes
+2025/10/15-06:51:51.848 446b673 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/10/15-06:51:51.849 446b673 Delete type=2 #2950
+2025/10/15-06:51:51.849 446b673 Delete type=2 #2952
+2025/10/15-06:51:51.849 446b673 Delete type=2 #2956
+2025/10/15-06:51:51.849 446b673 Delete type=2 #2954
+2025/10/15-06:51:51.849 446b673 Delete type=2 #2959

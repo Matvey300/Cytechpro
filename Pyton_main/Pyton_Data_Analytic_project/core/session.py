@@ -85,3 +85,14 @@ def load_latest_snapshot(collection_id: str) -> pd.DataFrame:
 
 def print_info(msg: str):
     print(f"[ℹ] {msg}")
+
+
+"""
+# === Module Header ===
+# 📁 Module: core/session.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Session wrapper utilities and compatibility shims.
+# =====================
+"""

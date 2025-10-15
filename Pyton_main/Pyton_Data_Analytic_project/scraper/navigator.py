@@ -63,3 +63,14 @@ def open_reviews_page(driver, asin: str, marketplace: str) -> bool:
     except Exception as e:
         print_info(f"[nav] {asin}: failed to load reviews page: {e}")
         return False
+
+
+"""
+# === Module Header ===
+# 📁 Module: scraper/navigator.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Navigation helpers for Selenium to reach target pages.
+# =====================
+"""

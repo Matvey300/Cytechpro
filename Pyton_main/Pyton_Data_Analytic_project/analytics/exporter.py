@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: analytics/exporter.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: MatveyB
+# 📝 Summary: Builds curated BI exports (dimensions, facts, and derived timeseries).
+# =====================
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -265,6 +275,108 @@ def export_for_bi(session, *, prefer_parquet: bool = True) -> Path:
 
     _write(sentiment_daily, out_ver, "sentiment_daily", prefer_parquet)
 
+    # 4.1) nps_daily and nps_rolling (7d/28d): daily NPS components and rolling NPS per ASIN
+    try:
+        nps_daily = pd.DataFrame()
+        if not rev.empty and "rating" in rev.columns:
+            rv = rev.copy()
+            # Coerce types
+            if "review_date" in rv.columns:
+                rv["review_date"] = pd.to_datetime(rv["review_date"], errors="coerce").dt.date
+            rv["rating"] = pd.to_numeric(rv["rating"], errors="coerce")
+            rv = rv.dropna(subset=["asin", "review_date", "rating"]).copy()
+
+            # Prepare daily classification counts
+            rv["promoter"] = (rv["rating"] == 5).astype(int)
+            rv["passive"] = (rv["rating"] == 4).astype(int)
+            rv["detractor"] = rv["rating"].between(1, 3).astype(int)
+
+            g = (
+                rv.groupby(["asin", "review_date"], dropna=False)[
+                    ["promoter", "passive", "detractor"]
+                ]
+                .sum()
+                .reset_index()
+                .rename(
+                    columns={
+                        "review_date": "date",
+                        "promoter": "promoter_cnt",
+                        "passive": "passive_cnt",
+                        "detractor": "detractor_cnt",
+                    }
+                )
+            )
+            g["n_reviews"] = (
+                pd.to_numeric(g["promoter_cnt"], errors="coerce").fillna(0)
+                + pd.to_numeric(g["passive_cnt"], errors="coerce").fillna(0)
+                + pd.to_numeric(g["detractor_cnt"], errors="coerce").fillna(0)
+            )
+            # Densify by reviews capture_date range (requested): use reviews' captured_at → date
+            try:
+                if "captured_at" in rv.columns:
+                    rcap = rv.copy()
+                    rcap["captured_at"] = pd.to_datetime(rcap["captured_at"], errors="coerce")
+                    rcap = rcap.dropna(subset=["captured_at"]).copy()
+                    rcap["date"] = rcap["captured_at"].dt.date
+                    # Grid of (asin, date) for every captured day per ASIN
+                    grid = rcap[["asin", "date"]].dropna().drop_duplicates()
+                    if not grid.empty:
+                        g = grid.merge(g, on=["asin", "date"], how="left")
+                        for c in ("promoter_cnt", "passive_cnt", "detractor_cnt", "n_reviews"):
+                            if c in g.columns:
+                                g[c] = (
+                                    pd.to_numeric(g.get(c), errors="coerce").fillna(0).astype(int)
+                                )
+            except Exception:
+                pass
+
+            # Compute daily NPS (leave blank when n_reviews==0)
+            g["nps_daily"] = (
+                (g["promoter_cnt"].astype(float) - g["detractor_cnt"].astype(float))
+                / g["n_reviews"].replace({0: pd.NA})
+            ) * 100.0
+            nps_daily = g[
+                [
+                    "asin",
+                    "date",
+                    "promoter_cnt",
+                    "passive_cnt",
+                    "detractor_cnt",
+                    "n_reviews",
+                    "nps_daily",
+                ]
+            ]
+        _write(nps_daily, out_ver, "nps_daily", prefer_parquet)
+
+        # Rolling 7d/28d per ASIN (calendar-based rolling since we densified)
+        nps_roll = pd.DataFrame()
+        if not nps_daily.empty:
+            nd = nps_daily.copy()
+            nd["date"] = pd.to_datetime(nd["date"], errors="coerce")
+            nd = nd.dropna(subset=["date"]).sort_values(["asin", "date"]).copy()
+
+            def _roll_nps(gdf: pd.DataFrame) -> pd.DataFrame:
+                gdf = gdf.set_index("date").sort_index()
+                for c in ("promoter_cnt", "detractor_cnt", "n_reviews"):
+                    gdf[c] = pd.to_numeric(gdf.get(c), errors="coerce").fillna(0)
+                r7_prom = gdf["promoter_cnt"].rolling(window=7, min_periods=3).sum()
+                r7_detr = gdf["detractor_cnt"].rolling(window=7, min_periods=3).sum()
+                r7_den = gdf["n_reviews"].rolling(window=7, min_periods=3).sum()
+                r28_prom = gdf["promoter_cnt"].rolling(window=28, min_periods=7).sum()
+                r28_detr = gdf["detractor_cnt"].rolling(window=28, min_periods=7).sum()
+                r28_den = gdf["n_reviews"].rolling(window=28, min_periods=7).sum()
+
+                out = gdf[["promoter_cnt", "passive_cnt", "detractor_cnt", "n_reviews"]].copy()
+                out["nps_7d"] = ((r7_prom - r7_detr) / r7_den.replace({0: pd.NA})) * 100.0
+                out["nps_28d"] = ((r28_prom - r28_detr) / r28_den.replace({0: pd.NA})) * 100.0
+                return out.reset_index()
+
+            nps_roll = nd.groupby("asin", group_keys=False).apply(_roll_nps)
+        _write(nps_roll, out_ver, "nps_rolling_7d", prefer_parquet)
+        _write(nps_roll, out_ver, "nps_rolling_28d", prefer_parquet)
+    except Exception:
+        pass
+
     # 5) nps_by_asin
     try:
         from analytics.review_authenticity import compute_nps_per_asin
@@ -272,9 +384,35 @@ def export_for_bi(session, *, prefer_parquet: bool = True) -> Path:
         nps_by_asin = compute_nps_per_asin(
             rev if not rev.empty else pd.DataFrame(columns=["asin", "rating"])
         )
+        # Add capture date for model anchoring (max review_date per ASIN)
+        try:
+            last_dates = pd.DataFrame(columns=["asin", "date_captured"])
+            if not rev.empty and "review_date" in rev.columns:
+                r2 = rev.copy()
+                r2["review_date"] = pd.to_datetime(r2["review_date"], errors="coerce").dt.date
+                last_dates = (
+                    r2.dropna(subset=["asin", "review_date"])
+                    .groupby("asin")["review_date"]
+                    .max()
+                    .reset_index()
+                    .rename(columns={"review_date": "date_captured"})
+                )
+            nps_by_asin = nps_by_asin.merge(last_dates, on="asin", how="left")
+        except Exception:
+            # Ensure column exists even if computation failed
+            if "date_captured" not in nps_by_asin.columns:
+                nps_by_asin["date_captured"] = pd.NaT
     except Exception:
         nps_by_asin = pd.DataFrame(
-            columns=["asin", "n_reviews", "promoter_pct", "passive_pct", "detractor_pct", "nps"]
+            columns=[
+                "asin",
+                "n_reviews",
+                "promoter_pct",
+                "passive_pct",
+                "detractor_pct",
+                "nps",
+                "date_captured",
+            ]
         )
     _write(nps_by_asin, out_ver, "nps_by_asin", prefer_parquet)
 

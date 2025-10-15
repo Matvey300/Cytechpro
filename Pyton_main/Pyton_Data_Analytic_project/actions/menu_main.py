@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: actions/menu_main.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Main CLI menu and flows orchestration.
+# =====================
+"""
+
 from actions.reviews_controller import run_review_pipeline
 
 try:

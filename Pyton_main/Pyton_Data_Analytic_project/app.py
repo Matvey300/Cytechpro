@@ -1,4 +1,12 @@
-# app.py
+"""
+# === Module Header ===
+# 📁 Module: app.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: CLI entrypoint. Validates env and launches main menu.
+# =====================
+"""
 
 from actions.menu_main import main_menu
 from core.env_check import validate_environment

@@ -1,12 +1,12 @@
-# === Module Status ===
-# 📁 Module: analytics/daily
-# 📅 Last Reviewed: 2025-09-15
+"""
+# === Module Header ===
+# 📁 Module: analytics/daily.py
+# 📅 Last Reviewed: 2025-10-15
 # 🔧 Status: 🟠 Under Refactor
-# 👤 Owner: Matvey
-# 📝 Notes:
-# - Replace print with print_info
-# - Make snapshot path injectable for testing
+# 👤 Owner: MatveyB
+# 📝 Summary: Daily scraping of product metrics and snapshot persistence.
 # =====================
+"""
 
 import re
 import time

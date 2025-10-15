@@ -425,3 +425,14 @@ def start_amazon_browser_session(asin: str, collection_dir: Path) -> WebDriver:
     print("[✅] Login flow normalized (proceeding with current session).")
     _apply_visibility_post_create(driver)
     return driver
+
+
+"""
+# === Module Header ===
+# 📁 Module: core/auth_amazon.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Amazon authentication helpers and session management.
+# =====================
+"""

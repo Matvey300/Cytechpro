@@ -1,13 +1,12 @@
-# === Module Status ===
-# 📁 Module: actions/reviews_controller
-# 📅 Last Reviewed: 2025-09-15
-# 🔧 Status: 🛠️ Under Refactor (Planned)
-# 👤 Owner: Matvey
-# 📝 Notes:
-# - Ensure collect_reviews_for_asins is imported and callable
-# - Improve debug logging
-# - Harmonize return values (df, stats) across project
+"""
+# === Module Header ===
+# 📁 Module: actions/reviews_controller.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Orchestrates review collection pipeline and returns (df, stats).
 # =====================
+"""
 
 from pathlib import Path
 

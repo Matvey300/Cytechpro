@@ -164,4 +164,36 @@ Notes
 ## License
 
 MIT — see LICENSE
+## Module Status Overview
 
+Below is a concise list of key modules and their current status. Owner for all: MatveyB. Last Reviewed: 2025-10-15.
+
+- actions/menu_main.py — 🟢 Stable
+- actions/asin_controller.py — 🟢 Stable
+- actions/reviews_controller.py — 🟢 Stable
+- actions/asin_search.py — 🟢 Stable
+- analytics/exporter.py — 🟠 Under Refactor
+- analytics/daily.py — 🟠 Under Refactor
+- analytics/reaction_pulse.py — 🟠 Under Refactor
+- analytics/review_authenticity.py — 🟠 Under Refactor
+- analytics/review_dynamics.py — 🟠 Under Refactor
+- api/serpapi.py — 🟢 Stable
+- core/log.py — 🟢 Stable
+- core/auto_collect.py — 🟢 Stable
+- core/session_state.py — 🟢 Stable
+- core/collection_io.py — 🟢 Stable
+- core/env_check.py — 🟢 Stable
+- core/category_tree.py — 🟢 Stable
+- core/auth_amazon.py — 🟢 Stable
+- scraper/review_collector.py — 🟢 Stable
+- scraper/page_parser.py — 🟢 Stable
+- scraper/product_info.py — 🟢 Stable
+- scraper/navigator.py — 🟢 Stable
+- scraper/html_saver.py — 🟢 Stable
+- scraper/review_parser.py — 🟢 Stable
+- scraper/driver.py — 🟢 Stable
+- scripts/auto_runner.py — 🟢 Stable
+- scripts/setup_cron.sh — 🟢 Stable
+- app.py — 🟢 Stable
+
+If you want a generated table with links and additional metadata (summary, deps), say “generate extended status” — I’ll build it from headers.

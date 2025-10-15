@@ -1,4 +1,3 @@
-
 from core.log import print_error, print_success
 
 
@@ -51,3 +50,14 @@ def save_review_pages_html(rawdata_dir, asin, pages):
     - pages (List[str]): List of raw HTML strings for each review page.
     """
     save_review_pages(rawdata_dir, asin, pages)
+
+
+"""
+# === Module Header ===
+# 📁 Module: scraper/html_saver.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Persists raw HTML snapshots for later parsing and QA.
+# =====================
+"""

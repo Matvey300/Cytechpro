@@ -186,7 +186,7 @@ def collect_reviews_for_asins(
             )
             or (Path(out_dir) if out_dir else None)
             or (
-                Path("Pyton_main/Pyton_Data_Analytic_project/DATA")
+                Path("Python_main/Python_Data_Analytic_project/DATA")
                 / (collection_id or "UNKNOWN_COLLECTION")
             )
         )
@@ -465,7 +465,7 @@ def collect_reviews_for_asins(
                                     )
                                     if base is None:
                                         base = Path(
-                                            "Pyton_main/Pyton_Data_Analytic_project/DATA"
+                                            "Python_main/Python_Data_Analytic_project/DATA"
                                         ) / (collection_id or "UNKNOWN_COLLECTION")
                                     dp_dir = base / "Raw" / "snapshots" / run_ts
                                     dp_dir.mkdir(parents=True, exist_ok=True)
@@ -745,3 +745,14 @@ def collect_reviews_for_asins(
         "duplicates_skipped": total_duplicates_skipped,
     }
     return df_reviews, stats
+
+
+"""
+# === Module Header ===
+# 📁 Module: scraper/review_collector.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Collects reviews for selected ASINs and persists to CSV.
+# =====================
+"""

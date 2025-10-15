@@ -1,17 +1,12 @@
-# analytics/reaction_pulse.py
-
-# === Module Status ===
-# 📁 Module: analytics/reaction_pulse
-# 📅 Last Reviewed: 2025-09-15
+"""
+# === Module Header ===
+# 📁 Module: analytics/reaction_pulse.py
+# 📅 Last Reviewed: 2025-10-15
 # 🔧 Status: 🟠 Under Refactor
-# 👤 Owner: Matvey
-# 📝 Notes:
-# - Replace print with print_info
-# - Standardize fallback/error outputs
-# - Consider extracting plotting logic
+# 👤 Owner: MatveyB
+# 📝 Summary: Sentiment analysis helpers and reaction pulse charts.
 # =====================
-
-# analytics/reaction_pulse.py
+"""
 
 import os
 

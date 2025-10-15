@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: core/auto_collect.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Auto-collection state management and scheduling helpers.
+# =====================
+"""
+
 from __future__ import annotations
 
 import json

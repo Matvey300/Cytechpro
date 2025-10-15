@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Robust venv setup for Pyton_Data_Analytic_project
+# Robust venv setup for Python_Data_Analytic_project
 # - Uses Homebrew Python if available, otherwise falls back to python3 on PATH
 # - Installs pinned dependencies from requirements.txt (creates one if missing)
 # - Verifies imports with clear errors (no raw tracebacks)

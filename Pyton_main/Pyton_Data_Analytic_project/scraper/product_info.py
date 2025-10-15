@@ -226,3 +226,14 @@ def extract_product_details(soup: BeautifulSoup, row: pd.Series) -> Dict[str, An
         "bsr": bsr,
         "review_count": review_count,
     }
+
+
+"""
+# === Module Header ===
+# 📁 Module: scraper/product_info.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Extracts product metadata from HTML (rating, price, etc.).
+# =====================
+"""

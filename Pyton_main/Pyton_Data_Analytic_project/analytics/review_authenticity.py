@@ -1,3 +1,13 @@
+"""
+# === Module Header ===
+# 📁 Module: analytics/review_authenticity.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟠 Under Refactor
+# 👤 Owner: MatveyB
+# 📝 Summary: Review authenticity heuristics and NPS analysis per ASIN.
+# =====================
+"""
+
 from typing import Dict
 
 import numpy as np

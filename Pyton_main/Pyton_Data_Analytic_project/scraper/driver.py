@@ -1,10 +1,13 @@
-# === Module Status ===
-# 📁 Module: scraper/driver
-# 📅 Last Reviewed: 2025-09-18
-# 🔧 Status: 🟢 Final (visibility/profile fixed)
-# 👤 Owner: Matvey (patched by Kot)
-# 📝 Notes: BROWSER_VISIBILITY respected; profile from env_check.get_chrome_profile_env()
+"""
+# === Module Header ===
+# 📁 Module: scraper/driver.py
+# 📅 Last Reviewed: 2025-10-15
+# 🔧 Status: 🟢 Stable
+# 👤 Owner: MatveyB
+# 📝 Summary: Selenium driver setup; respects visibility/profile from env.
 # =====================
+"""
+
 from core.env_check import ENV_VARS, get_chrome_profile_env
 from core.session import print_info
 from selenium import webdriver
