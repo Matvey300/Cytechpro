@@ -1,0 +1,14 @@
+# Candidate orphan modules:
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/actions/asin_search.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/actions/snapshots.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/api/serpapi.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/auth_amazon.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/category_tree.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/collection_io.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/env_check.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/marketplaces.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/session.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/session_state.py
+/Users/Matvej1/CyberPro/Python_main/Python_Data_Analytic_project/core/synonyms.py
+
+# Total: 11

@@ -1,0 +1,26 @@
+sprint_board.md
+Project_charter.md
+Projections.md
+
+# virtualenv
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# data and outputs
+Out/
+logs/
+DATA/**
+!DATA/z/
+!DATA/z/20250920_250822_1125__On-Ear_Headphones_created20250905/
+
+# IDE
+.vscode/
+.idea/
+
+# other
+*.sqlite3
